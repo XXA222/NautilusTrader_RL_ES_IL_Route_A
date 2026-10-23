@@ -51,6 +51,10 @@ from rles_route_a.integration.native_transition_builder import (
 
 每次 Gym teacher rollout 会绑定确定性 `trajectory_id`（由 fold/source/执行配方/seed/teacher 类型派生）；可传入 `rollout_id` 区分同 seed 下有意独立的实验运行。该身份从 `AuditedTeacherBarrier` 传至 `LabeledStep`，序列 Dataset 按 fold/episode/trajectory 切分上下文，避免相同 episode 窗口的不同运行串接隐藏状态。
 
+离线 IQL/TD3+BC 进入策略回放前，可用 `audit_offline_policy_action_support(...)` 对冻结行为数据与未参与训练的策略查询状态计算条件动作支持度。每个 Train transition 必须提供预注册 stratum；stratum 应组合市场 regime、当前仓位方向/大小和持仓时长桶。查询需绑定独立 Fold、episode、数据源、冻结 encoder 与执行配方。报告在 Train-only 标准化状态空间内查找同 stratum 的近邻，并分别给出 state support、动作容差内的 action support 及分层结果。`max_state_distance`、`action_tolerance`、近邻数和分层定义须在查看候选输出前冻结。该报告明确是 `DIAGNOSTIC_ONLY`，不能替代原生回放、外推风险门或经济晋级收据。
+
+结果条件监督消融由 `build_outcome_supervision_arms(steps)` 固定生成三个同长度、同顺序的训练臂：完整已观察教师行为、仅完整正收益原生交易案例等权 BC、以及该臂再加入显式亏损入场规避意图标签。正向案例按 trade receipt 而不是时间步计权；规避标签只监督 intent，不伪造 exposure。函数要求一个 Train Fold/source 和真实 `OBSERVED_NATIVE_TRADE_*` 收据；没有正向完整案例或只有情景收益时会失败关闭。将每个 arm 转成相同配置的序列 Dataset 后，训练时显式传入 `outcome_ablation_sampler(dataset, seed=...)` 以绕过自动原生案例采样，并使用相同 seed、模型初始化、batch/epoch、早停及成本/撮合配方；只在预先冻结且未用于筛选的独立原生窗口上比较。该构造器不运行实验，也不生成经济结论。
+
 ## C. 教师 Gate
 
 `NativePair` 需要冻结 teacher/baseline/source，覆盖完整 `window × scenario × seed` 矩阵，`matched_native_barriers=True`，并由 L6 **实际验证**窗口互不重叠后设置 `nonoverlap_verified=True`。默认必须具备 `base` 和 `stress` 两类成本情景、至少两组独立训练随机种子。`screen_teacher` 返回 `TRAIN_INNER_SCREEN_PASS/REJECT`，无论 PASS 与否均不表示独立市场获利证明。

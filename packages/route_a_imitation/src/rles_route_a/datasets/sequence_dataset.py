@@ -105,6 +105,7 @@ class LabeledStep:
         if self.label_origin not in {
             "OBSERVED_TEACHER_ACTION",
             "INFERRED_NEGATIVE_TRADE_ENTRY_AVOIDANCE",
+            "EXCLUDED_FROM_OUTCOME_ABLATION",
         }:
             raise ValueError("unknown Route A teacher-label origin")
         inferred_avoidance = (
@@ -124,6 +125,11 @@ class LabeledStep:
                 raise ValueError("inferred negative-entry label violates its counterfactual contract")
         elif avoidance_reason in self.advice.reason_codes:
             raise ValueError("inferred negative-entry reason requires its explicit label origin")
+        if (self.label_origin == "EXCLUDED_FROM_OUTCOME_ABLATION"
+                and (self.supervision_weight != 0.0
+                     or self.intent_supervision_weight != 0.0
+                     or "excluded_from_outcome_ablation" not in self.advice.reason_codes)):
+            raise ValueError("excluded ablation row must be explicitly marked and unsupervised")
         if self.source_identity and (not isinstance(self.source_identity, str) or not self.source_identity.strip()):
             raise ValueError("invalid source identity")
 
