@@ -184,6 +184,12 @@ def test_offline_policy_action_support_rejects_episode_leak_and_mixed_provenance
             train,(query,),training_strata=("state-1",)*2,
             max_state_distance=1.,action_tolerance=.1,
         )
+    overlapping=replace(query,episode_id="heldout-ep",decision_ts_ns=150_000_000_000)
+    with pytest.raises(PermissionError,match="follow the entire training time range"):
+        audit_offline_policy_action_support(
+            train,(overlapping,),training_strata=("state-1",)*2,
+            max_state_distance=1.,action_tolerance=.1,
+        )
     separated=replace(query,episode_id="heldout-ep",execution_recipe="other")
     with pytest.raises(PermissionError,match="mixes Fold, source, encoder, or execution recipe"):
         audit_offline_policy_action_support(

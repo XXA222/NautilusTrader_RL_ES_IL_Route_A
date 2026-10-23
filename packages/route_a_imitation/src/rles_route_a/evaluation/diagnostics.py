@@ -90,6 +90,12 @@ def audit_offline_policy_action_support(
     if (not all(train_episodes) or not all(query_episodes)
             or train_episodes.intersection(query_episodes)):
         raise PermissionError("action support queries must use episodes disjoint from training")
+    if any(type(row.decision_ts_ns) is not int or row.decision_ts_ns <= 0
+           for row in references):
+        raise ValueError("native action support rows must retain decision timestamps")
+    if min(query.decision_ts_ns for query in queries) <= max(
+            row.decision_ts_ns for row in references):
+        raise PermissionError("policy support queries must follow the entire training time range")
     dimension = len(references[0].state)
     if (any(len(row.state) != dimension for row in references)
             or any(len(query.state) != dimension for query in queries)):
