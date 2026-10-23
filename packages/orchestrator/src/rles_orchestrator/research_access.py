@@ -2,10 +2,13 @@
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from hashlib import sha256
+from importlib.metadata import PackageNotFoundError, distribution
 import json
 from pathlib import Path
 from time import time_ns
 from typing import Literal, overload
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 import uuid
 
 from rles_data.core import CuratedStore, DataError, digest, require_hash, require_ns
@@ -15,6 +18,31 @@ from rles_research.access import ProjectResearchRegistry
 
 ACTIVE_OWNER: ContextVar[str | None] = ContextVar("research_owner", default=None)
 DATA_FAMILY = "perpetual-market-v1"
+
+
+def _workspace_from_local_wheel() -> Path | None:
+    """Resolve a workspace checkout from a locally installed wheel's provenance."""
+    try:
+        direct_url = distribution("rles-orchestrator").read_text("direct_url.json")
+    except PackageNotFoundError:
+        return None
+    if direct_url is None:
+        return None
+    try:
+        origin = json.loads(direct_url)
+        if not isinstance(origin, dict):
+            return None
+        parsed = urlparse(origin.get("url", ""))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if parsed.scheme != "file" or not isinstance(origin.get("archive_info"), dict):
+        return None
+    archive = Path(url2pathname(parsed.path)).resolve()
+    for candidate in archive.parents:
+        metadata = candidate / "pyproject.toml"
+        if metadata.is_file() and "[tool.uv.workspace]" in metadata.read_text(encoding="utf-8"):
+            return candidate
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,9 +62,13 @@ class RegisteredTrainReadReceipt:
 
 
 def project_registry() -> ProjectResearchRegistry:
-    # Source checkout identity is stable even if the CLI's cwd/output changes.
+    # Source checkouts and local wheel installs retain a stable workspace identity
+    # even if the CLI's cwd/output changes. Index-installed wheels fall back to cwd.
     source = Path(__file__).resolve().parents[4]
-    candidates = (source, *Path.cwd().resolve().parents, Path.cwd().resolve())
+    cwd = Path.cwd().resolve()
+    wheel_workspace = _workspace_from_local_wheel()
+    candidates = (source, *((wheel_workspace,) if wheel_workspace is not None else ()),
+                 *cwd.parents, cwd)
     for candidate in candidates:
         metadata = candidate / "pyproject.toml"
         if metadata.is_file() and "[tool.uv.workspace]" in metadata.read_text(encoding="utf-8"):
