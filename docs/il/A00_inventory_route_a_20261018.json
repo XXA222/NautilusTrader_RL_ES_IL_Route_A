@@ -1,0 +1,2037 @@
+{
+  "economic_gate": {
+    "allowed": [
+      "synthetic mechanism validation",
+      "explicitly labeled Train-inner engineering diagnostics"
+    ],
+    "blocked": [
+      "formal historical net-return claims",
+      "Test/Holdout strategy selection"
+    ],
+    "eligible": false,
+    "reason": "The existing audit marks historical ETHUSDT rules, account fees and margin history scenario-only or unverified."
+  },
+  "generated_at_utc": "2026-10-18T14:07:19.631336+00:00",
+  "git_head": "c24d1bc4a47584f91a4c4db93bf77117d4e8341c",
+  "git_worktree_change_count": 153,
+  "historical_rule_file_candidates": [
+    "tests\\fixtures\\real_ethusdt_20240101\\SCENARIO_RULE_ASSUMPTIONS.json",
+    "tests\\fixtures\\real_ethusdt_20240101\\scenario_rules.json"
+  ],
+  "local_data_directories": [
+    {
+      "bytes": 26139479,
+      "file_count": 332,
+      "name": "binance_ethusdt_20231230_20240415"
+    },
+    {
+      "bytes": 243430,
+      "file_count": 9,
+      "name": "binance_ethusdt_20240101"
+    },
+    {
+      "bytes": 95146468,
+      "file_count": 5,
+      "name": "binance_ethusdt_20240101_quotes_1s"
+    },
+    {
+      "bytes": 25984832,
+      "file_count": 659,
+      "name": "binance_ethusdt_20240415_20240731"
+    },
+    {
+      "bytes": 26238016,
+      "file_count": 667,
+      "name": "binance_ethusdt_20240731_20241116"
+    },
+    {
+      "bytes": 1253882,
+      "file_count": 56,
+      "name": "binance_ethusdt_20240731_20241201"
+    },
+    {
+      "bytes": 26967765,
+      "file_count": 685,
+      "name": "binance_ethusdt_20240812_20241201"
+    },
+    {
+      "bytes": 13842928,
+      "file_count": 3,
+      "name": "binance_ethusdt_wfo_2024_apr_aug_twofold"
+    },
+    {
+      "bytes": 125272,
+      "file_count": 12,
+      "name": "raw"
+    }
+  ],
+  "persistent_archive_integrity": {
+    "manifest_available": true,
+    "missing_or_mismatched": [],
+    "verified_files": [
+      "data/market.parquet",
+      "data/market.parquet.COMPLETED.json",
+      "data/scenario-rules.json",
+      "data/SCENARIO_RULE_ASSUMPTIONS_2024_2026.json",
+      "models/candidate-seed-102/bundle.json",
+      "models/candidate-seed-102/bundle.json.sha256",
+      "models/candidate-seed-102/COMPLETED.json",
+      "models/candidate-seed-102/r1/actor.json",
+      "models/candidate-seed-102/r1/COMPLETED",
+      "models/candidate-seed-102/r1/integrity.json",
+      "models/candidate-seed-102/r1/weights.npz",
+      "models/candidate-seed-102/R1-learning.json",
+      "models/candidate-seed-102/R1-learning.json.sha256",
+      "models/candidate-seed-102/run.json"
+    ]
+  },
+  "prior_evidence": {
+    "docs/AUDIT_REPORT_20261016.md": true,
+    "docs/HISTORICAL_RULES_BLOCKER_20261016.md": true,
+    "docs/audit_evidence/20261016/persistent_artifacts_v2.json": true
+  },
+  "project_research_registry": {
+    "access_count": 214,
+    "available": true,
+    "bytes": 4120576,
+    "intervals": [
+      {
+        "end_ns": 1704559260001000000,
+        "family": "perpetual-market-v1",
+        "key": "5d39daf9861c15373805c7a144c7da335da700b2ec9eefab5ebfd44913d01ff6",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067260001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704559260001000000,
+        "family": "perpetual-market-v1",
+        "key": "c7ece6922e1b8bbdf6beb62590e815623923c616805d5d07cce0b6d7a74fb507",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067260001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1721088000000000000,
+        "family": "perpetual-market-v1",
+        "key": "4803a770a7592bca7127b7e4291d53e2af55cd1c08c1728c9ec16a2e47d5f073",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067260001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1721088000000000000,
+        "family": "perpetual-market-v1",
+        "key": "92789554282a863a2a80f17e66b9f9ec561147c7588b88bbae2ae5fe00484ebd",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067260001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1721088000000000000,
+        "family": "perpetual-market-v1",
+        "key": "e8949d056b08c3b385e61f4fbf8d47705db4bb6de567f82493dca44dba7887ac",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067260001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704096300000000000,
+        "family": "perpetual-market-v1",
+        "key": "036b16b07d765d6312e463ba2eeebfc162b6d89c3d71ecb61c99df93cc6a7f85",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704096300000000000,
+        "family": "perpetual-market-v1",
+        "key": "561468731476843b5a2bd9ac5428eb643fd86fa1cd38d96ec088909e352cfe65",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704096300000000000,
+        "family": "perpetual-market-v1",
+        "key": "d9fb6a50faa34ff2f8d37f472c0f3e4b159c9b6b26fafaa4246ad9826b421df5",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704067500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704110700000000000,
+        "family": "perpetual-market-v1",
+        "key": "08225676e44dc8a352c3dcdf26f3747babc215a1277ba92e894c60d87cbad54d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704096300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704110700000000000,
+        "family": "perpetual-market-v1",
+        "key": "3179895d181a591a8237c0c1a653a74713b1ff2f78961a613788a19e8281c480",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704096300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704110700000000000,
+        "family": "perpetual-market-v1",
+        "key": "3a71dcba903029126d72a36a332bfd44c33ef863d89305811568b2d064785934",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704096300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704110700000000000,
+        "family": "perpetual-market-v1",
+        "key": "46b4904ea2387dcc0d4877aa2d6e65f4047da3b061ca73efbe287b5dde902583",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704096300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704110700000000000,
+        "family": "perpetual-market-v1",
+        "key": "ae74dc93db42acd03ebc1172479632dcceaf6164f097c6901d0feabbccc44bbc",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704096300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704110700000000000,
+        "family": "perpetual-market-v1",
+        "key": "c4cf960240ef30f6ea45a7f89e3dd2648fe0bcbab2dbf9eaa858595b1d701e88",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704096300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "01ab141c6f4b49c63f827d0640b2f63501bb0c91f2420564f4a732d1cb7b5a36",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "077973efa00e017e076e3dd63934841cb69e19caf7b50017c93c0ef27954be9d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "07adafd34bd5a854466685dd4f95ffe1fcfe9b42532c0558dca8232cfd44bdf1",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "2dc7f44978dc0847f9d67fb84dba76a923d95ba670c735589126694293804d5e",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "37acf6978042ff953644db2bd99d4016dedc69c3c75facaa50195e81438b2aa9",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "421ee1c268e8d03db9800052af9b62a7a96f7d727b3047fc77cb6dd24b3e105a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "6bc065c69559e8fbdd2bdc9ce8208260d7ff62cc62201ef78c9f12bcc78d209b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "6db9180609ab3c0ab5b555e8d886ccea0367ae19c340711392f168c147e27e92",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "76eb7afb6e5143e32a46a55ace57c25696fb911123b409e7832f8ea25adcb826",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "82f81adba8c50c51108ca4345b4dd8769b4488f732c61c645525f8e586cfad24",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "8bd65f6e42d177c7ca2638e97283b80ecefc97505c17545dd9e78c9a24f7116e",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "9284446f252bb3b4b1c6f731e07ca6602d29e927a6240746a6f6612ddce19b3d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "9815d4554795396931c05b3a9f5a6625b0c400da84146847c4c56c739c8460a8",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "e3e1341860817ac6be6e498b4c5dcabaa53b0d2ea91083d3734731d1d2f774bd",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "e661860ecc44f4b59e9579478f565a56cb4a4ceb2c93497133122bf28fed6d48",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "e6c377dac0a239208cf3d405f992199ea56c9742314cedd21b48dd55420f8023",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "f1360f4ae796a5b5741d7ce7c1162ad6211e8b503e3a57d2f6bbc01026215a19",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704153660000000000,
+        "family": "perpetual-market-v1",
+        "key": "f32b2523a9cd639c6edbfa8b2e051427376bce17a134d84c001036adb4cd6982",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704139500000000000,
+        "family": "perpetual-market-v1",
+        "key": "2e18481890ab4770875d9a1008b3f1d4b94cb48f6559cda9a5bc0d5fc491aa83",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704139500000000000,
+        "family": "perpetual-market-v1",
+        "key": "c3c6574fbcc472c8040e5726848a55662fe2a1998f8d87f18a423f674497b7ed",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704110700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704182700000000000,
+        "family": "perpetual-market-v1",
+        "key": "5737b4cd3c5e609d136d31bea920d87a2b17b428be3e7355cf299e82e8c08cd1",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704153900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704182700000000000,
+        "family": "perpetual-market-v1",
+        "key": "dcff20783472ddef00fb3eafa662452fe86dceb3ab9243c392454fc755269edf",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704153900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704197100000000000,
+        "family": "perpetual-market-v1",
+        "key": "621381b05628e0957f408100fd13b3d0ac126ccae75a6fe16f9bb9dc3bc1f896",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704182700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704197100000000000,
+        "family": "perpetual-market-v1",
+        "key": "62d94a2b70d3556058ec2c54f43f11b26c7a22edef807262d4a22accc6e21dc4",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704182700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704197100000000000,
+        "family": "perpetual-market-v1",
+        "key": "ceccdb9dcf0e6815c87acad727f01bc202b661751913b8843613f063e871a988",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704182700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704197100000000000,
+        "family": "perpetual-market-v1",
+        "key": "eee2953aec14ed89f07e252d4c0d949650847838f331283cb0ccb3f3a584412b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704182700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704225900000000000,
+        "family": "perpetual-market-v1",
+        "key": "1513f558f06d8f54655c38dfbea90df1fdaaf6a16e43269cdeca659047c6e073",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704197100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704225900000000000,
+        "family": "perpetual-market-v1",
+        "key": "15e85929ba7334ac8dd4f19cf3126083af869cfea5df0d03d602de60acc1c80d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704197100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704269100000000000,
+        "family": "perpetual-market-v1",
+        "key": "4cc0fd92b8651ce3db54d4d2f9a183d3286a51df1c377da006f2077a3aac5fa4",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704240300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704269100000000000,
+        "family": "perpetual-market-v1",
+        "key": "9bdf1231b1e724bfc300cdffeea678a7540af00cd390e4d645cba23125a022ea",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704240300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704283500000000000,
+        "family": "perpetual-market-v1",
+        "key": "37be8d20027912e7d22fd5145331b6b8488f50867864a6f1698c505d48348961",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704269100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704283500000000000,
+        "family": "perpetual-market-v1",
+        "key": "5ca4097ef4ae607c1f05999d93afde09843fa0676677d9f53b45505e55e53089",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704269100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704283500000000000,
+        "family": "perpetual-market-v1",
+        "key": "7983250d15b2aa6961b30becfe1872641ae699d354713ee7f3b7766990171b06",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704269100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704283500000000000,
+        "family": "perpetual-market-v1",
+        "key": "841e8543375ca979f3cc20ab8805e8d1484c4a8fe897bc766ff40c5ce5cca1c3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704269100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704312300000000000,
+        "family": "perpetual-market-v1",
+        "key": "70ac9db2d7c2ec2c8472e2ffd5bfa585a97a9b1276174c00151858b64710a26e",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704283500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704312300000000000,
+        "family": "perpetual-market-v1",
+        "key": "ab1689ed35d53e6da54e46bfe7180a21da0a8d21a1f37bffecaacae2d9341f93",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704283500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "1d6edadd60c65050f0613bab9ceda4fc8299b30b8ddcf21473ac13e9019dab70",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "2900bd949c33c6cfa5605bb0147139e525766ec4d60e90554596cab727530857",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "339d3a28579c7f2fb0490a79e954457ccb90865726f5afc9498054c6747a5630",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "3dda7708fa09250ca9c5a7d6ab35718a5fcfc3bb576bb10c1c74b139f82f9e6b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "5aebc9c3c95cc50813101f8925849057f4e0c1537a77980130177ff7ede71e10",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "6190d85a145c9f976738d1b345d383ac7b3fbeac9a8211f8166307854c475526",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "7ae9b5831a73232678c1103347e2cdeebd83b2ffd49b4f61c97011f835d188e9",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "7b019be09ae6211d312fe8f1b9370ce1823d2e8b62f49dd2c166fe495909d56e",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704355500000000000,
+        "family": "perpetual-market-v1",
+        "key": "c963ea3609b5119d349d759760dc8619da60d2280f9f83acd877f6bfc36d2ac5",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704326700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704369900000000000,
+        "family": "perpetual-market-v1",
+        "key": "047b8727c166d6284ac90ba41025c7dd2f6b58e2c72d90d3f5e0cd421c1cd1a1",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704355500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704369900000000000,
+        "family": "perpetual-market-v1",
+        "key": "8426309cc00a5a667e2724437499b4a27cf3393863eb987f73c04df06969aca7",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704355500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704369900000000000,
+        "family": "perpetual-market-v1",
+        "key": "bbc6a2ef818b67c3815713d6d4c5155e7868eb7781b047ad33e342bb13558d08",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704355500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704369900000000000,
+        "family": "perpetual-market-v1",
+        "key": "dce703f241eb95c14bb266e1d5e86d0f33405a011bd11fa926699492e707647a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704355500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704398700000000000,
+        "family": "perpetual-market-v1",
+        "key": "c7eee2762c4ec21d0376c5467db1bf4b3f05c0742e8ccffc33d62415c1c11055",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704369900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704398700000000000,
+        "family": "perpetual-market-v1",
+        "key": "e2e1685ae3c8c3081f690de9c7e0dcbe505b6085933fb3690d71846a0eba63b8",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704369900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704441900000000000,
+        "family": "perpetual-market-v1",
+        "key": "933ad35b7e3cf3b11311804240792cb02793f1cf45a35828f266dde6a0563c0d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704413100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704441900000000000,
+        "family": "perpetual-market-v1",
+        "key": "e72083e330a34d426c12f32cf8795b474396bb89f457849e8b4d3dc87225f164",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704413100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704456300000000000,
+        "family": "perpetual-market-v1",
+        "key": "3098451a927d61e13290c07ed9f44535db70c21770f6b85bfe62045e91016edf",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704441900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704456300000000000,
+        "family": "perpetual-market-v1",
+        "key": "56714ea03d71e5551d493216ee4d7640647836faa16a961b04c60d383e4d825c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704441900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704456300000000000,
+        "family": "perpetual-market-v1",
+        "key": "8f5e89042fdb9b829f63dee65a061048c43e9e9b5389ffe7ab7b9843078aa608",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704441900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704456300000000000,
+        "family": "perpetual-market-v1",
+        "key": "ba9ba1fc024525d300ca3a1b7a4aa68b433d2255086d9a6ddaf4d6064ca17acd",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704441900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704485100000000000,
+        "family": "perpetual-market-v1",
+        "key": "18e608eb6cf61b20a271d2dade648dee000190b761648760566e6982f0d19ddc",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704456300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704485100000000000,
+        "family": "perpetual-market-v1",
+        "key": "a94a29557c09d95aad01a67f91f11913212ed21f2c3ac27c15dae454d88c3621",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704456300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704528300000000000,
+        "family": "perpetual-market-v1",
+        "key": "ba37e5d4c6a52f6fc27db0bd27f9c03278dd5462c972f2ec2b39f2a42be9c60b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704499500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704528300000000000,
+        "family": "perpetual-market-v1",
+        "key": "bc6cd48f8e1621a155b232df43ea36cb4c62dcc6331f46911f552d36101ae567",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704499500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704542700000000000,
+        "family": "perpetual-market-v1",
+        "key": "510c00e2f3e23093c1d2de30f056a23ec87200554acbd7d83b747cf8424f5a80",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704528300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704542700000000000,
+        "family": "perpetual-market-v1",
+        "key": "809c49bd553ec00eaf714c683519eb48deb13b8761bba11d5f5be22a21c09867",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704528300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704542700000000000,
+        "family": "perpetual-market-v1",
+        "key": "989973455f9375dcd8ee721d1af9584c03763e653c3b18711cbbc481c9b348ec",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704528300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704542700000000000,
+        "family": "perpetual-market-v1",
+        "key": "fb7453309a5fd531574af94034da55ee773f034f4a0e60d320f131be0e5da5bd",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704528300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704571500000000000,
+        "family": "perpetual-market-v1",
+        "key": "1fe94f4c9b5828985a3a82df5bb4039308cde764c4abff14bb42f89cb3eadd58",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704542700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704571500000000000,
+        "family": "perpetual-market-v1",
+        "key": "8a0ecb00eebddc3ba12f48cc9d791d1641a79f6811bd07d011a7f617d9029fbb",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704542700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704614700000000000,
+        "family": "perpetual-market-v1",
+        "key": "9e4618241362dfebc629835b6bfd5129258514bcbf3bc6c9003c4cf79357be3a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704585900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704614700000000000,
+        "family": "perpetual-market-v1",
+        "key": "ff67d81b8bef8a48940f4690cdd31e7bb1157a61722a28865163550edba14f45",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704585900000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704629100000000000,
+        "family": "perpetual-market-v1",
+        "key": "5a0f2a4350bac685adc2b8b396609614e0840501cdadd6c76a234a36d181ccbc",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704614700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704629100000000000,
+        "family": "perpetual-market-v1",
+        "key": "9a545914a5f411954b982c0ef00692a3362fc4311a37e1d1de781cecb5790da3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704614700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704629100000000000,
+        "family": "perpetual-market-v1",
+        "key": "acf86a270d090cf6d83ecd3f4e3df82cd22d50140b056142246c9eb125cf9377",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704614700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704629100000000000,
+        "family": "perpetual-market-v1",
+        "key": "d139c9dbee4ce3447acddb1373b239d1e9a148748d458f34f9fe55d424d37ac8",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704614700000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704657900000000000,
+        "family": "perpetual-market-v1",
+        "key": "48d967ae7fdead303986ab2bae17b61b0cc9906b76f148575178ad06c967d3de",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704629100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704657900000000000,
+        "family": "perpetual-market-v1",
+        "key": "d345ee5de89bd703659ef4cc8ce58d86e46dedb79870a3a23e70c4fbfc3deb02",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704629100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704701100000000000,
+        "family": "perpetual-market-v1",
+        "key": "3ebee3e42c24211abb0bffa213eee2db461ef6968f87d3a565ce612d778bd7d7",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704672300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704701100000000000,
+        "family": "perpetual-market-v1",
+        "key": "4053959e94c02b75052c49a3407ae50b437a301eb8b3ca591813bd8dae580164",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704672300000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704715500000000000,
+        "family": "perpetual-market-v1",
+        "key": "7065df7c9285b3c9573ad7b3ab1de8e56b439802818991898bfc023b85233faf",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704701100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704715500000000000,
+        "family": "perpetual-market-v1",
+        "key": "761cf2f93ca9da653f8ae1cb2cb275c2c6db595d1b21edae2f7b8497da83969d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704701100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704715500000000000,
+        "family": "perpetual-market-v1",
+        "key": "9ac0d40a2107cd3a38958228e0f1034fdfd5484eeb60da905e35f4495668ea72",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704701100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704715500000000000,
+        "family": "perpetual-market-v1",
+        "key": "ed0181ea93fa73de2248b9326f016823bb9336441e495163c3c7258373009be6",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704701100000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704744300000000000,
+        "family": "perpetual-market-v1",
+        "key": "dfc93cb5ba967b7ab788a3e5b24f75778f7d7383d7e9508aa0a9994a2fe78b82",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704715500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1704744300000000000,
+        "family": "perpetual-market-v1",
+        "key": "fcdd7dfe9d1a5a879916416b9cc50fbacd3208afa63c941246e1db6e772075ee",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1704715500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "0eee343409df0bec3b31341d1d9187b9ad4871faa574a58d316ade4db8704f1c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "2eaa112171a3d9ce11da4f06d814f6350bd2b92d3d105c05962e6f07748e1d34",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "3073516d088e556c17f1b28a5fefa178e2c9f6ab037b94281cd0d54498e292d1",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "4a61262b2c0e4bc753c974a5ea007b60b8b4d09cc2ecb6aef0479e09c60e0df2",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "92c028e95513617a0a941268a9cd733a560153c05489e0d18ed123dc844e95f4",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "adc220673f5f627761f181340cc24bf0482a8e3ffea26affb91b8c805c6a70fb",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "c1e82662299c2f97a5a7d67c21ec50a5ca89c25674796c80dc8198f3ae05b51c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1705363200000000000,
+        "family": "perpetual-market-v1",
+        "key": "dc36764d0b90d26cdc8d1eec9dfba8424fea8570f2ad66ad1efa3d733a7e25ee",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1707868800000000000,
+        "family": "perpetual-market-v1",
+        "key": "06014a329dbf19ed55793a31b54a3b6a93e652fcf5de020f8c659ab7b71a9df3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1707868800000000000,
+        "family": "perpetual-market-v1",
+        "key": "ce1018e6279c43c0501b427fb9c015266e0242e2facdfa21be393eb7e3449191",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710460800000000000,
+        "family": "perpetual-market-v1",
+        "key": "d4a7cc94db478f4fb26a6b88c14f4191c42261cb1a9b45d6a2401cbfb30197b4",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "0c5694806f759927335799d46bd6fd1b04179833b864f09ff90eb920ad223488",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "4401e017c2afd9e9528b317bca656c64c24fca9de65b1cde51ac452a829e182c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "66b05a6bb6cd5fe9d3d4f906953d6dc544432a40831df4e8516784f3c9892565",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "8fe442b8e9c305c4b09aad6488fb3ea1f562782b87b93e7d2b3591cbe2433428",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "bd19e94c29a8ea7161328eb20ac511c37712602d1036c154e5ca708de6b24e18",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "d031bb3b85b1195a6ffbf8776b22d5cc5ecbe4414989f86a2c18319f3b61f730",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1713052800000000000,
+        "family": "perpetual-market-v1",
+        "key": "d8ff1929c0f6e8e4ae07e4c6b0121c7ee0ce305c1433410d2075a2f494e67b57",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1705276800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1708041600000000000,
+        "family": "perpetual-market-v1",
+        "key": "22b571ec926a17e3acbd2dfd52e379200b94447a13d07da970e1008e12345d88",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1707955200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1708041600000000000,
+        "family": "perpetual-market-v1",
+        "key": "5e3619af06dd8a1d8574995daec1a7e798c4dc3c60dfe37acfaa77f1f89d1eb8",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1707955200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1708041600000000000,
+        "family": "perpetual-market-v1",
+        "key": "5e603de77b0125cfa602e8f24035352a05d3cdb241356f2cd4aa5c18e87f34b5",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1707955200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1708041600000000000,
+        "family": "perpetual-market-v1",
+        "key": "5f83d5c72748c1c3202a1b97353a5bce04e13d8115fcbd220f3e0860c8b5c33b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1707955200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1708041600000000000,
+        "family": "perpetual-market-v1",
+        "key": "a7ee03b2c62a34dc9262a1b5ef19ed2e280cc51e998aefbba65a735b3dbcfdc5",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1707955200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1708041600000000000,
+        "family": "perpetual-market-v1",
+        "key": "d7269994b294110cb33f92f9df7b3cd40f2477bb56953e7d5e51c9ceae619712",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1707955200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710547200000000000,
+        "family": "perpetual-market-v1",
+        "key": "154f27d50d9192b7cd6a71f6df33d40b94db18c97b55605d59d121bf8b7f1d4d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1710460800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710547200000000000,
+        "family": "perpetual-market-v1",
+        "key": "3037879e727318cb61d0fa526bf4ade983464c7c46270f572fa8f5d105b90d78",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1710460800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710547200000000000,
+        "family": "perpetual-market-v1",
+        "key": "4b42e17c95aa784ba5c54bad0935eeb68b4f2f0018052864ecc4a00795e793fe",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1710460800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710547200000000000,
+        "family": "perpetual-market-v1",
+        "key": "8ae66c62e04baa168b7484760fdb6af8c2d15c652364fdf19df0f6280717679d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1710460800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710547200000000000,
+        "family": "perpetual-market-v1",
+        "key": "9916fdd1dd8ba9def4470819138413dcfb6fb14d36304fe692c35cdac7669f27",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1710460800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1710547200000000000,
+        "family": "perpetual-market-v1",
+        "key": "c23b4b4f5699e7a80600cf528b4939e3dae9a72a745d262f903fc1e19c6667e8",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1710460800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1722384000000000000,
+        "family": "perpetual-market-v1",
+        "key": "467d6dd526fa688a2df7156276e177ded0edf468105d2aa995e34bdfce65b8e5",
+        "market": "ETHUSDT",
+        "purpose": "holdout",
+        "start_ns": 1721088000000000000,
+        "state": "reserved"
+      },
+      {
+        "end_ns": 1722556800000000000,
+        "family": "perpetual-market-v1",
+        "key": "7ad3491ea957ef16c0f6f6091b3b92cf92d1d24408e9267ed6219aedd0063d52",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1727654400000000000,
+        "family": "perpetual-market-v1",
+        "key": "25e06b8d2769c0434c14c09a968ffebfae69c8eac0cdbe54f7b1aaad7987255c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1727654400000000000,
+        "family": "perpetual-market-v1",
+        "key": "47ab45555af0b9d11394b1feca407a0dd1a67c6533e20b0da26c667fb41c798b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1727654400000000000,
+        "family": "perpetual-market-v1",
+        "key": "4b46d11d28bb0b4c17dcdf3f58a71259883e91a4b8de22e9db25655b0f549629",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1727654400000000000,
+        "family": "perpetual-market-v1",
+        "key": "b95d8f7901b1bb515ab365faabf1dd929573366127fe6574bbff97412a6c0ac3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1727654400000000000,
+        "family": "perpetual-market-v1",
+        "key": "c9e517191f7921301412ef17515a90f498e5590ddcd84f8c98d53878723e72a1",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1727654400000000000,
+        "family": "perpetual-market-v1",
+        "key": "ffcb87a9653ffb1fadd547dd0ab4f8c41edf5be95081506560d4aa3aa1b53915",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753574400000000000,
+        "family": "perpetual-market-v1",
+        "key": "3c308f96c78ea61ef961846cf7a2af5555952d130f27cb56155fffaa3e29ad48",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753574400000000000,
+        "family": "perpetual-market-v1",
+        "key": "3ec0ab4fefa66b4de7d0e87144bab4982dda965339e51e55453a928b5f2ce0b7",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753574400000000000,
+        "family": "perpetual-market-v1",
+        "key": "5659ff54459303d97946356dee7fcbc38b7dc9c8b5fc3ed44a936771353451bc",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753574400000000000,
+        "family": "perpetual-market-v1",
+        "key": "7a2af7ea659416ea75c34e46ef680551746ee0cb0b0a50c01971ff034daf8036",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753574400000000000,
+        "family": "perpetual-market-v1",
+        "key": "9e73390cb95351e2f8cb980236b77decf8a13332730da3559bd167df00fc71f9",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753574400000000000,
+        "family": "perpetual-market-v1",
+        "key": "c9d4fdf340adde1a2f1fce6246ab85dd03351a9a1528341f4efdd96202e7870c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722470400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1740963600000000000,
+        "family": "perpetual-market-v1",
+        "key": "b96a3bdb8ba5886a4efa159feaa1ddb069e9f5bba2a86cfc2c9f79e032589672",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722729600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1740963600000000000,
+        "family": "perpetual-market-v1",
+        "key": "ef90b23991af0d3dc79ea3e73207e00bb8be8ec3badfae88312e671d26b6dce0",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1722729600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1725640860001000000,
+        "family": "perpetual-market-v1",
+        "key": "1421b38ea5426ee2eea7a07d43e05f65f02ec1ddbe415626818ffa1424c4d95b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1725148860001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1725640860001000000,
+        "family": "perpetual-market-v1",
+        "key": "303da3c80af41a6e72af57cfcc829040d338361af21d82843abd7852ec971317",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1725148860001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1733644500000000000,
+        "family": "perpetual-market-v1",
+        "key": "642aee503e8cd7a7c65981be3bc562d2a1cdbd470ee48be9a7b31b688522e9f0",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1728460500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1733644500000000000,
+        "family": "perpetual-market-v1",
+        "key": "a4fa02304c185cff5f48ceec8f5320e05d6b807a4ffc182800d8680842138a98",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1728460500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1733644500000000000,
+        "family": "perpetual-market-v1",
+        "key": "c140d961a810fda5d5dbb1c282e78c65e97054f873c65f539987982deca11e2a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1728460500000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1751328000001000001,
+        "family": "perpetual-market-v1",
+        "key": "17a1d3bd8aafd212a494b2ba600cb374eb6c32c62a523eb50093f1e878023235",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1731801600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1751328000001000001,
+        "family": "perpetual-market-v1",
+        "key": "595a56fd2b9864f0e0ae7a4fe593e5728a04573a883f7383a14d6e2157d8c83e",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1731801600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1751328000001000001,
+        "family": "perpetual-market-v1",
+        "key": "71ba6e15675166034c8a1b6933936cc9aeb7478172545389cf293ff6fead4ee7",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1731801600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1734969361000000000,
+        "family": "perpetual-market-v1",
+        "key": "25e2910ec01332f221b76bfacde46773bf06e7255dff72c4bdd68762d14f8d40",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1733673361000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1734969361000000000,
+        "family": "perpetual-market-v1",
+        "key": "7ac4b9410df5f814fb5024e77a01c6862484bc957fe3e72c56ffd48c0fdbf620",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1733673361000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1734969361000000000,
+        "family": "perpetual-market-v1",
+        "key": "889c9d471e72b799356c1c8f097d74e09ff0f25f2c7d2dbe7c487cdb3b338e9a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1733673361000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1742947200000000000,
+        "family": "perpetual-market-v1",
+        "key": "42d9fb509ad01afee5c6973ac30bebb4128ab61f833f2062d7ecd05e8ca5869c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1737763200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1742947200000000000,
+        "family": "perpetual-market-v1",
+        "key": "e8171684219219f08cc51b2d95499d5a3be0401815e151d2854cf5dd12b437fe",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1737763200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1738454400000000000,
+        "family": "perpetual-market-v1",
+        "key": "18529b12340af1a04d6e4d897be179ba4a56c109f08b207f6e7844cdeb4f3a79",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1738281600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1740960000000000000,
+        "family": "perpetual-market-v1",
+        "key": "7a599cea3d698fba7d90e4e96f8ace845376571dad2c21de3db803aa6cb9ace1",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1738368000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1740960000000000000,
+        "family": "perpetual-market-v1",
+        "key": "dff0ac5e876b8c63a2c8de59c80b7b173621ddda712a9f3a60787ccb44bb7175",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1738368000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1759280400000000000,
+        "family": "perpetual-market-v1",
+        "key": "2f6d9fe4930e255ebce2d3e2cc75ffe725b1e863ea35c5c196e9ebaab849035c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1741046400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1744272061000000000,
+        "family": "perpetual-market-v1",
+        "key": "32e11c13a5440d86fd1b5ed3c48b985860850790af6df467675bcda77b99c711",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1742976061000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1744272061000000000,
+        "family": "perpetual-market-v1",
+        "key": "ff2ef85467fa4902cace9a4a947aae1da514c8b8c016ff07dacd119d3369a480",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1742976061000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1746549660001000000,
+        "family": "perpetual-market-v1",
+        "key": "a700aacff1cc8649f0e27ed373bd6ae4b75df621a64e3ecc2b415cfb2df636d6",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1746057660001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1746549660001000000,
+        "family": "perpetual-market-v1",
+        "key": "b515952cab7fcffbc700f20aec5f5b81bf1f2b4963252621558a79910bf02a26",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1746057660001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "1dc602f252df8fe7b9b1ed0546145bc63e71a6947888584cdda645aa627c69bb",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "4541748ace752d95a30a7c9715d32cea0474544f31eb2e9dd7136a55f5dcd074",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "5f4a38e1439908670e7ac270ed419b7debda7bb87e5b211bfdca8edf99e5c18a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "6ab100fe68590babff5d926abc4dfe95622e55a8ed39ad6a1ce873eff8f2acf3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "70eb986afeda6cf2b0257670111d34e1451adefa68c75689e47cc997a0b4185a",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "71b5ddae5c7823d1e71cb2fa1d5fd0a7bf89c32d27dc55a5c44bb8ea7d0bd72d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "7b67963a7f7ae0cbafac01166cbd81cd992651d8689935f1a2920339e63736f3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "8a41a37972ea9943aff1ddae3d65807c9f0139986a4bd5f199cc476fccbcf1eb",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "b7fbef5a7588cda6fbaaa876403d6a932fa4f0ae52509406177b59071240bc6f",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1752192000000000000,
+        "family": "perpetual-market-v1",
+        "key": "da5b5e1d36b0cb3f98b94220dcb984dff57671663cf0a548c82f5be39d293eea",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1747008000000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1769904000001000001,
+        "family": "perpetual-market-v1",
+        "key": "036a785b7fa1cb3df51092e35cb9d6d199fe920f7726f294c5fcfeb06403f0d0",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1751328000007000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1769904000001000001,
+        "family": "perpetual-market-v1",
+        "key": "3c5dc7202041da3556e78dde57a972c1944598cb72fc7242df43e1f18b0e948f",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1751328000007000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1769904000001000001,
+        "family": "perpetual-market-v1",
+        "key": "48475445111286b3e1aebe2daebdfcb5c55bd49f6fdd59d696dd81d1a86bf230",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1751328000007000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1769904000001000001,
+        "family": "perpetual-market-v1",
+        "key": "5e434954fbbaab50ab677ff810d2711193f37f827d8b06d3de223c5084df8230",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1751328000007000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1769904000001000001,
+        "family": "perpetual-market-v1",
+        "key": "beab9429e32f4b20cdf5460cf9c33400a5d21b9abf839e500b53dcc95e28c612",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1751328000007000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "15bb131c4b099faf5c670924bf8096068d37b9a1369cccc136b5acb277b7460d",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "2b281769ad3ff5e44d560fc0cbce5bee982c283d3a1757eda19b5810a147ecd2",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "3c2ab778ba954211a62f2234ae0f65135218e6a3bef374b654011ad3d60f0de3",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "568cff8420fd2bbe9d0a11dcc18b12f8a37598218c16f6af3f70011507523f2b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "5707616733c9b3c6b170f63b7661ba6093d05d5fb46e7018c6d90cc1b7f365ed",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "666d1828f4565767f969936959d0f023d9a9c450b4051a12ca08aa728115be89",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "7ba594e67cc4b6251f33aa75495f8257561314a25e5756c89032ae117376a467",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "b3258b35a0eb4323f5db21223df01b65adc4277dfd377d1e950cb72b4e6794ca",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "bc43063461ad2c2fa01502b0b6ad497e68e03edec6f1177d667a466953a5c35b",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1753516861000000000,
+        "family": "perpetual-market-v1",
+        "key": "c259a07268eb8887589275766526b59b56a86962f68a81877f91979282eaaebc",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1752220861000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1761523200000000000,
+        "family": "perpetual-market-v1",
+        "key": "04b91130966dbb9770e10e921e480adbac58c2af3697adcc774ea3f9101dc009",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1756339200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1761523200000000000,
+        "family": "perpetual-market-v1",
+        "key": "461366d33fe0a135c1200025d7bb6d490d27a88dfaf24f7cf5dbcbfe78950ccc",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1756339200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1759276800000000000,
+        "family": "perpetual-market-v1",
+        "key": "34bf83deb715160379e7a8378175f61be3c1d3beda147aada8c5647ad60a6d52",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1756684800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1759276800000000000,
+        "family": "perpetual-market-v1",
+        "key": "af6a184b786aca6f1b2d3c96e898bd97b1387f1fcde42f6976a96e148aa3806f",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1756684800000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1777597200000000000,
+        "family": "perpetual-market-v1",
+        "key": "c9343658d2ccce0df2be5304b7ebb02648feb1598e1adde31e70e2f4833d0244",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1759363200000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1762848061000000000,
+        "family": "perpetual-market-v1",
+        "key": "9be1b738add079aee67e829f9b648ee75594b7886e8a8466f26dfe1bb7111b07",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1761552061000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1762848061000000000,
+        "family": "perpetual-market-v1",
+        "key": "ace73ecdf55be1c155836ceb23ad8ee6d22c90a12acbaf9cd0b3b90513311834",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1761552061000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1770854400000000000,
+        "family": "perpetual-market-v1",
+        "key": "58adedf02898793e3af376b5dd67dd2c9f06cd021965f464946785c7844dec46",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1765670400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1770854400000000000,
+        "family": "perpetual-market-v1",
+        "key": "fb5c2c5597573a75bf3d7350843d361e871afa7f1c03e008cca93d235f0a0da4",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1765670400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1767717660001000000,
+        "family": "perpetual-market-v1",
+        "key": "47fb339d740d3c0b76fd9d5389ad101a5067a2e24b8b22a46f1c840dd33352ab",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1767225660001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1767717660001000000,
+        "family": "perpetual-market-v1",
+        "key": "d0ec52d997033313f8296638eb203efb1a4ea7cc686a8f4b7f8d9863912f0821",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1767225660001000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1772179261000000000,
+        "family": "perpetual-market-v1",
+        "key": "7250000eae2d076df09d39a5a36cc90d93914075f80b94ac9c30dfbda16ca21c",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1770883261000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1772179261000000000,
+        "family": "perpetual-market-v1",
+        "key": "be46c8d307ce5e6de5b8a874e4dbec8457f069f9428a1bcd9137b115505ab1ea",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1770883261000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1777593600000000000,
+        "family": "perpetual-market-v1",
+        "key": "415e1c5bf2015efd79bfc38e46a7b5a9010787987dc92d0533992f4eee3f6d53",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1775001600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1777593600000000000,
+        "family": "perpetual-market-v1",
+        "key": "9046511ed363dc36493cf28d56e609f2b5cd0038ab7ebd63ca1e178b37d89d6f",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1775001600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1780185600000000000,
+        "family": "perpetual-market-v1",
+        "key": "237e5e43ac239c8b8941a9db54f6fff4c15728cd2c2be4db1b6c2cdaadc80428",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1775001600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1780185600000000000,
+        "family": "perpetual-market-v1",
+        "key": "7d7a55062feafb0f58f52192a8972217d8ea85e9ec8a1fa78c261d1ed3674d29",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1775001600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1780185600000000000,
+        "family": "perpetual-market-v1",
+        "key": "bd60bcb63a06779dc491d0c6779920e4c0b8b2af89a4315b0a6900e97041282f",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1775001600000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1781510461000000000,
+        "family": "perpetual-market-v1",
+        "key": "5b7912f9e45aaac40a18188293d25261943c686a0c3734062ba48d25c3872521",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1780214461000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1781510461000000000,
+        "family": "perpetual-market-v1",
+        "key": "b8204224f0f6d57585dd7010190bd9469e4274bdc93d03ddb72420ad1ab939a0",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1780214461000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1782835322000000000,
+        "family": "perpetual-market-v1",
+        "key": "d457642dd5454d12c6594c4d6df1a13ef41da49538b78e42ac121d48154d2965",
+        "market": "ETHUSDT",
+        "purpose": "test",
+        "start_ns": 1781539322000000000,
+        "state": "reserved"
+      },
+      {
+        "end_ns": 1784131322000000000,
+        "family": "perpetual-market-v1",
+        "key": "2f1da5435bb8fdd4944ee50f0f8e397550a4b3a63d63ac6193ddd1baa6c83ce7",
+        "market": "ETHUSDT",
+        "purpose": "holdout",
+        "start_ns": 1782835322000000000,
+        "state": "reserved"
+      },
+      {
+        "end_ns": 1786147200000000000,
+        "family": "perpetual-market-v1",
+        "key": "24282523dc07a8432ad1c1ea2d5face2fb8ac34ee5dca7d7e478d1ff4d99a9f9",
+        "market": "ETHUSDT",
+        "purpose": "development",
+        "start_ns": 1785974400000000000,
+        "state": "recorded"
+      },
+      {
+        "end_ns": 1786406460000000000,
+        "family": "perpetual-market-v1",
+        "key": "9b6a1151beeb872887be6efd18e9c8a5083931fd533e79d1b8699ab6bcb225a6",
+        "market": "ETHUSDT",
+        "purpose": "test",
+        "start_ns": 1786147200000000000,
+        "state": "reserved"
+      },
+      {
+        "end_ns": 1786406460000000000,
+        "family": "perpetual-market-v1",
+        "key": "9f77a7e96e035b340b9ea91d69ecd7f120d105fc3ba0a9b15677954d69aa1b43",
+        "market": "ETHUSDT",
+        "purpose": "test",
+        "start_ns": 1786147200000000000,
+        "state": "reserved"
+      }
+    ],
+    "purpose_state_counts": {
+      "development:recorded": 209,
+      "holdout:reserved": 2,
+      "test:reserved": 3
+    },
+    "query_intent_table_available": false,
+    "sha256": "ba451d2ecf4757ae063ec523a5f4069b5a46953a333adfdfccaf2fd7e0461841"
+  },
+  "research_registry_scope_note": "The registry is append-only local governance, not a complete record of every historical data read. The 2026-10-16 inventory imported 67 known records from 10 WFO databases and 22 reports; older undocumented reads cannot be reconstructed from files alone.",
+  "rules_and_fee_scope": "No current exchange snapshot is substituted for historical effective rules.",
+  "schema": "rles.il.a00_inventory.v1",
+  "working_tree_includes_uncommitted_changes": true
+}

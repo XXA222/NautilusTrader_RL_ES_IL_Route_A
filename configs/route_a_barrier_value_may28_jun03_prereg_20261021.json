@@ -1,0 +1,55 @@
+{
+  "schema": "rles.route-a.barrier-value.train-inner-prereg.v1",
+  "created_at": "2026-10-21",
+  "purpose": "One frozen Train-inner confirmation block for the existing barrier-value GRU; diagnostic only, not independent OOS or promotion evidence.",
+  "source": {
+    "snapshot": "data/routea_train_20231230_20240614_flow",
+    "snapshot_sha256": "f684548ffa39dd8e13af6b389d3d979edaab56c3c9629d5d251003cbd16a8bef",
+    "marker_sha256": "b8cc7c876a3dba727a2cd9b3c782f78b17308abaff03350919cc293839d47fb",
+    "authorized_split": "Train score interval [2024-04-16T00:00:00Z, 2024-06-15T00:00:00Z)"
+  },
+  "fit": {
+    "start_utc": "2024-04-16T00:00:00Z",
+    "end_utc_exclusive": "2024-05-15T00:00:00Z",
+    "label_horizon_minutes": 240,
+    "purge_rule": "Every training path label ends before the evaluation start."
+  },
+  "evaluation": {
+    "window_id": "fresh_train_may28_jun03_00z",
+    "start_utc": "2024-05-28T00:00:00Z",
+    "end_utc_exclusive": "2024-06-03T00:00:00Z",
+    "decision_cadence_minutes": 5,
+    "position_limit": 1,
+    "reentry_rule": "Reenter only at the next five-minute decision strictly after the exit bar.",
+    "primary_minimum_predicted_net_value_bps": 10.0,
+    "other_thresholds": "May be emitted as descriptive diagnostics only; do not select or tune from them.",
+    "minimum_trade_count_for_screen": 30,
+    "subperiods_utc": [
+      ["2024-05-28T00:00:00Z", "2024-05-31T00:00:00Z"],
+      ["2024-05-31T00:00:00Z", "2024-06-03T00:00:00Z"]
+    ]
+  },
+  "model": {
+    "type": "GRU direct long-short net path value regression",
+    "features": "causal v6 16 features plus 3 causal kline flow features",
+    "hidden_size": 32,
+    "epochs": 40,
+    "batch_size": 128,
+    "seed": 31,
+    "fit_scaler_on_fit_rows_only": true,
+    "training_cost_hurdle_bps_round_trip": 30.0
+  },
+  "path_and_cost_assumptions": {
+    "take_profit_bps": 60.0,
+    "stop_loss_bps": 30.0,
+    "horizon_minutes": 240,
+    "same_bar_conflict": "Stop first",
+    "stop_gap_fill": "Worse open",
+    "stress_round_trip_cost_bps": 30.0,
+    "base_same_trade_cost_sensitivity_bps": 12.0,
+    "base_sensitivity_method": "Add 18 bps per same fixed trade; do not change model predictions or entries.",
+    "economic_status": "SCENARIO_ONLY"
+  },
+  "screen_rule": "Keep the frozen candidate only if the primary threshold produces at least 30 sequential trades, positive stress net mean, and positive net means in both predeclared three-day subperiods. A pass permits a separately frozen native Train-inner screen only; it is not promotion or profitability certification.",
+  "failure_rule": "If the screen rule fails, reject this frozen recipe. Do not change thresholds, labels, features, or windows in response to this block."
+}

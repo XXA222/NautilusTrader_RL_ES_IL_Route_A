@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rles-route-a-imitation"
+version = "0.3.0"
+description = "Independent expert-imitation and offline policy research for the frozen NautilusTrader-RL-ES snapshot"
+requires-python = "==3.14.7"
+dependencies = ["numpy>=2,<3", "torch>=2.14,<2.15"]
+
+[project.optional-dependencies]
+test = ["pytest>=9,<10"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rles_route_a"]
+exclude = ["src/rles_route_a/models/**"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/rles_route_a/models" = "rles_route_a/models"
+"configs/route_a_v1.json" = "rles_route_a/configs/route_a_v1.json"
+
+[tool.hatch.build.targets.sdist.force-include]
+"src/rles_route_a/models" = "src/rles_route_a/models"
+"configs/route_a_v1.json" = "configs/route_a_v1.json"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

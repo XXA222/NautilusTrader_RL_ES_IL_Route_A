@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rles-il-core"
+version = "0.1.0"
+requires-python = "==3.14.7"
+description = "Causal imitation-learning datasets over NautilusTrader native episodes"
+dependencies = [
+  "numpy>=2,<3",
+  "gymnasium>=1.2,<2",
+  "pyarrow>=20,<26",
+  "rles-gym-bridge[historical]>=0.4.0.dev2,<0.5.0",
+  "rles-rl-sb3>=0.4.1,<0.5.0",
+]
+
+[project.scripts]
+rles-il-audit = "rles_il_core.audit:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rles_il_core"]
