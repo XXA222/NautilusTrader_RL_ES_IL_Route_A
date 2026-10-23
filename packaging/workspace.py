@@ -1,4 +1,4 @@
-"""L1-owned, read-only validator for the 11-package dependency DAG.
+"""Read-only validator for the workspace package dependency DAG.
 
 Never generates other teams' packages, modifies their pyproject files or claims
 independent-wheel acceptance before every package exists.
@@ -11,7 +11,7 @@ import re
 import tomllib
 from pathlib import Path
 
-PACKAGES: dict[str, frozenset[str]] = {
+BASE_PACKAGES: dict[str, frozenset[str]] = {
     "contracts": frozenset(),
     "data": frozenset({"contracts"}),
     "nautilus_adapter": frozenset({"contracts"}),
@@ -23,9 +23,22 @@ PACKAGES: dict[str, frozenset[str]] = {
     "compute_runtime": frozenset({"contracts"}),
     "orchestrator": frozenset({"contracts"}),
     "research": frozenset({"contracts"}),
+    "il_core": frozenset({"contracts"}),
+    "route_a_imitation": frozenset(),
 }
-DISTRIBUTIONS = {key: "rles-" + key.replace("_", "-") for key in PACKAGES}
+BASE_PACKAGES.update({
+    "il_core": frozenset({"gym_bridge", "rl_sb3"}),
+    "route_a_imitation": frozenset(),
+})
 REQUIREMENT_NAME = re.compile(r"^([A-Za-z0-9][A-Za-z0-9_.-]*)")
+
+
+def discover_packages(root: Path) -> dict[str, Path]:
+    """Discover workspace distributions from packages/*/pyproject.toml."""
+    result: dict[str, Path] = {}
+    for path in sorted((root / "packages").glob("*/pyproject.toml")):
+        result[path.parent.name] = path
+    return result
 
 
 def topological_order(graph: dict[str, frozenset[str]]) -> tuple[str, ...]:
@@ -48,22 +61,16 @@ def _normalize(name: str) -> str:
 
 
 def validate_tree(root: Path, *, require_all: bool) -> tuple[str, ...]:
-    topological_order(PACKAGES)
-    pyprojects = {key: root / "packages" / key / "pyproject.toml" for key in PACKAGES}
-    missing = tuple(key for key, path in pyprojects.items() if not path.is_file())
-    if "contracts" in missing:
+    pyprojects = discover_packages(root)
+    if "contracts" not in pyprojects:
         raise ValueError("L1 contracts pyproject missing")
-    if require_all and missing:
-        raise ValueError(f"other workstream packages not supplied: {', '.join(missing)}")
-    known = {_normalize(value): key for key, value in DISTRIBUTIONS.items()}
+    known = {_normalize("rles-" + key.replace("_", "-")): key for key in pyprojects}
     present_graph: dict[str, frozenset[str]] = {}
     for key, path in pyprojects.items():
-        if key in missing:
-            continue
         with path.open("rb") as handle:
             meta = tomllib.load(handle)
         project = meta.get("project", {})
-        expected = DISTRIBUTIONS[key]
+        expected = "rles-" + key.replace("_", "-")
         if _normalize(project.get("name", "")) != _normalize(expected):
             raise ValueError(f"{key}: project.name must be {expected}")
         deps = project.get("dependencies", [])
@@ -77,16 +84,22 @@ def validate_tree(root: Path, *, require_all: bool) -> tuple[str, ...]:
             dependency = known.get(_normalize(match[1]))
             if dependency is not None:
                 internal.add(dependency)
-        unauthorized = internal - PACKAGES[key]
-        if unauthorized:
-            raise ValueError(f"{key}: undeclared cross-line dependency: {sorted(unauthorized)}")
-        missing_edges = PACKAGES[key] - internal
-        if missing_edges:
-            raise ValueError(f"{key}: required workspace dependencies missing: {sorted(missing_edges)}")
+        expected_edges = BASE_PACKAGES.get(key)
+        if expected_edges is not None:
+            unauthorized = internal - expected_edges
+            if unauthorized:
+                raise ValueError(f"{key}: undeclared cross-line dependency: {sorted(unauthorized)}")
+            missing_edges = expected_edges - internal
+            if missing_edges:
+                raise ValueError(f"{key}: required workspace dependencies missing: {sorted(missing_edges)}")
         present_graph[key] = frozenset(internal)
     # The permitted graph is acyclic; validate the actual declared dependency graph as well.
     topological_order(present_graph)
-    return missing
+    if require_all:
+        missing = tuple(key for key in BASE_PACKAGES if key not in pyprojects)
+        if missing:
+            raise ValueError(f"workspace packages missing: {', '.join(missing)}")
+    return tuple(key for key in BASE_PACKAGES if key not in pyprojects)
 
 
 def main() -> None:
@@ -95,7 +108,8 @@ def main() -> None:
     parser.add_argument("--require-all", action="store_true")
     args = parser.parse_args()
     missing = validate_tree(args.root, require_all=args.require_all)
-    print(f"required dependency edges present; {len(PACKAGES) - len(missing)}/{len(PACKAGES)} packages present")
+    present = len(discover_packages(args.root))
+    print(f"workspace dependency graph valid; {present} packages present")
     if missing:
         print("pending other owners: " + ", ".join(missing))
 

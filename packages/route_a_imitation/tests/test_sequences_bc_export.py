@@ -171,6 +171,27 @@ def test_mlp_baseline_and_left_padding_invariance(observed):
     assert torch.allclose(one, two, atol=1e-6)
 
 
+def test_training_sequences_match_online_prefix_inference(observed):
+    torch.manual_seed(41)
+    torch.set_num_threads(1)
+    rows = make_steps(observed)[:4]
+    ds = EpisodeSequenceDataset(rows, feature_names=NAMES, context_bars=3)
+    cfg = BCConfig(feature_names=NAMES, context_bars=3, hidden_size=8, layers=1)
+    policy = BCInferencePolicy(BCGRUPolicy(NAMES, 8, 1), cfg)
+    policy.reset("a")
+
+    for index, row in enumerate(rows):
+        sample = ds[index]
+        with torch.no_grad():
+            _logits, trained_exposure = policy.model(
+                sample["x"].unsqueeze(0), sample["length"].reshape(1),
+            )
+        online_exposure = policy.predict_exposure(row.observation)
+        assert online_exposure == pytest.approx(
+            float(trained_exposure.item()), rel=1e-6, abs=1e-6,
+        )
+
+
 def test_fractional_supervision_weight_preserves_weighted_mean():
     logits = torch.tensor([[1.0, -0.5, 0.2, 0.0, -0.3, 0.1, -1.0]])
     exposure = torch.tensor([0.1])

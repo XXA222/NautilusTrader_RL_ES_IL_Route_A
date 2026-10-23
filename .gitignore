@@ -20,7 +20,7 @@ dist-*/
 outputs/
 runs/
 checkpoints/
-models/
+/models/
 *.log
 *.sqlite
 *.sqlite3

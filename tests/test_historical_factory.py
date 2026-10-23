@@ -2324,6 +2324,11 @@ def test_market_audit_reports_only_registered_train_coverage_without_granting_mi
     from rles_data.io import read_curated
 
     config = recipe(tmp_path)
+    rules_document = json.loads(Path(config["rules_path"]).read_text(encoding="utf-8"))
+    rules_document["events"][0]["payload"]["instrument"] = "OTHER-PERP.SIM"
+    uncovered_rules = tmp_path / "uncovered-rules.json"
+    uncovered_rules.write_text(json.dumps(rules_document), encoding="utf-8")
+    config["rules_path"] = str(uncovered_rules)
     calls = []
 
     def read_train_window(

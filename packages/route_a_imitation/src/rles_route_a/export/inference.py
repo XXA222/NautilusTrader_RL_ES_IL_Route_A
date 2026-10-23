@@ -24,12 +24,20 @@ def intent_aware_exposure(intent: str, raw_target: float, current: float) -> flo
     if intent == "HOLD":
         return float(current)
     if intent == "OPEN_LONG":
-        return float(raw_target) if raw_target > 0 else float(current)
+        if raw_target <= 0:
+            return float(current)
+        if current > 1e-6 and raw_target < current:
+            return float(current)
+        return float(raw_target)
     if intent == "OPEN_SHORT":
-        return float(raw_target) if raw_target < 0 else float(current)
+        if raw_target >= 0:
+            return float(current)
+        if current < -1e-6 and raw_target > current:
+            return float(current)
+        return float(raw_target)
     if intent == "ADD":
         if abs(current) <= 1e-6:
-            return float(raw_target)
+            return float(current)
         if current * raw_target <= 0 or abs(raw_target) <= abs(current):
             return float(current)
         return float(raw_target)

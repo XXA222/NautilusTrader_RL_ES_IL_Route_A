@@ -7,6 +7,7 @@ from rles_route_a.config import BCConfig
 from rles_route_a.export.bundle import save_bc_bundle
 from rles_route_a.models.bc import BCGRUPolicy
 from rles_route_a.integration.native_inference import load_route_a_predictor_factory
+from rles_route_a.export.inference import intent_aware_exposure
 
 
 def context(ts: int, *, daily_available: int | None = None):
@@ -35,6 +36,23 @@ class Env:
 
     def rles_visible_context_inputs(self):
         return context(self.ts, daily_available=self.ts+1 if self.future_daily else None)
+
+
+@pytest.mark.parametrize(
+    ("intent", "raw_target", "current", "expected"),
+    [
+        ("ADD", .7, 0., 0.),
+        ("ADD", -.5, 0., 0.),
+        ("OPEN_LONG", .1, .4, .4),
+        ("OPEN_SHORT", -.1, -.4, -.4),
+        ("OPEN_LONG", .6, -.3, .6),
+        ("OPEN_SHORT", -.6, .3, -.6),
+    ],
+)
+def test_intent_projection_does_not_change_action_semantics(
+    intent: str, raw_target: float, current: float, expected: float,
+) -> None:
+    assert intent_aware_exposure(intent, raw_target, current) == expected
 
 
 def test_route_a_bundle_predicts_from_each_live_pre_action_host_context(tmp_path):
