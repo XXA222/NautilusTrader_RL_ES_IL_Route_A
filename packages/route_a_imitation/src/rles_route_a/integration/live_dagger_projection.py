@@ -51,6 +51,9 @@ class LiveNautilusGymProjection:
         if (isinstance(target, bool) or not isinstance(target, (int, float))
                 or not isfinite(target)):
             raise ValueError("host projection omitted a finite target")
+        if (not isinstance(disposition, str)
+                or disposition not in {"SUBMIT", "NOOP", "WAIT", "CANCEL"}):
+            raise ValueError("host projection omitted a supported disposition")
         label_disposition = "PROJECTED" if disposition == "SUBMIT" else disposition
         from rles_route_a.training.dagger_collector import ProjectedTeacherTarget
         return ProjectedTeacherTarget(float(target), self._recipe, label_disposition)

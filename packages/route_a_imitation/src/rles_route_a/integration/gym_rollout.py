@@ -333,6 +333,7 @@ class NativeGymTeacherProvider:
         if decision_policy is not None and not isinstance(decision_policy, BCInferencePolicy):
             raise TypeError("native student replay requires a frozen Route A BC inference policy")
         actor_identity = None
+        active_student_policy_id: str = ""
         if decision_policy is not None:
             digest = sha256()
             for name, tensor in sorted(decision_policy.model.state_dict().items()):
@@ -348,6 +349,9 @@ class NativeGymTeacherProvider:
         if dagger_state_sink is not None:
             if decision_policy is None or not callable(dagger_state_sink):
                 raise TypeError("DAgger collection requires the frozen student policy and a state sink")
+            if not isinstance(student_policy_id, str) or not student_policy_id:
+                raise ValueError("DAgger collection requires the frozen student policy identity")
+            active_student_policy_id = student_policy_id
             if student_policy_id != actor_identity:
                 raise ValueError("DAgger student identity must equal the frozen actor hash")
             if (not isinstance(dagger_projection_recipe, str)
@@ -442,7 +446,7 @@ class NativeGymTeacherProvider:
                 dagger_visits.append(VisitedStudentState(
                     observation=observation,
                     native_action_trace=barrier.trace,
-                    student_policy_id=student_policy_id,
+                    student_policy_id=active_student_policy_id,
                     source_identity=self.source_identity,
                     split="train",
                     teacher_label=teacher_label,
