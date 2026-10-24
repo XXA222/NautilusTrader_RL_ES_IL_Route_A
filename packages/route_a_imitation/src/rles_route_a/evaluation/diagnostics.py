@@ -101,8 +101,6 @@ def audit_offline_policy_action_support(
             or any(len(query.state) != dimension for query in queries)):
         raise ValueError("support state dimensions differ from the frozen encoder")
 
-    # Use only training-state moments. Constant dimensions are omitted from the
-    # distance by assigning unit scale; they contribute no separation anyway.
     scales = [pstdev(row.state[index] for row in references) or 1.0
               for index in range(dimension)]
     grouped: dict[str, list[OfflineTransition]] = {}

@@ -1,9 +1,10 @@
 """Controlled outcome-conditioned BC ablation datasets from native trade cases."""
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 from collections.abc import Sized
+from dataclasses import dataclass, replace
 from typing import Literal, Sequence, cast
+
 import torch
 from torch.utils.data import Dataset, RandomSampler
 
@@ -39,10 +40,10 @@ def build_outcome_supervision_arms(
 
     Positive trade cases are weighted to equal total pre-minibatch
     exposure/intent weight per completed trade, rather than per decision row.
-    Negative-entry avoidance
-    contributes only its explicit intent label; it never fabricates a realized
-    flat exposure. All cases must be fee-inclusive native receipts in one Train
-    Fold/source; scenario-only or unassessed data fail closed.
+    Negative-entry avoidance contributes only its explicit intent label; it
+    never fabricates a realized flat exposure. All cases must be fee-inclusive
+    native receipts in one Train Fold/source; scenario-only or unassessed data
+    fail closed.
     """
     if not steps or any(not isinstance(step, LabeledStep) for step in steps):
         raise ValueError("native labeled Train steps are required")

@@ -1,19 +1,46 @@
-# Route A backup test results
+# Backup validation — 2026-10-24
 
-Run date: 2026-10-22 (Asia/Shanghai)
+Canonical source root:
 
-Source snapshot: current working tree of `D:\Program Files\NautilusTrader_RL_ES_IL_Route_A`, captured without `.git` history and with Codex remote attachments excluded.
+`D:\Program Files\NautilusTrader_RL_ES_IL_Route_A`
 
-Command:
+This report records local validation of the exact working-tree snapshot prepared
+for the independent GitHub repository
+`XXA222/NautilusTrader_RL_ES_IL_Route_A`.
+
+## Results
+
+### Root test suite
 
 ```powershell
-$env:PYTHONDONTWRITEBYTECODE='1'
-$env:PYTHONPATH='D:\Program Files\NautilusTrader_RL_ES_IL_Route_A'
-.\.venv\Scripts\python.exe -m pytest -p no:cacheprovider
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider tests
 ```
 
-Result: **737 passed, 5 skipped, 1 failed, 56 warnings**; 743 tests collected; 570.99 seconds.
+Result: **738 passed, 5 skipped, 56 warnings** in 397.89 seconds.
 
-The five skips were CUDA-dependent checks because a CUDA learner was unavailable. The single failure was `tests/test_historical_factory.py::test_market_audit_reports_only_registered_train_coverage_without_granting_missing_rules`. It is reproducible in isolation. `audit_market()` rejects the test fixture because its environment is missing the now-required `rules_path` (`packages/orchestrator/src/rles_orchestrator/application.py:451`). This report records the current result as-is; it does not imply a green test suite.
+The five skips were CUDA-only tests on a host without an available CUDA learner.
+Warnings were dependency/runtime warnings from Torch, EvoTorch, and NumPy; no
+test failed.
 
-An older checked-in test record from 2026-10-16 reported 442 passed and 4 skipped; it does not describe this snapshot.
+### Route A package test suite
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider packages/route_a_imitation/tests
+```
+
+Result: **205 passed, 2 skipped** (207 tests collected).
+
+### Static checks
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check packages qa tests
+```
+
+Result: **All checks passed**.
+
+## Scope and limits
+
+These results prove the listed local code and contract checks for this snapshot.
+They do not claim profitable trading, native economic certification, or CUDA
+coverage. GitHub Actions remains the authoritative clean-runner confirmation for
+the published commit.
