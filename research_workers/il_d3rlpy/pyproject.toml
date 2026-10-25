@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rles-il-d3rlpy-worker"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "d3rlpy==2.8.1",
+  "numpy>=2,<3",
+]
+
+[project.scripts]
+rles-il-iql = "il_worker.train_iql:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/il_worker"]

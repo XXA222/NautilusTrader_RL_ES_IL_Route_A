@@ -1,0 +1,66 @@
+{
+  "schema": "route_a.v1",
+  "action_schema": "single_exposure_v1",
+  "market": {
+    "base_bar": "1m",
+    "informative_bars": [
+      "1h",
+      "1d"
+    ],
+    "train_fold": "360/15/15",
+    "context_bars": 120
+  },
+  "teacher": {
+    "strategies": [
+      "trend",
+      "wait",
+      "recovery"
+    ],
+    "require_economic_gate": true
+  },
+  "bc": {
+    "feature_names": [
+      "market.trend_1h",
+      "market.trend_1d",
+      "market.vol_1m",
+      "account.net_exposure",
+      "account.drawdown",
+      "account.unrealized_pnl_fraction"
+    ],
+    "context_bars": 120,
+    "hidden_size": 128,
+    "layers": 2,
+    "batch_size": 128,
+    "learning_rate": 0.0003,
+    "epochs": 50,
+    "intent_weight": 0.25,
+    "exposure_weight": 1.0,
+    "grad_clip": 1.0,
+    "stop_loss_fraction": 0.0,
+    "stop_cooldown_ns": 0,
+    "seed": 31,
+    "max_gap_ns": 60000000000
+  },
+  "dagger": {
+    "iterations": 3,
+    "expert_fraction": 0.7,
+    "sample_split": "train"
+  },
+  "iql": {
+    "enabled_only_if": "RA3_PASS",
+    "freeze_encoder": true,
+    "expectile": 0.7,
+    "gamma": 0.99,
+    "beta": 3.0,
+    "max_weight": 100
+  },
+  "evaluation": {
+    "scenarios": [
+      "zero",
+      "base",
+      "stress"
+    ],
+    "reuse_l6_research_ledger": true,
+    "final_holdout_once": true
+  }
+}

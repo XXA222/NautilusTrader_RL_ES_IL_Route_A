@@ -1,5 +1,14 @@
 # NautilusTrader RL/ES Research
 
+## Canonical local workspace
+
+The only authorized local development root for this project is
+`D:\Program Files\NautilusTrader_RL_ES_IL_Route_A`. Local development must stop
+if `git rev-parse --show-toplevel` resolves anywhere else. See `AGENTS.md` and
+`.canonical-project-root`; persistent local clones, copies, backup trees, and
+worktrees at any other path are forbidden. Isolated CI runner checkouts are the
+only exception.
+
 An experimental workspace for reinforcement learning and evolutionary strategies around NautilusTrader. The repository contains the RLES packages, tests, build metadata, and selected technical documentation.
 
 This is research software. It does not promise profitable trading and is not financial advice. Backtest results depend on data quality, execution assumptions, fees, and risk settings.

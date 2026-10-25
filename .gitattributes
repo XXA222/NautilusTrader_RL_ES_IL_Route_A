@@ -1,0 +1,6 @@
+# Fixture manifests bind exact bytes. Windows autocrlf must not alter their
+# source evidence or checksum files when a clean checkout is created.
+tests/fixtures/** -text
+docs/audit_evidence/** -text
+configs/** -text
+*.sha256 -text

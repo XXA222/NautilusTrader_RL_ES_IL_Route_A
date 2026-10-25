@@ -1,0 +1,62 @@
+{
+  "schema": "rles.route-a.teacher-july-fresh-train-warmup-errata.v1",
+  "status": "frozen_after_feature_warmup_failure_before_any_native_outcome",
+  "supersedes_prereg_sha256": "c39de520b23b0047299cf83ea4e5be52706e5f8e1fabadc9f6b8154ff51f52da",
+  "failure_receipt": ".artifacts/route-a-july-fresh-train-native-20261025/failure.json",
+  "failure_receipt_sha256": "74fab09f530d8b9b187bfa8315287caeb5148de4fb35c29432ddf74ec5e5ca85",
+  "repair_reason": "First scoring bar lacked the two complete UTC daily candles required by closed_return_1d; native factory rejected before any arm was rolled out. No performance or candidate outcome was read. Move score start from July 18 to July 19, retain source and all frozen strategy/cost assumptions.",
+  "scope": {
+    "market": "ETHUSDT",
+    "product": "Binance USD-M perpetual",
+    "split": "new Train-inner screen only",
+    "source_start_utc_inclusive": "2026-07-17T00:00:00Z",
+    "scored_start_utc_inclusive": "2026-07-19T00:00:00Z",
+    "end_utc_exclusive": "2026-08-05T00:00:00Z",
+    "formal_test_or_holdout_access": false,
+    "account_specific_economic_authority": false
+  },
+  "role_check": "Registered Train source and four scoring blocks remain disjoint from registered Test/Holdout and formal query intent; July 17-18 are warmup only. Unknown external reads cannot be excluded.",
+  "source": {
+    "provider": "Binance Public Data",
+    "streams": ["USD-M 1m klines", "USD-M 1m markPriceKlines", "USD-M 1m indexPriceKlines", "USD-M fundingRate monthly archives"],
+    "importer": "packages/data/src/rles_data/binance_archive.py",
+    "archive_interval": "daily",
+    "availability_delay_ns": 1000000,
+    "instrument_rules_supplied": false,
+    "account_specific_fees_or_margin_supplied": false
+  },
+  "windows": [
+    ["2026-07-19T00:00:00Z", "2026-07-23T06:00:00Z"],
+    ["2026-07-23T06:00:00Z", "2026-07-27T12:00:00Z"],
+    ["2026-07-27T12:00:00Z", "2026-07-31T18:00:00Z"],
+    ["2026-07-31T18:00:00Z", "2026-08-05T00:00:00Z"]
+  ],
+  "arms": ["flat", "fixed_long", "fixed_short", "p0_recovery_v3_both_exit", "p0_recovery_v3_either_exit"],
+  "teacher": {
+    "candidate_rule": "route_a_candidates_v3_recovery",
+    "entry_cadence_minutes": 5,
+    "exit_cadence_minutes": 1,
+    "entry_size": 0.3,
+    "trend_invalidation_threshold": 0.002,
+    "exit_variants": ["both", "either"],
+    "hard_risk_overlay": "FrozenTeacherSelector and RecoveryTeacher defaults",
+    "normal_max_holding_time": null
+  },
+  "execution": {
+    "host": "Nautilus native Gym/Execution/M2.2/L6",
+    "source_mode": "row_group_scoped_v1",
+    "scenario_modes": ["base", "stress"],
+    "settlement_timestamp_tolerance_ns": 1000000000,
+    "seed": 20261025,
+    "episode_terminal_margin_minutes": 3,
+    "terminal_force_flat": "excluded from ordinary teacher-closed trade count",
+    "economic_status": "SCENARIO_ONLY"
+  },
+  "decision_rule": "No threshold or arm selection from these outcomes. Report every block, scenario and arm; compare account returns to flat and both fixed sides; require formal G1/G2 separately. Do not read Test/Holdout or promote student.",
+  "limitations": [
+    "This errata repairs solely the pre-outcome feature warmup boundary and is not a performance retry.",
+    "The two exit variants were developed on previously consumed Train-fit windows.",
+    "Four blocks and one market do not by themselves prove generalization.",
+    "Public archives and scenario rules do not establish historical account-specific economic authority."
+  ]
+}

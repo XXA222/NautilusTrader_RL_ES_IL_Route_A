@@ -110,6 +110,29 @@ def test_source_settlement_timestamp_jitter_requires_explicit_tolerance():
     assert quality(store, tolerant).grade == Grade.A
 
 
+@pytest.mark.parametrize("offset,publication_delay,missing,accepted", [
+    (26_000_000, 1_000_000, False, True),
+    (1_000_000_000, 1_000_000, False, True),
+    (1_000_000_001, 1_000_000, False, False),
+    (26_000_000, 1_000_001, False, False),
+    (26_000_000, 1_000_000, True, False),
+])
+def test_archive_clock_policy_keeps_missing_and_late_publication_fail_closed(
+        offset, publication_delay, missing, accepted):
+    shifted = MINUTE_NS + offset
+    facts = [
+        replace(event, ts_event_ns=shifted, ts_init_ns=shifted + publication_delay,
+                available_at_ns=shifted + publication_delay,
+                payload={**event.payload, "settlement_ns": shifted})
+        if event.kind == "funding_settlement" else event
+        for event in events() if not (missing and event.kind == "funding_settlement")
+    ]
+    declared = replace(policy(), settlement_timestamp_tolerance_ns=1_000_000_000,
+                       settlement_max_delay_ns=1_000_000)
+    report = quality(CuratedStore(facts), declared)
+    assert ("funding_settlement_coverage_gap" not in report.findings) is accepted
+
+
 def test_observation_schema_owns_immutable_string_sequences():
     names = ["account.equity", "account.peak_equity", "account.drawdown", "risk.guard_intervention",
              "execution.prev_executed_target"]

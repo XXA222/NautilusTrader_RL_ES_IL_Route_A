@@ -1,25 +1,186 @@
 """Synthetic contract tests for production assembly; never real-data claims."""
-from dataclasses import asdict
+
+from bisect import bisect_left, bisect_right
+from dataclasses import asdict, replace
+from decimal import Decimal
 from hashlib import sha256
 import json
 from pathlib import Path
+import subprocess
+import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
 from rles_data.core import Availability, CuratedStore, DataError, Event, MINUTE_NS
 from rles_data.features import make_feature_row
-from rles_data.io import write_curated
-from rles_gym_bridge.historical import (HistoricalEnvironmentFactory, _visible_batches_by_decision,
-                                        historical_feature_spec, scheduled_funding_time_features)
+from rles_data.io import read_curated, write_curated
+from rles_data.contracts import to_market_event
+from rles_gym_bridge.historical import (
+    HistoricalEnvironmentFactory,
+    NativeMarkExcursionTracker,
+    _visible_batches_by_decision,
+    historical_feature_spec,
+    partition_decision_lanes,
+    scheduled_funding_time_features,
+)
+from rles_gym_bridge.episode import BarrierFrame, EpisodeReplay
+from rles_nautilus_adapter.session import VisibleBatch
+from rles_contracts.dto import DataQualityGrade
 from rles_risk import SoftRiskParams
 
 pytestmark = pytest.mark.micro_golden
 
 
+def test_route_a_bc_accepts_real_disjoint_native_windows_with_one_recipe(tmp_path):
+    from rles_il_core.bc import evaluate_bc_candidates, prepare_bc_pairs
+    from rles_il_core.collector import collect_episodes
+    from rles_il_core.dataset import build_dataset_manifest
+    from rles_il_core.experts import FixedExposureExpert
+
+    environment = recipe(tmp_path, bar_count=100)
+    environment["execution"]["zero_target_policy"] = "close"
+    fit = HistoricalEnvironmentFactory(
+        **{**environment, "start_ns": 6 * MINUTE_NS, "end_ns": 25 * MINUTE_NS}
+    )
+    selection = HistoricalEnvironmentFactory(
+        **{
+            **environment,
+            "start_ns": 60 * MINUTE_NS,
+            "end_ns": 95 * MINUTE_NS,
+            "fit_scaler": False,
+            "scaler": fit.scaler,
+        }
+    )
+    expert = lambda: FixedExposureExpert(target_exposure=0.2, entry_ts_ns=1)
+    fit_rows = collect_episodes(fit, expert, seeds=(7,))
+    selection_rows = collect_episodes(selection, expert, seeds=(7,))
+    rows = (*fit_rows, *selection_rows)
+    assert fit.transition_hash != selection.transition_hash
+    assert fit.route_a_execution_recipe_hash == selection.route_a_execution_recipe_hash
+    observations, actions, accepted = prepare_bc_pairs(rows)
+    assert len(observations) == len(actions) == sum(len(row.transitions) for row in rows)
+    assert accepted == rows
+    manifest = build_dataset_manifest(
+        fit, rows, run_label="synthetic-disjoint", dependency_versions={"fixture": "1"}
+    )
+    assert set(manifest["transition_hashes"]) == {fit.transition_hash, selection.transition_hash}
+
+    class _PassedIdentityGate(Exception):
+        pass
+
+    def provider_factory(_seed):
+        raise _PassedIdentityGate
+
+    with pytest.raises(_PassedIdentityGate):
+        evaluate_bc_candidates(
+            provider_factory,
+            fit_rows,
+            selection_rows,
+            selection_window_ns=(selection.start_ns, selection.end_ns),
+            dataset_manifest=manifest,
+            artifact_path=tmp_path / "candidate.zip",
+            epochs_candidates=(10,),
+            learning_rate_candidates=(1e-4,),
+            seeds=(11,),
+        )
+    altered = replace(
+        selection_rows[0],
+        episode_metadata={**selection_rows[0].episode_metadata, "execution_recipe_hash": "b" * 64},
+    )
+    with pytest.raises(ValueError, match="execution recipe"):
+        prepare_bc_pairs((*fit_rows, altered))
+
+
+def test_route_a_four_arm_comparison_uses_disjoint_historical_factories(tmp_path):
+    from rles_il_core.bc import compare_four_native_arms
+    from rles_il_core.collector import collect_episodes
+    from rles_il_core.experts import FixedExposureExpert
+    from rles_rl_sb3.config import PolicySpec, RLConfig, SeedSpec, TransitionFingerprint, digest
+    from rles_rl_sb3.provider import RLProvider
+
+    environment = recipe(tmp_path, bar_count=100)
+    environment["execution"]["zero_target_policy"] = "close"
+    fit = HistoricalEnvironmentFactory(
+        **{**environment, "start_ns": 6 * MINUTE_NS, "end_ns": 25 * MINUTE_NS}
+    )
+    selection = HistoricalEnvironmentFactory(
+        **{
+            **environment,
+            "start_ns": 60 * MINUTE_NS,
+            "end_ns": 95 * MINUTE_NS,
+            "fit_scaler": False,
+            "scaler": fit.scaler,
+        }
+    )
+    expert = lambda: FixedExposureExpert(target_exposure=0.2, entry_ts_ns=1)
+    fit_rows = collect_episodes(fit, expert, seeds=(7,))
+    selection_rows = collect_episodes(selection, expert, seeds=(7,))
+    fingerprint = TransitionFingerprint(
+        env_contract=digest("NautilusBarrierEnv-v0.4.0"),
+        dataset=selection.store.snapshot_hash,
+        feature=selection.features.hash,
+        feature_scaler=selection.scaler.hash,
+        observation=selection.schema.hash,
+        action=digest({"target_net_exposure": [-1, 1], "shape": [1]}),
+        action_transform=digest("soft-hard-native-quantity"),
+        execution=selection.execution.fingerprint(),
+        hard_risk=selection.hard.signature(),
+        soft_risk=digest({name: str(value) for name, value in asdict(selection.soft).items()}),
+        reward=digest({"lambda_dd": 0, "lambda_guard": 0}),
+        normalization=digest({"VecNormalize": False}),
+        engine=digest("nautilus_trader-2.0.0rc6"),
+        adapter=digest("rles.perpetual-native-v2"),
+        fold=digest([selection.start_ns, selection.end_ns]),
+        terminal=digest("force_flatten_with_cost:finite_settlement_no_bootstrap_v1"),
+    )
+    config = RLConfig(
+        algorithm="PPO",
+        policy=PolicySpec(
+            observation_dim=len(selection.schema.names),
+            hidden_layers=(8,),
+            value_layers=(8,),
+            observation_schema_hash=selection.schema.hash,
+            action_schema_hash="c" * 64,
+        ),
+        fingerprint=fingerprint,
+        seeds=SeedSpec(11, (12,), 13, 14),
+        device="cpu",
+        normalize_observation=False,
+        hyperparameters={"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+    )
+
+    def provider_factory():
+        return RLProvider(
+            config,
+            lambda _rank, _seed, _phase: selection.make_env(fingerprint.hash),
+            lambda _gates, _config: True,
+        )
+
+    result = compare_four_native_arms(
+        provider_factory,
+        fit_rows,
+        selection_trajectories=selection_rows,
+        selection_window_ns=(selection.start_ns, selection.end_ns),
+        rule_teacher_factory=expert,
+        native_env_factory=selection,
+        native_seeds=(17,),
+        report_path=tmp_path / "four-arm-native.json",
+        rl_steps=2,
+        bc_epochs=500,
+        bc_batch_size=16,
+        bc_learning_rate=3e-3,
+        parity_tolerance=0.05,
+    )
+    assert result.sample_budget == 2
+
+
 def test_checked_in_ethusdt_real_config_has_valid_soft_risk_domain():
     project = Path(__file__).resolve().parents[1]
-    config = json.loads((project / "configs/ethusdt_20240101_real.json").read_text(encoding="utf-8"))
+    config = json.loads(
+        (project / "configs/ethusdt_20240101_real.json").read_text(encoding="utf-8")
+    )
     SoftRiskParams.from_search_dict(config["environment"]["soft_risk"])
 
 
@@ -30,17 +191,36 @@ def test_actor_account_scale_is_causal_and_legacy_checkpoint_defaults_stay_raw(t
     factory = HistoricalEnvironmentFactory(**recipe(tmp_path))
     config = {"output": str(tmp_path / "run")}
     before = _training_actor_spec(factory, (2,), config, Route.A1)
-    future = Event("future-mark", "mark", 25 * MINUTE_NS, 25 * MINUTE_NS, 25 * MINUTE_NS,
-                   Availability.NATIVE, "b" * 64, {"instrument": factory.instrument, "price": "1000000"},
-                   "synthetic:future-perturbation")
+    future = Event(
+        "future-mark",
+        "mark",
+        25 * MINUTE_NS,
+        25 * MINUTE_NS,
+        25 * MINUTE_NS,
+        Availability.NATIVE,
+        "b" * 64,
+        {"instrument": factory.instrument, "price": "1000000"},
+        "synthetic:future-perturbation",
+    )
     factory.store = CuratedStore((*factory.store.events, future))
     after = _training_actor_spec(factory, (2,), config, Route.A1)
     assert after.signature == before.signature
     manifest = Path(config["output"]) / "run.json"
     manifest.parent.mkdir()
-    manifest.write_text(json.dumps({"schema": "rles.historical-run.v1", "run_id": "legacy", "attempt_id": "legacy",
-                                    "recipe_hash": "a" * 64, "run_fingerprint": "b" * 64}))
-    legacy = _training_actor_spec(factory, (2,), {**config, "resume_checkpoint": "legacy-boundary"}, Route.A1)
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "rles.historical-run.v1",
+                "run_id": "legacy",
+                "attempt_id": "legacy",
+                "recipe_hash": "a" * 64,
+                "run_fingerprint": "b" * 64,
+            }
+        )
+    )
+    legacy = _training_actor_spec(
+        factory, (2,), {**config, "resume_checkpoint": "legacy-boundary"}, Route.A1
+    )
     assert legacy.version == 1 and legacy.input_scale is None
 
 
@@ -49,15 +229,207 @@ def test_historical_frame_batch_partition_is_ordered_complete_and_linear_windowe
     frames = _visible_batches_by_decision(batches, (25, 30, 40))
 
     assert frames == (("pre-window", "first"), ("boundary",), ("later",))
-    assert tuple(batch for frame in frames for batch in frame) == tuple(batch for _, batch in batches)
+    assert tuple(batch for frame in frames for batch in frame) == tuple(
+        batch for _, batch in batches
+    )
+
+
+def test_factory_market_batch_index_matches_uncached_visible_event_grouping(tmp_path):
+    factory = HistoricalEnvironmentFactory(**recipe(tmp_path, bar_count=30))
+    warmup_minutes = (
+        max(
+            field.lookback_bars * field.timeframe_minutes
+            for field in factory.features.fields
+            if field.source_kind == "ohlcv_1m"
+        )
+        + 2
+    )
+    feed_start_ns = max(0, factory.rows[0].decision_ts_ns - warmup_minutes * MINUTE_NS)
+    feed_end_ns = factory.rows[-1].decision_ts_ns
+    expected = {}
+    for event in factory.store.available_event_window(feed_start_ns, feed_end_ns):
+        if event.kind in {"instrument_rule", "funding_update"}:
+            continue
+        if event.payload.get("instrument") != factory.instrument:
+            continue
+        expected.setdefault(event.available_at_ns, []).append(event.event_id)
+
+    first = factory._visible_market_batch_index()
+    second = factory._visible_market_batch_index()
+
+    assert first is second
+    assert [
+        (timestamp, [event.event_id for event in batch.events]) for timestamp, batch in first
+    ] == list(expected.items())
+    batch_times = tuple(timestamp for timestamp, _batch in first)
+    for start_offset in (0, 7):
+        episode_rows = factory.rows[start_offset : start_offset + 8]
+        episode_feed_start = max(
+            0,
+            episode_rows[0].decision_ts_ns - warmup_minutes * MINUTE_NS,
+        )
+        left = bisect_left(batch_times, episode_feed_start)
+        right = bisect_right(batch_times, episode_rows[-1].decision_ts_ns)
+        uncached = _visible_batches_by_decision(
+            first[left:right],
+            tuple(row.decision_ts_ns for row in episode_rows),
+        )
+        cached = factory._episode_market_batch_groups(
+            start_offset=start_offset,
+            episode_rows=episode_rows,
+            feed_start_ns=episode_feed_start,
+        )
+        assert cached == uncached
+        frames = factory._episode_barrier_frames(
+            start_offset=start_offset,
+            episode_rows=episode_rows,
+            feed_start_ns=episode_feed_start,
+        )
+        cached_frames = factory._barrier_frames_by_row
+        assert cached_frames is not None
+        assert frames[0].batches == uncached[0]
+        assert frames[0].market == cached_frames[start_offset].market
+        assert frames[0].time_features == cached_frames[start_offset].time_features
+        assert frames[1:] == cached_frames[start_offset + 1 : start_offset + len(episode_rows)]
+
+
+def test_cached_episode_frames_preserve_native_replay_boundary_and_ledger(tmp_path, monkeypatch):
+    from collections import defaultdict
+
+    from rles_research.native_metrics import native_report
+    from rles_gym_bridge.l2_bridge import visible_market_features
+
+    config = recipe(tmp_path, bar_count=24)
+    cached_factory = HistoricalEnvironmentFactory(**config)
+    reference_factory = HistoricalEnvironmentFactory(**config)
+
+    def uncached_frames(*, start_offset, episode_rows, feed_start_ns):
+        groups = defaultdict(list)
+        for event in reference_factory.store.available_event_window(
+            feed_start_ns, episode_rows[-1].decision_ts_ns
+        ):
+            if event.kind in {"instrument_rule", "funding_update"}:
+                continue
+            if event.payload.get("instrument") != reference_factory.instrument:
+                continue
+            if event.available_at_ns is None:
+                continue
+            groups[event.available_at_ns].append(
+                to_market_event(
+                    event,
+                    quality_grade=DataQualityGrade(reference_factory.quality.grade.value),
+                )
+            )
+        batches = tuple(
+            (timestamp, VisibleBatch(timestamp, tuple(events), True))
+            for timestamp, events in sorted(groups.items())
+        )
+        batch_groups = _visible_batches_by_decision(
+            batches,
+            tuple(row.decision_ts_ns for row in episode_rows),
+        )
+        frames = []
+        for row, visible_batches in zip(episode_rows, batch_groups, strict=True):
+            frames.append(
+                BarrierFrame(
+                    row.decision_ts_ns,
+                    visible_batches,
+                    visible_market_features(
+                        row,
+                        reference_factory.features,
+                        reference_factory.schema,
+                        instrument=reference_factory.instrument,
+                        decision_ts_ns=row.decision_ts_ns,
+                    ),
+                    {},
+                )
+            )
+        return tuple(frames)
+
+    monkeypatch.setattr(reference_factory, "_episode_barrier_frames", uncached_frames)
+    reference_env = reference_factory.make_env()
+    cached_resume_env = None
+    try:
+        reference_env.reset(seed=317)
+        prefix = []
+        for action in (0.5, -0.5):
+            prefix.append(reference_env.step(np.asarray([action], dtype=np.float32)))
+        replay = EpisodeReplay.from_dict(reference_env.rles_export_replay())
+        continuation = [
+            reference_env.step(np.asarray([action], dtype=np.float32))
+            for action in (0.25, 0.0, 0.5)
+        ]
+        reference_report = native_report(
+            reference_factory.snapshots,
+            fill_references=reference_factory.fill_references,
+            sample_interval_ns=MINUTE_NS,
+        )
+        reference_env.close()
+
+        cached_resume_env = cached_factory.make_env(replay=replay)
+        resumed_observation, _info = cached_resume_env.reset(seed=317)
+        assert np.array_equal(resumed_observation, prefix[-1][0])
+        assert cached_resume_env.rles_boundary_token == replay.boundary_token
+        for action, expected in zip((0.25, 0.0, 0.5), continuation, strict=True):
+            actual = cached_resume_env.step(np.asarray([action], dtype=np.float32))
+            assert np.array_equal(actual[0], expected[0])
+            assert actual[1:4] == expected[1:4]
+            expected_info, actual_info = dict(expected[4]), dict(actual[4])
+            volatile_fill_ids = {"event_id", "trade_id", "venue_order_id", "causation_id"}
+            for info in (expected_info, actual_info):
+                info["native_policy_fills"] = tuple(
+                    {key: value for key, value in fill.items() if key not in volatile_fill_ids}
+                    for fill in info["native_policy_fills"]
+                )
+            assert actual_info == expected_info
+        cached_report = native_report(
+            cached_factory.snapshots,
+            fill_references=cached_factory.fill_references,
+            sample_interval_ns=MINUTE_NS,
+        )
+        assert cached_report["metrics"] == reference_report["metrics"]
+        for field in (
+            "total_fee",
+            "total_slippage_cost",
+            "total_funding",
+            "net_return",
+            "max_drawdown",
+            "turnover_ratio",
+        ):
+            assert cached_report["metrics"][field] == reference_report["metrics"][field]
+        economic_fill_fields = (
+            "instrument_id",
+            "order_side",
+            "last_qty",
+            "last_px",
+            "commission",
+            "ts_event",
+        )
+        assert [
+            tuple(fill.get(key) for key in economic_fill_fields) for fill in cached_report["fills"]
+        ] == [
+            tuple(fill.get(key) for key in economic_fill_fields)
+            for fill in reference_report["fills"]
+        ]
+        assert cached_factory.snapshots[-1].equity == reference_factory.snapshots[-1].equity
+        assert cached_factory.snapshots[-1].positions == reference_factory.snapshots[-1].positions
+    finally:
+        reference_env.close()
+        if cached_resume_env is not None:
+            cached_resume_env.close()
 
 
 def test_stress_execution_identity_changes_only_the_mode_from_frozen_base(tmp_path):
     environment = recipe(tmp_path)
     base = HistoricalEnvironmentFactory(**environment)
-    stress = HistoricalEnvironmentFactory(**{
-        **environment, "fit_scaler": False, "scaler": base.scaler, "mode": "stress",
-    })
+    stress = HistoricalEnvironmentFactory(
+        **{
+            **environment,
+            "fit_scaler": False,
+            "scaler": base.scaler,
+            "mode": "stress",
+        }
+    )
 
     assert stress.mode == "stress"
     assert stress.config_hash != base.config_hash
@@ -80,6 +452,26 @@ def test_nondefault_reward_scale_is_bound_to_historical_training_identity(tmp_pa
     assert scaled.make_env()._reward.config.reward_scale == 10_000.0
 
 
+def test_nondefault_drawdown_reward_shaping_is_bound_to_historical_identity(tmp_path):
+    environment = recipe(tmp_path)
+    raw = HistoricalEnvironmentFactory(**environment)
+    default_explicit = HistoricalEnvironmentFactory(**environment, reward_lambda_dd=0.0)
+    shaped = HistoricalEnvironmentFactory(**environment, reward_lambda_dd=0.1)
+
+    assert raw.config_hash == default_explicit.config_hash
+    assert raw.transition_hash == default_explicit.transition_hash
+    assert shaped.config_hash != raw.config_hash
+    assert shaped.transition_hash != raw.transition_hash
+    assert shaped.metadata()["reward_config"]["lambda_dd"] == 0.1
+    assert shaped.metadata()["reward_config"]["lambda_guard"] == 0.0
+    env = shaped.make_env()
+    try:
+        assert env._reward.config.lambda_dd == 0.1
+        assert env._reward.config.lambda_guard == 0.0
+    finally:
+        env.close()
+
+
 def test_rank_partitioned_training_episodes_start_in_distinct_time_lanes(tmp_path):
     factory = HistoricalEnvironmentFactory(**recipe(tmp_path, bar_count=30))
     full_steps = len(factory.rows) - 3
@@ -95,13 +487,25 @@ def test_rank_partitioned_training_episodes_start_in_distinct_time_lanes(tmp_pat
         assert first_info["episode_window"]["decision_steps"] == episode_steps
         assert last_info["episode_window"]["decision_steps"] == episode_steps
         assert first_info["episode_window"]["start_ns"] < last_info["episode_window"]["start_ns"]
-        assert last_info["episode_window"]["start_ns"] == factory.rows[
-            full_steps // 2
-        ].decision_ts_ns
+        assert (
+            last_info["episode_window"]["start_ns"] == factory.rows[full_steps // 2].decision_ts_ns
+        )
         assert first_info["episode_window"]["episode_index"] == 0
         assert last_info["episode_window"]["episode_index"] == 0
     finally:
         last.close()
+
+
+def test_rank_decision_lanes_partition_every_step_with_balanced_remainders():
+    lanes = partition_decision_lanes(129_597, 90)
+    sizes = [end - start for start, end in lanes]
+
+    assert lanes[0][0] == 0
+    assert lanes[-1][1] == 129_597
+    assert all(previous[1] == following[0] for previous, following in zip(lanes, lanes[1:]))
+    assert sum(sizes) == 129_597
+    assert sizes.count(1_440) == 87
+    assert sizes.count(1_439) == 3
 
 
 def test_rank_partition_rejects_duplicate_or_oversized_segments(tmp_path):
@@ -133,8 +537,9 @@ def test_historical_episode_windows_rotate_reproducibly_within_rank_lane(tmp_pat
 
 
 def test_historical_factory_accepts_v2_profile_and_binds_its_schema(tmp_path):
-    factory = HistoricalEnvironmentFactory(**recipe(tmp_path, bar_count=80, start_minute=62),
-                                           feature_profile="causal_mtf_v2")
+    factory = HistoricalEnvironmentFactory(
+        **recipe(tmp_path, bar_count=80, start_minute=62), feature_profile="causal_mtf_v2"
+    )
 
     assert factory.feature_profile == "causal_mtf_v2"
     assert "market.trend_efficiency_15m" in factory.schema.names
@@ -147,12 +552,15 @@ def test_historical_factory_v3_binds_schedule_time_inputs_separately(tmp_path):
     environment["coverage_policy"]["known_schedule_times_ns"] = {symbol: (90 * MINUTE_NS,)}
     factory = HistoricalEnvironmentFactory(**environment, feature_profile="causal_mtf_v3")
     v2 = HistoricalEnvironmentFactory(**environment, feature_profile="causal_mtf_v2")
+    v4 = HistoricalEnvironmentFactory(**environment, feature_profile="causal_mtf_v4")
 
     assert "market.trend_efficiency_60m" in factory.schema.names
     assert "time.funding_settlement_within_24h" in factory.schema.names
     assert "time.funding_settlement_time_to_event_24h" in factory.schema.names
     assert factory.schema.hash != v2.schema.hash
     assert "time.funding_settlement_within_24h" not in v2.schema.names
+    assert "market.close_1m" in v4.schema.names
+    assert "time.funding_settlement_within_24h" in v4.schema.names
 
 
 def test_funding_schedule_countdown_is_bounded_and_uses_strict_future_schedule():
@@ -174,70 +582,202 @@ def test_funding_schedule_countdown_is_bounded_and_uses_strict_future_schedule()
     }
 
 
-def recipe(tmp_path, *, price_jump=False, bar_count=20, start_minute=6):
+def recipe(tmp_path, *, price_jump=False, bar_count=20, start_minute=6,
+           include_flow=False, funding_settlement_minutes=()):
     symbol = "ETHUSDT-PERP.SIM"
-    rule = {"instrument": symbol, "tick_size": "0.01", "step_size": "0.001", "min_qty": "0.001",
-            "min_notional": "1", "maker_fee": "0.001", "taker_fee": "0.001", "initial_margin_rate": "1",
-            "maintenance_margin_rate": "0.35", "effective_ns": MINUTE_NS,
-            "valid_until_ns": (bar_count + 1) * MINUTE_NS,
-            "rule_version": "SYNTHETIC-TEST-ONLY"}
+    rule = {
+        "instrument": symbol,
+        "tick_size": "0.01",
+        "step_size": "0.001",
+        "min_qty": "0.001",
+        "min_notional": "1",
+        "maker_fee": "0.001",
+        "taker_fee": "0.001",
+        "initial_margin_rate": "1",
+        "maintenance_margin_rate": "0.35",
+        "effective_ns": MINUTE_NS,
+        "valid_until_ns": (bar_count + 1) * MINUTE_NS,
+        "rule_version": "SYNTHETIC-TEST-ONLY",
+    }
     source = tmp_path / "synthetic-rule.json"
     source.write_text(json.dumps(rule), encoding="utf-8")
     fingerprint = sha256(source.read_bytes()).hexdigest()
-    rule_event = Event("rule", "instrument_rule", MINUTE_NS, MINUTE_NS, MINUTE_NS, Availability.NATIVE,
-                       fingerprint, rule, "synthetic:factory-test-rule")
+    rule_event = Event(
+        "rule",
+        "instrument_rule",
+        MINUTE_NS,
+        MINUTE_NS,
+        MINUTE_NS,
+        Availability.NATIVE,
+        fingerprint,
+        rule,
+        "synthetic:factory-test-rule",
+    )
     rules = tmp_path / "rules.json"
-    rules.write_text(json.dumps({"sources": [{"path": str(source), "sha256": fingerprint, "provenance": "synthetic:test"}],
-                                  "events": [asdict(rule_event)]}), encoding="utf-8")
+    rules.write_text(
+        json.dumps(
+            {
+                "sources": [
+                    {"path": str(source), "sha256": fingerprint, "provenance": "synthetic:test"}
+                ],
+                "events": [asdict(rule_event)],
+            }
+        ),
+        encoding="utf-8",
+    )
     events = []
     for i in range(1, bar_count + 1):
         timestamp = i * MINUTE_NS
         price = "1040" if price_jump and i >= 8 else "1000"
-        for kind, payload in {
-            "ohlcv_1m": {"open": price, "high": price, "low": price, "close": price, "volume": "1000"},
-            "mark": {"price": price}, "index": {"price": price},
-        }.items():
-            events.append(Event(f"{kind}-{i}", kind, timestamp, timestamp, timestamp, Availability.NATIVE,
-                                "a" * 64, {"instrument": symbol, **payload}, f"synthetic:{kind}"))
+        market_events = {
+            "ohlcv_1m": {
+                "open": price,
+                "high": price,
+                "low": price,
+                "close": price,
+                "volume": "1000",
+            },
+            "mark": {"price": price},
+            "index": {"price": price},
+        }
+        if include_flow:
+            market_events["ohlcv_1m"].update({
+                "quote_asset_volume": "1000000",
+                "number_of_trades": 100,
+                "taker_buy_base_asset_volume": "500",
+                "taker_buy_quote_asset_volume": "500000",
+            })
+        for kind, payload in market_events.items():
+            events.append(
+                Event(
+                    f"{kind}-{i}",
+                    kind,
+                    timestamp,
+                    timestamp,
+                    timestamp,
+                    Availability.NATIVE,
+                    "a" * 64,
+                    {"instrument": symbol, **payload},
+                    f"synthetic:{kind}",
+                )
+            )
     for minute in range(1, bar_count + 1, 20):
         timestamp = minute * MINUTE_NS
-        events.append(Event(f"rate-{minute}", "funding_update", timestamp, timestamp, timestamp,
-                            Availability.NATIVE, "a" * 64,
-                            {"instrument": symbol, "rate": "0.001"}, "synthetic:funding_update"))
+        events.append(
+            Event(
+                f"rate-{minute}",
+                "funding_update",
+                timestamp,
+                timestamp,
+                timestamp,
+                Availability.NATIVE,
+                "a" * 64,
+                {"instrument": symbol, "rate": "0.001"},
+                "synthetic:funding_update",
+            )
+        )
+    for minute in funding_settlement_minutes:
+        timestamp = minute * MINUTE_NS
+        events.append(Event(
+            f"settlement-{minute}", "funding_settlement", timestamp, timestamp,
+            timestamp, Availability.NATIVE, "a" * 64,
+            {"instrument": symbol, "rate": "0.001", "settlement_ns": timestamp,
+             "interval_minutes": 480},
+            "synthetic:funding_settlement",
+        ))
     market = tmp_path / "market.parquet"
     write_curated(market, CuratedStore(events))
     latency = {"model_id": "base", "decision_ns": 1, "submit_ns": 1, "venue_ns": 1}
-    execution = {"schema_version": "0.4.0", "deadband": "0.01", "pending_order_policy": "cancel_replace",
-                 "order_type": "MARKET", "tif": "GTC", "terminal_policy": "force_flatten_with_cost",
-                 "base_latency": latency, "stress_latency": {**latency, "model_id": "stress", "venue_ns": 2},
-                 "base_fill": {"model_id": "base", "slippage_bps": "1", "data_granularity": "bar"},
-                 "stress_fill": {"model_id": "stress", "slippage_bps": "2", "data_granularity": "bar"}}
-    return dict(market_path=market, rules_path=rules, instrument=symbol,
-                start_ns=start_minute * MINUTE_NS, end_ns=(bar_count - 1) * MINUTE_NS,
-                coverage_policy={"maximum_age_ns": {"mark": MINUTE_NS, "index": MINUTE_NS, "funding_update": 30 * MINUTE_NS},
-                                 "settlement_times_ns": {symbol: ()}, "provenance": "synthetic:factory-test"},
-                execution=execution, starting_balance="10000", risk_budget_notional="1000",
-                hard_risk={"max_notional": "1000", "max_leverage": "1", "margin_buffer_fraction": "0.1",
-                           "min_equity": "1", "incomplete_data_max_leverage": "1", "require_mark": True, "require_funding": True},
-                soft_risk={"target_scale": "1", "max_turnover_fraction": "1", "drawdown_throttle": "0", "funding_sensitivity": "0"},
-                fit_scaler=True)
+    execution = {
+        "schema_version": "0.4.0",
+        "deadband": "0.01",
+        "pending_order_policy": "cancel_replace",
+        "order_type": "MARKET",
+        "tif": "GTC",
+        "terminal_policy": "force_flatten_with_cost",
+        "base_latency": latency,
+        "stress_latency": {**latency, "model_id": "stress", "venue_ns": 2},
+        "base_fill": {"model_id": "base", "slippage_bps": "1", "data_granularity": "bar"},
+        "stress_fill": {"model_id": "stress", "slippage_bps": "2", "data_granularity": "bar"},
+    }
+    return dict(
+        market_path=market,
+        rules_path=rules,
+        instrument=symbol,
+        start_ns=start_minute * MINUTE_NS,
+        end_ns=(bar_count - 1) * MINUTE_NS,
+        coverage_policy={
+            "maximum_age_ns": {
+                "mark": MINUTE_NS,
+                "index": MINUTE_NS,
+                "funding_update": 30 * MINUTE_NS,
+            },
+            "settlement_times_ns": {symbol: ()},
+            "provenance": "synthetic:factory-test",
+        },
+        execution=execution,
+        starting_balance="10000",
+        risk_budget_notional="1000",
+        hard_risk={
+            "max_notional": "1000",
+            "max_leverage": "1",
+            "margin_buffer_fraction": "0.1",
+            "min_equity": "1",
+            "incomplete_data_max_leverage": "1",
+            "require_mark": True,
+            "require_funding": True,
+        },
+        soft_risk={
+            "target_scale": "1",
+            "max_turnover_fraction": "1",
+            "drawdown_throttle": "0",
+            "funding_sensitivity": "0",
+        },
+        fit_scaler=True,
+    )
 
 
 def test_causal_mtf_profile_adds_regime_features_without_future_leakage():
-    maximum_age = {"mark": 60 * MINUTE_NS, "index": 60 * MINUTE_NS,
-                   "funding_update": 60 * MINUTE_NS}
+    maximum_age = {
+        "mark": 60 * MINUTE_NS,
+        "index": 60 * MINUTE_NS,
+        "funding_update": 60 * MINUTE_NS,
+    }
     legacy = historical_feature_spec(maximum_age)
     profile_v1 = historical_feature_spec(maximum_age, profile="causal_mtf_v1")
     profile = historical_feature_spec(maximum_age, profile="causal_mtf_v2")
-    assert profile.fields[:len(legacy.fields)] == legacy.fields
-    assert profile.fields[:len(profile_v1.fields)] == profile_v1.fields
-    assert tuple(field.name for field in profile.fields[len(legacy.fields):len(profile_v1.fields)]) == (
-        "return_5m", "return_15m", "return_60m", "volatility_15m", "volatility_60m",
+    profile_v4 = historical_feature_spec(maximum_age, profile="causal_mtf_v4")
+    profile_v5 = historical_feature_spec(maximum_age, profile="causal_mtf_v5")
+    profile_v6 = historical_feature_spec(maximum_age, profile="causal_mtf_v6")
+    profile_v7 = historical_feature_spec(maximum_age, profile="causal_mtf_v7")
+    assert profile.fields[: len(legacy.fields)] == legacy.fields
+    assert profile.fields[: len(profile_v1.fields)] == profile_v1.fields
+    assert tuple(
+        field.name for field in profile.fields[len(legacy.fields) : len(profile_v1.fields)]
+    ) == (
+        "return_5m",
+        "return_15m",
+        "return_60m",
+        "volatility_15m",
+        "volatility_60m",
     )
-    assert tuple(field.name for field in profile.fields[len(profile_v1.fields):]) == (
-        "trend_efficiency_15m", "trend_efficiency_60m",
+    assert tuple(field.name for field in profile.fields[len(profile_v1.fields) :]) == (
+        "trend_efficiency_15m",
+        "trend_efficiency_60m",
     )
     assert profile.max_lookback_ns == 61 * MINUTE_NS
+    assert profile_v4.fields[: len(profile.fields)] == profile.fields
+    assert profile_v4.fields[-1].name == "close_1m"
+    assert profile_v5.fields[: len(profile_v4.fields)] == profile_v4.fields
+    assert tuple(field.name for field in profile_v5.fields[len(profile_v4.fields) :]) == (
+        "closed_return_1h",
+        "closed_return_1d",
+        "volatility_1m",
+        "zscore_1m",
+    )
+    assert profile_v6.fields[: len(profile_v5.fields)] == profile_v5.fields
+    assert profile_v7.fields[: len(profile_v6.fields)] == profile_v6.fields
+    assert profile_v7.fields[-1].name == "breakout_1h"
 
     symbol = "ETHUSDT-PERP.SIM"
     events = []
@@ -247,17 +787,46 @@ def test_causal_mtf_profile_adds_regime_features_without_future_leakage():
         close = float(100 + minute)
         closes.append(close)
         for kind, payload in {
-            "ohlcv_1m": {"open": str(close), "high": str(close), "low": str(close),
-                         "close": str(close), "volume": "10"},
+            "ohlcv_1m": {
+                "open": str(close),
+                "high": str(close),
+                "low": str(close),
+                "close": str(close),
+                "volume": "10",
+                "quote_asset_volume": "1000",
+                "number_of_trades": 10,
+                "taker_buy_base_asset_volume": "6",
+                "taker_buy_quote_asset_volume": "600",
+            },
             "mark": {"price": str(close)},
             "index": {"price": str(close)},
         }.items():
-            events.append(Event(f"{kind}-{minute}", kind, timestamp, timestamp, timestamp,
-                                Availability.NATIVE, "a" * 64, {"instrument": symbol, **payload},
-                                f"synthetic:causal-mtf:{kind}"))
-    events.append(Event("funding", "funding_update", MINUTE_NS, MINUTE_NS, MINUTE_NS,
-                        Availability.NATIVE, "a" * 64,
-                        {"instrument": symbol, "rate": "0.001"}, "synthetic:causal-mtf:funding"))
+            events.append(
+                Event(
+                    f"{kind}-{minute}",
+                    kind,
+                    timestamp,
+                    timestamp,
+                    timestamp,
+                    Availability.NATIVE,
+                    "a" * 64,
+                    {"instrument": symbol, **payload},
+                    f"synthetic:causal-mtf:{kind}",
+                )
+            )
+    events.append(
+        Event(
+            "funding",
+            "funding_update",
+            MINUTE_NS,
+            MINUTE_NS,
+            MINUTE_NS,
+            Availability.NATIVE,
+            "a" * 64,
+            {"instrument": symbol, "rate": "0.001"},
+            "synthetic:causal-mtf:funding",
+        )
+    )
 
     decision = 61 * MINUTE_NS
     store = CuratedStore(events)
@@ -267,14 +836,44 @@ def test_causal_mtf_profile_adds_regime_features_without_future_leakage():
     assert values["trend_efficiency_15m"] == pytest.approx(1.0)
     assert values["trend_efficiency_60m"] == pytest.approx(1.0)
     assert row.available_at_ns <= decision
+    row_v4 = make_feature_row(store, profile_v4, decision, instrument=symbol)
+    assert (
+        dict(zip((field.name for field in profile_v4.fields), row_v4.values))["close_1m"]
+        == closes[-1]
+    )
+    from rles_data.core import FeatureSpec
 
-    future = Event("future-bar", "ohlcv_1m", 62 * MINUTE_NS, 62 * MINUTE_NS, 62 * MINUTE_NS,
-                   Availability.NATIVE, "b" * 64,
-                   {"instrument": symbol, "open": "1000000", "high": "1000000", "low": "1000000",
-                    "close": "1000000", "volume": "1000000"}, "synthetic:future-perturbation")
+    breakout_spec = FeatureSpec(profile_v7.schema_version, (profile_v7.fields[-1],))
+    row_v7 = make_feature_row(store, breakout_spec, decision, instrument=symbol)
+    values_v7 = dict(zip((field.name for field in breakout_spec.fields), row_v7.values))
+    assert values_v7["breakout_1h"] == pytest.approx(closes[-1] / closes[-2] - 1)
+    assert row_v7.available_at_ns <= decision
+
+    future = Event(
+        "future-bar",
+        "ohlcv_1m",
+        62 * MINUTE_NS,
+        62 * MINUTE_NS,
+        62 * MINUTE_NS,
+        Availability.NATIVE,
+        "b" * 64,
+        {
+            "instrument": symbol,
+            "open": "1000000",
+            "high": "1000000",
+            "low": "1000000",
+            "close": "1000000",
+            "volume": "1000000",
+        },
+        "synthetic:future-perturbation",
+    )
     extended_store = CuratedStore((*events, future))
     extended_row = make_feature_row(extended_store, profile, decision, instrument=symbol)
     assert extended_row.values == row.values
+    extended_row_v4 = make_feature_row(extended_store, profile_v4, decision, instrument=symbol)
+    assert extended_row_v4.values == row_v4.values
+    extended_row_v7 = make_feature_row(extended_store, breakout_spec, decision, instrument=symbol)
+    assert extended_row_v7.values == row_v7.values
 
 
 def test_trend_efficiency_encodes_chop_is_bounded_and_rejects_gaps():
@@ -287,26 +886,158 @@ def test_trend_efficiency_encodes_chop_is_bounded_and_rejects_gaps():
         close = 100.0 if minute < 47 or minute % 2 == 0 else 101.0
         timestamp = minute * MINUTE_NS
         for kind, payload in {
-            "ohlcv_1m": {"open": str(close), "high": str(close), "low": str(close),
-                         "close": str(close), "volume": "1"},
-            "mark": {"price": str(close)}, "index": {"price": str(close)},
+            "ohlcv_1m": {
+                "open": str(close),
+                "high": str(close),
+                "low": str(close),
+                "close": str(close),
+                "volume": "1",
+            },
+            "mark": {"price": str(close)},
+            "index": {"price": str(close)},
         }.items():
-            events.append(Event(f"{kind}-{minute}", kind, timestamp, timestamp, timestamp,
-                                Availability.NATIVE, "c" * 64, {"instrument": symbol, **payload},
-                                f"synthetic:trend-efficiency:{kind}"))
-    spec = FeatureSpec("0.4.0", (
-        FeatureField("trend_efficiency_15m", "float64", "ratio", "ohlcv_1m", 15, 1,
-                     "trend_efficiency"),
-    ))
+            events.append(
+                Event(
+                    f"{kind}-{minute}",
+                    kind,
+                    timestamp,
+                    timestamp,
+                    timestamp,
+                    Availability.NATIVE,
+                    "c" * 64,
+                    {"instrument": symbol, **payload},
+                    f"synthetic:trend-efficiency:{kind}",
+                )
+            )
+    spec = FeatureSpec(
+        "0.4.0",
+        (
+            FeatureField(
+                "trend_efficiency_15m", "float64", "ratio", "ohlcv_1m", 15, 1, "trend_efficiency"
+            ),
+        ),
+    )
     decision = 61 * MINUTE_NS
     row = make_feature_row(CuratedStore(events), spec, decision, instrument=symbol)
     efficiency = row.values[0]
     assert isfinite(efficiency) and -1 <= efficiency <= 1
     assert efficiency == pytest.approx(1 / 15, rel=1e-4)
-
     gap_events = [event for event in events if event.event_id != "ohlcv_1m-55"]
     with pytest.raises(DataError, match="gap|not enough"):
         make_feature_row(CuratedStore(gap_events), spec, decision, instrument=symbol)
+
+
+def test_rolling_close_zscore_is_causal_and_zero_on_constant_prices():
+    from rles_data.core import FeatureField, FeatureSpec
+
+    symbol = "ETHUSDT-PERP.SIM"
+    field = FeatureField("zscore_1m", "float64", "ratio", "ohlcv_1m", 3, 1, "zscore")
+    spec = FeatureSpec("0.4.0", (field,))
+
+    def bar_event(minute: int, close: float, *, suffix: str = "") -> Event:
+        timestamp = minute * MINUTE_NS
+        return Event(
+            f"zscore-{minute}{suffix}",
+            "ohlcv_1m",
+            timestamp,
+            timestamp,
+            timestamp,
+            Availability.NATIVE,
+            "d" * 64,
+            {
+                "instrument": symbol,
+                "open": str(close),
+                "high": str(close),
+                "low": str(close),
+                "close": str(close),
+                "volume": "1",
+            },
+            "synthetic:zscore",
+        )
+
+    decision = 4 * MINUTE_NS
+    history = tuple(bar_event(i, float(i)) for i in (1, 2, 3, 4))
+    row = make_feature_row(CuratedStore(history), spec, decision, instrument=symbol)
+    assert row.values[0] == pytest.approx(1.22474487139)
+
+    extended = (*history, bar_event(5, 1e9))
+    unchanged = make_feature_row(CuratedStore(extended), spec, decision, instrument=symbol)
+    assert unchanged.values == row.values
+
+    flat = tuple(bar_event(i, 10.0) for i in (1, 2, 3, 4))
+    flat_row = make_feature_row(CuratedStore(flat), spec, decision, instrument=symbol)
+    assert flat_row.values == (0.0,)
+
+
+def test_route_a_v5_multitimeframe_features_use_only_closed_bars():
+    from rles_data.core import FeatureField, FeatureSpec
+
+    symbol = "ETHUSDT-PERP.SIM"
+    spec = FeatureSpec(
+        "0.4.0",
+        (
+            FeatureField("closed_return_1h", "float64", "ratio", "ohlcv_1m", 1, 60, "return"),
+            FeatureField("closed_return_1d", "float64", "ratio", "ohlcv_1m", 1, 1440, "return"),
+            FeatureField("volatility_1m", "float64", "ratio", "ohlcv_1m", 60, 1, "volatility"),
+            FeatureField("zscore_1m", "float64", "ratio", "ohlcv_1m", 60, 1, "zscore"),
+        ),
+    )
+    events = []
+    for minute in range(1, 2881):
+        timestamp = minute * MINUTE_NS
+        close = float(100 + minute)
+        events.append(
+            Event(
+                f"route-a-v5-{minute}",
+                "ohlcv_1m",
+                timestamp,
+                timestamp,
+                timestamp,
+                Availability.NATIVE,
+                "e" * 64,
+                {
+                    "instrument": symbol,
+                    "open": str(close),
+                    "high": str(close),
+                    "low": str(close),
+                    "close": str(close),
+                    "volume": "1",
+                },
+                "synthetic:route-a-v5",
+            )
+        )
+    decision = 2880 * MINUTE_NS
+    future_ts = decision + MINUTE_NS
+    events.append(
+        Event(
+            "route-a-v5-future",
+            "ohlcv_1m",
+            future_ts,
+            future_ts,
+            future_ts,
+            Availability.NATIVE,
+            "f" * 64,
+            {
+                "instrument": symbol,
+                "open": "1e12",
+                "high": "1e12",
+                "low": "1e12",
+                "close": "1e12",
+                "volume": "1e12",
+            },
+            "synthetic:future-perturbation",
+        )
+    )
+    row = make_feature_row(CuratedStore(events), spec, decision, instrument=symbol)
+    features = dict(zip((field.name for field in spec.fields), row.values))
+    assert features["closed_return_1h"] == pytest.approx(2980 / 2920 - 1)
+    assert features["closed_return_1d"] == pytest.approx(2980 / 1540 - 1)
+    assert features["volatility_1m"] > 0
+    assert features["zscore_1m"] > 0
+    assert row.available_at_ns <= decision
+
+    without_future = make_feature_row(CuratedStore(events[:-1]), spec, decision, instrument=symbol)
+    assert without_future.values == row.values
 
 
 def test_production_factory_uses_native_models_full_observations_and_terminal_costs(tmp_path):
@@ -328,15 +1059,21 @@ def test_production_factory_uses_native_models_full_observations_and_terminal_co
         assert final.equity < 10000
         observed_positions = [row for snapshot in factory.snapshots for row in snapshot.positions]
         assert observed_positions
-        assert all(not ({"events", "adjustments", "commissions", "venue_order_ids", "trade_ids"}
-                        & set(row)) for row in observed_positions)
+        assert all(
+            not (
+                {"events", "adjustments", "commissions", "venue_order_ids", "trade_ids"} & set(row)
+            )
+            for row in observed_positions
+        )
         assert {f["order_side"] for f in final.fills} == {"BUY", "SELL"}
         assert all(float(f["last_px"]) > 1000 for f in final.fills if f["order_side"] == "BUY")
         assert all(float(f["last_px"]) < 1000 for f in final.fills if f["order_side"] == "SELL")
         assert obs[factory.schema.names.index("execution.prev_raw_target")] == np.float32(0.5)
         from rles_research.native_metrics import native_report
 
-        report = native_report(factory.snapshots, fill_references=factory.fill_references, sample_interval_ns=MINUTE_NS)
+        report = native_report(
+            factory.snapshots, fill_references=factory.fill_references, sample_interval_ns=MINUTE_NS
+        )
         metrics = report["metrics"]
         assert metrics["total_fee"] > 0 and metrics["total_slippage_cost"] > 0
         assert metrics["total_funding"] == 0
@@ -348,6 +1085,51 @@ def test_production_factory_uses_native_models_full_observations_and_terminal_co
         env.close()
 
 
+def test_short_episode_boundary_has_extra_native_flatten_cost_vs_continuous_account(tmp_path):
+    from rles_research.native_metrics import native_report
+
+    config = recipe(tmp_path)
+    continuous = HistoricalEnvironmentFactory(**config)
+    short = HistoricalEnvironmentFactory(**config)
+    full_env = continuous.make_env()
+    try:
+        full_env.reset(seed=31)
+        for index in range(5):
+            _full_obs, _, full_done, full_truncated, full_info = full_env.step(
+                np.asarray([0.5], dtype=np.float32)
+            )
+            if index < 4:
+                assert not (full_done or full_truncated)
+        assert not (full_done or full_truncated)
+        assert full_info["terminal_settled"] is False
+        full_report = native_report(
+            continuous.snapshots,
+            fill_references=continuous.fill_references,
+            sample_interval_ns=MINUTE_NS,
+        )
+    finally:
+        full_env.close()
+    short_env = short.make_env(episode_steps=5)
+    try:
+        short_env.reset(seed=31)
+        for index in range(5):
+            _short_obs, _, short_done, short_truncated, short_info = short_env.step(
+                np.asarray([0.5], dtype=np.float32)
+            )
+            if index < 4:
+                assert not (short_done or short_truncated)
+        assert short_done or short_truncated
+        assert short_info["terminal_settled"] is True
+        short_report = native_report(
+            short.snapshots, fill_references=short.fill_references, sample_interval_ns=MINUTE_NS
+        )
+        assert not full_report["terminal_flat"] and short_report["terminal_flat"]
+        assert short_report["metrics"]["total_fee"] > full_report["metrics"]["total_fee"]
+        assert len(short_report["fills"]) > len(full_report["fills"])
+    finally:
+        short_env.close()
+
+
 def test_soft_funding_adjustment_is_not_reported_as_hard_risk_violation(tmp_path):
     config = recipe(tmp_path)
     config["soft_risk"] = {**config["soft_risk"], "funding_sensitivity": "1"}
@@ -355,7 +1137,9 @@ def test_soft_funding_adjustment_is_not_reported_as_hard_risk_violation(tmp_path
     env = factory.make_env()
     try:
         env.reset(seed=31)
-        _observation, _reward, terminated, truncated, info = env.step(np.array([0.5], dtype=np.float32))
+        _observation, _reward, terminated, truncated, info = env.step(
+            np.array([0.5], dtype=np.float32)
+        )
         assert not terminated and not truncated
         assert info["risk_intervention_components_known"] is True
         assert info["risk_soft_adjustment"] == pytest.approx(0.0005)
@@ -365,30 +1149,400 @@ def test_soft_funding_adjustment_is_not_reported_as_hard_risk_violation(tmp_path
         env.close()
 
 
+def test_exact_neutral_multiplier_replays_identical_perpetual_funding_ledger(tmp_path):
+    from rles_rl_sb3.actor import InferenceActor
+    from rles_rl_sb3.config import PolicySpec, RLConfig, SeedSpec, TransitionFingerprint, digest
+    from rles_rl_sb3.provider import RLProvider
+    from rles_research.native_metrics import native_report
+    from rles_data.io import read_curated
+
+    source_recipe = recipe(tmp_path, bar_count=50, start_minute=6)
+    source_path = source_recipe["market_path"]
+    events = list(read_curated(source_path).events)
+    settlements = (20 * MINUTE_NS, 40 * MINUTE_NS)
+    source_recipe["coverage_policy"]["settlement_times_ns"] = {
+        source_recipe["instrument"]: settlements,
+    }
+    for timestamp in settlements:
+        events.append(
+            Event(
+                f"funding-settlement-{timestamp}",
+                "funding_settlement",
+                timestamp,
+                timestamp,
+                timestamp,
+                Availability.NATIVE,
+                "a" * 64,
+                {
+                    "instrument": source_recipe["instrument"],
+                    "rate": "0.001",
+                    "settlement_ns": timestamp,
+                },
+                "synthetic:neutral-parity-settlement",
+            )
+        )
+    market_path = tmp_path / "neutral-parity-market.parquet"
+    write_curated(market_path, CuratedStore(events))
+    source_recipe["market_path"] = market_path
+
+    actor_factory = HistoricalEnvironmentFactory(**source_recipe)
+    fingerprint = TransitionFingerprint(
+        env_contract=digest("NautilusBarrierEnv-v0.4.0"),
+        dataset=actor_factory.store.snapshot_hash,
+        feature=actor_factory.features.hash,
+        feature_scaler=actor_factory.scaler.hash,
+        observation=actor_factory.schema.hash,
+        action=digest({"target_net_exposure": [-1, 1], "shape": [1]}),
+        action_transform=digest("soft-hard-native-quantity"),
+        execution=actor_factory.execution.fingerprint(),
+        hard_risk=actor_factory.hard.signature(),
+        soft_risk=digest({name: str(value) for name, value in asdict(actor_factory.soft).items()}),
+        reward=digest({"lambda_dd": 0, "lambda_guard": 0}),
+        normalization=digest({"VecNormalize": False}),
+        engine=digest("nautilus_trader-2.0.0rc6"),
+        adapter=digest("rles.perpetual-native-v2"),
+        fold=digest([actor_factory.start_ns, actor_factory.end_ns]),
+        terminal=digest("force_flatten_with_cost:finite_settlement_no_bootstrap_v1"),
+    )
+    rl_config = RLConfig(
+        algorithm="PPO",
+        policy=PolicySpec(
+            observation_dim=len(actor_factory.schema.names),
+            hidden_layers=(4,),
+            value_layers=(4,),
+            observation_schema_hash=actor_factory.schema.hash,
+            action_schema_hash="c" * 64,
+        ),
+        fingerprint=fingerprint,
+        seeds=SeedSpec(812, (813,), 814, 815),
+        device="cpu",
+        hyperparameters={"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+    )
+    provider = RLProvider(
+        rl_config,
+        lambda _rank, _seed, _phase: actor_factory.make_env(fingerprint.hash),
+        lambda _gates, _config: True,
+    )
+    try:
+        provider.create()
+        provider.train(4)
+        artifact = provider.export_inference(
+            tmp_path / "neutral-parity-l4-actor",
+            np.zeros((4, len(actor_factory.schema.names)), dtype=np.float32),
+        )
+    finally:
+        provider.close()
+    actor = InferenceActor(artifact, verify=True)
+
+    def replay(multipliers):
+        factory = HistoricalEnvironmentFactory(**source_recipe)
+        env = factory.make_env(soft_multipliers=multipliers)
+        try:
+            observation, _ = env.reset(seed=812)
+            trace = []
+            while True:
+                action = actor.predict(observation[None, :])[0]
+                observation, _reward, terminated, truncated, info = env.step(action)
+                trace.append(
+                    tuple(
+                        info[key]
+                        for key in (
+                            "requested_action",
+                            "risk_soft_target",
+                            "risk_adjusted_target",
+                            "execution_plan_action",
+                            "execution_plan_reason",
+                            "executed_action",
+                            "native_equity",
+                            "r_econ",
+                            "drawdown",
+                        )
+                    )
+                )
+                if terminated or truncated:
+                    break
+            report = native_report(
+                factory.snapshots,
+                fill_references=factory.fill_references,
+                sample_interval_ns=MINUTE_NS,
+                linear_equity_rounding=None,
+            )
+            fills = tuple(
+                tuple(
+                    fill[key]
+                    for key in (
+                        "order_side",
+                        "last_qty",
+                        "last_px",
+                        "commission",
+                        "ts_event",
+                    )
+                )
+                for fill in report["fills"]
+            )
+            funding = tuple(
+                tuple(
+                    row[key]
+                    for key in (
+                        "pnl_change",
+                        "ts_event",
+                        "ts_init",
+                    )
+                )
+                for row in report["funding"]
+            )
+            return tuple(trace), fills, funding, tuple(report["account_rows"]), report["metrics"]
+        finally:
+            env.close()
+
+    baseline = replay({})
+    neutral = replay({"exposure_multiplier": 1.0, "drawdown_throttle": 1.0})
+    assert neutral == baseline
+    assert baseline[1]  # Native fills include both opening and terminal-close costs.
+    assert len(baseline[2]) == 2 and sum(float(row[0].split()[0]) for row in baseline[2]) < 0
+
+
 @pytest.mark.parametrize("requested, expected_plan", ((0.1, "NOOP"), (0.4, "SUBMIT")))
-def test_native_execution_distinguishes_scaled_deadband_from_risk_target(tmp_path, requested, expected_plan):
+def test_native_execution_distinguishes_scaled_deadband_from_risk_target(
+    tmp_path, requested, expected_plan
+):
     config = recipe(tmp_path)
     config["execution"]["deadband"] = "0.05"
     factory = HistoricalEnvironmentFactory(**config)
-    env = factory.make_env(soft_multipliers={
-        "exposure_multiplier": 0.5, "volatility_throttle": 0.5, "drawdown_throttle": 1.0,
-    })
+    env = factory.make_env(
+        soft_multipliers={
+            "exposure_multiplier": 0.5,
+            "volatility_throttle": 0.5,
+            "drawdown_throttle": 1.0,
+        }
+    )
     try:
         env.reset(seed=31)
-        _observation, _reward, _terminated, _truncated, info = env.step(np.array([requested], dtype=np.float32))
+        _observation, _reward, _terminated, _truncated, info = env.step(
+            np.array([requested], dtype=np.float32)
+        )
         assert info["risk_soft_target"] == pytest.approx(requested * 0.25)
         assert info["risk_adjusted_target"] == pytest.approx(requested * 0.25)
         assert info["risk_hard_adjustment"] == 0.0
         assert info["execution_plan_action"] == expected_plan
-        assert info["execution_plan_reason"] == ("deadband" if expected_plan == "NOOP" else "rebalance")
+        assert info["execution_plan_reason"] == (
+            "deadband" if expected_plan == "NOOP" else "rebalance"
+        )
+        assert info["execution_decision_id"] == (f"policy-{factory.snapshots[-2].decision_ts_ns}")
+        assert info["execution_plan_id"] and info["execution_idempotency_key"]
         if expected_plan == "NOOP":
+            assert float(info["execution_delta_qty"]) == 0
+            assert info["execution_client_order_id"] is None
+            assert info["execution_cancel_order_ids"] == ()
             assert info["policy_executed_action_pre_terminal"] == 0.0
             assert factory.snapshots[-1].fills == ()
         else:
+            assert float(info["execution_delta_qty"]) != 0
+            assert info["execution_client_order_id"].startswith("RLES-")
             assert info["policy_executed_action_pre_terminal"] == pytest.approx(0.1)
             assert factory.snapshots[-1].fills
+            assert {fill["client_order_id"] for fill in factory.snapshots[-1].fills} == {
+                info["execution_client_order_id"]
+            }
     finally:
         env.close()
+
+
+def test_rollout_execution_trace_joins_decisions_to_native_orders_and_fills(tmp_path):
+    from decimal import Decimal
+    from rles_orchestrator.application import rollout
+
+    factory = HistoricalEnvironmentFactory(**recipe(tmp_path, bar_count=14))
+    report, _ = rollout(
+        factory,
+        lambda _batch: np.asarray([[0.5]], dtype=np.float32),
+        seed=31,
+        collect_observations=False,
+        include_account_rows=False,
+        include_execution_trace=True,
+    )
+    summary = report["execution_decision_diagnostics"]
+    trace = report["execution_decision_trace"]
+    terminal_trace = report["terminal_settlement_trace"]
+    assert summary["components_known"] is True
+    assert summary["trace_included"] is True
+    assert summary["decision_count"] == report["action_diagnostics"]["count"]
+    assert len(trace) == summary["decision_count"]
+    assert all(
+        type(row["net_exposure"]) is float
+        and isinstance(row["market_features"], dict)
+        and "volatility_5m" in row["market_features"]
+        for row in trace
+    )
+    assert all(
+        row["actor_raw_action_unit"] == "normalized_box[-1,1]"
+        and row["risk_target_unit"] == "fraction_of_risk_budget"
+        and row["actor_raw_action"] == row["actor_requested_target"] == 0.5
+        for row in trace
+    )
+    assert all(row["soft_target"] is None or -1 <= row["soft_target"] <= 1 for row in trace)
+    submitted = [row for row in trace if row["action"] == "SUBMIT"]
+    noops = [row for row in trace if row["action"] == "NOOP"]
+    assert submitted and noops
+    assert summary["native_order_count"] == len(submitted)
+    assert summary["submitted_decisions_with_fills"] == len(submitted)
+    all_report_fills = {fill["event_id"]: fill for fill in report["fills"]}
+    linked_fill_ids = set()
+    for row in submitted:
+        assert row["client_order_id"].startswith("RLES-")
+        assert row["submission_status"] == "native_order_observed"
+        assert row["native_order_status"] == "FILLED"
+        assert row["unfilled_reason"] is None
+        assert float(row["filled_qty"]) > 0
+        for fill in row["fills"]:
+            linked_fill_ids.add(fill["event_id"])
+            assert fill["fee"].endswith(" USDT")
+    assert linked_fill_ids <= set(all_report_fills)
+    assert any(row["fills"] for row in submitted)
+    assert all(
+        row["client_order_id"] is None and row["fills"] == [] and row["related_order_ids"] == []
+        for row in noops
+    )
+    assert len(terminal_trace) == 1
+    settlement = terminal_trace[0]
+    assert settlement["decision_id"] == trace[-1]["decision_id"]
+    assert settlement["settlement_barrier_ts_ns"] >= settlement["policy_barrier_ts_ns"]
+    assert settlement["pre_terminal_net_exposure"] > 0
+    assert settlement["post_terminal_open_position_count"] == 0
+    assert Decimal(settlement["equity_after"]) - Decimal(settlement["equity_before"]) == Decimal(
+        settlement["equity_delta"]
+    )
+    terminal_order_ids = {row["client_order_id"] for row in settlement["orders"]}
+    assert terminal_order_ids - {row["client_order_id"] for row in submitted}
+    terminal_fill_ids = {row["event_id"] for row in settlement["fills"]}
+    assert terminal_fill_ids
+    assert terminal_fill_ids <= set(all_report_fills)
+    json.dumps(terminal_trace, allow_nan=False)
+
+
+def test_partial_native_fill_exposes_remaining_quantity_for_cancel_replace(tmp_path):
+    config = recipe(tmp_path, bar_count=14)
+    config["execution"]["stress_fill"]["simulated_depth_fraction"] = "0.5"
+    factory = HistoricalEnvironmentFactory(**config, mode="stress")
+    env = factory.make_env()
+    try:
+        env.reset(seed=31)
+        action = np.asarray([0.8], dtype=np.float32)
+        _observation, _reward, terminated, truncated, submitted = env.step(action)
+        assert not terminated and not truncated
+        pending = factory.snapshots[-1].orders
+        assert len(pending) == 1
+        order = pending[0]
+        assert order["status"] == "PARTIALLY_FILLED"
+        assert order["quantity"] == "0.800"
+        assert order["filled_qty"] == "0.400"
+        assert order["leaves_qty"] == "0.400"
+        assert submitted["execution_client_order_id"] == order["client_order_id"]
+
+        _observation, _reward, terminated, truncated, canceled = env.step(action)
+        assert not terminated and not truncated
+        assert canceled["execution_plan_action"] == "CANCEL"
+        assert canceled["execution_plan_reason"] == "cancel then resnapshot and replan after ACK"
+        assert canceled["execution_related_order_ids"] == (order["client_order_id"],)
+        assert factory.snapshots[-1].orders == ()
+        final_order = next(
+            row
+            for row in factory.snapshots[-1].all_orders
+            if row["client_order_id"] == order["client_order_id"]
+        )
+        assert final_order["status"] == "CANCELED"
+        assert final_order["filled_qty"] == "0.400"
+        assert final_order["quantity"] == "0.800"
+        assert any(
+            fill["client_order_id"] == order["client_order_id"]
+            for snapshot in factory.snapshots
+            for fill in snapshot.fills
+        )
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize(
+    "order, filled_qty, expected",
+    (
+        (None, "0", "unknown"),
+        (
+            {
+                "quantity": "1",
+                "filled_qty": "0",
+                "status": "REJECTED",
+                "reject_reason": "insufficient margin",
+            },
+            "0",
+            "insufficient margin",
+        ),
+        ({"quantity": "1", "filled_qty": "0", "status": "CANCELED"}, "0", "canceled_unfilled"),
+        (
+            {"quantity": "1", "filled_qty": "0.4", "status": "CANCELED"},
+            "0.4",
+            "canceled_after_partial_fill",
+        ),
+        (
+            {"quantity": "1", "filled_qty": "0.4", "status": "PARTIALLY_FILLED"},
+            "0.4",
+            "partial_fill_open",
+        ),
+        (
+            {"quantity": "1", "filled_qty": "0.4", "status": "PENDING_CANCEL"},
+            "0.4",
+            "cancel_pending",
+        ),
+        ({"quantity": "1", "filled_qty": "0", "status": "PENDING_UPDATE"}, "0", "update_pending"),
+        ({"quantity": "1", "filled_qty": "0", "status": "ACCEPTED"}, "0", "awaiting_fill"),
+        ({"quantity": "1", "filled_qty": "1", "status": "FILLED"}, "1", None),
+    ),
+)
+def test_execution_trace_unfilled_reason_uses_final_native_order_state(
+    order, filled_qty, expected
+) -> None:
+    from decimal import Decimal
+    from rles_orchestrator.application import _unfilled_order_reason
+
+    assert _unfilled_order_reason(order, Decimal(filled_qty)) == expected
+
+
+def test_execution_trace_rejects_mismatch_between_native_order_and_fill_events() -> None:
+    from decimal import Decimal
+    from rles_data.core import DataError
+    from rles_orchestrator.application import _unfilled_order_reason
+
+    order = {"quantity": "1", "filled_qty": "0.5", "status": "PARTIALLY_FILLED"}
+    with pytest.raises(DataError, match="disagree with cumulative order"):
+        _unfilled_order_reason(order, Decimal("0.4"))
+    with pytest.raises(DataError, match="no matching order"):
+        _unfilled_order_reason(None, Decimal("0.1"))
+
+
+def test_execution_trace_fee_summary_preserves_currency_units() -> None:
+    from rles_data.core import DataError
+    from rles_orchestrator.application import _fee_summary
+
+    summary = _fee_summary(
+        [
+            {"commission": "0.10 USDT"},
+            {"commission": "0.002 BNB"},
+            {"commission": "0.20 USDT"},
+        ]
+    )
+    assert summary == {
+        "fee": None,
+        "fee_currency": None,
+        "fees_by_currency": {"BNB": "0.002", "USDT": "0.30"},
+    }
+    assert _fee_summary([{"commission": "0.30 USDT"}]) == {
+        "fee": "0.30",
+        "fee_currency": "USDT",
+        "fees_by_currency": {"USDT": "0.30"},
+    }
+    with pytest.raises(DataError, match="amount and currency"):
+        _fee_summary([{"commission": "0.30"}])
+    with pytest.raises(DataError, match="finite"):
+        _fee_summary([{"commission": "NaN USDT"}])
 
 
 def test_native_hard_cap_price_drift_reduces_inside_deadband(tmp_path):
@@ -439,7 +1593,8 @@ def test_native_cache_compaction_preserves_historical_accounting(tmp_path):
                 if terminated or truncated:
                     break
             report = native_report(
-                factory.snapshots, fill_references=factory.fill_references,
+                factory.snapshots,
+                fill_references=factory.fill_references,
                 sample_interval_ns=MINUTE_NS,
             )
             fill_economics = sorted(
@@ -447,21 +1602,31 @@ def test_native_cache_compaction_preserves_historical_accounting(tmp_path):
                 for row in report["fills"]
             )
             position_economics = [
-                sorted((row["side"], row["signed_qty"], row["quantity"],
-                        row["avg_px_open"], row["avg_px_close"], row["realized_pnl"])
-                       for row in snapshot.positions)
+                sorted(
+                    (
+                        row["side"],
+                        row["signed_qty"],
+                        row["quantity"],
+                        row["avg_px_open"],
+                        row["avg_px_close"],
+                        row["realized_pnl"],
+                    )
+                    for row in snapshot.positions
+                )
                 for snapshot in factory.snapshots
             ]
             funding_economics = sorted(
-                (row["pnl_change"], row["currency"])
-                for row in report["funding"]
+                (row["pnl_change"], row["currency"]) for row in report["funding"]
             )
             return (
                 [snapshot.equity for snapshot in factory.snapshots],
                 position_economics,
                 [snapshot.orders for snapshot in factory.snapshots],
-                report["metrics"], fill_economics, funding_economics,
-                report["liquidations"], report["terminal_flat"],
+                report["metrics"],
+                fill_economics,
+                funding_economics,
+                report["liquidations"],
+                report["terminal_flat"],
             )
         finally:
             env.close()
@@ -483,19 +1648,981 @@ def test_native_observation_exposes_pending_order_direction_and_size(tmp_path):
         {"quantity": "1", "filled_qty": "0.5"},
     )
     snapshot = SimpleNamespace(
-        equity=Decimal("10000"), currency="USDT", mark=Decimal("1000"), positions=(),
-        orders=orders, all_orders=all_orders, margins=(),
-        account_events=({"balances": ({"currency": "USDT", "total": "10000 USDT", "free": "9000 USDT"},)},),
+        equity=Decimal("10000"),
+        currency="USDT",
+        mark=Decimal("1000"),
+        positions=(),
+        orders=orders,
+        all_orders=all_orders,
+        margins=(),
+        account_events=(
+            {"balances": ({"currency": "USDT", "total": "10000 USDT", "free": "9000 USDT"},)},
+        ),
     )
     state = factory.observation_state(snapshot)
     assert state["execution"]["pending_order_count"] == 2
     assert state["execution"]["pending_signed_exposure"] == pytest.approx(0.25)
     assert state["execution"]["pending_gross_exposure"] == pytest.approx(0.75)
     assert state["execution"]["fill_rate"] == pytest.approx(0.5)
+    empty_teacher_state = factory.teacher_state(snapshot)
+    assert empty_teacher_state["unrealized_pnl_pct"] == 0.0
+    assert empty_teacher_state["position_duration_ns"] == 0.0
+    assert empty_teacher_state["position_avg_px_open"] == 0.0
 
-    invalid = SimpleNamespace(**{**vars(snapshot), "orders": ({"side": "UNKNOWN", "leaves_qty": "0.1"},)})
+    held_snapshot = SimpleNamespace(
+        **{
+            **vars(snapshot),
+            "equity": Decimal("10100"),
+            "decision_ts_ns": 1_000_000_000_000,
+            "positions": ({
+                "side": "LONG", "quantity": "2", "duration_ns": 0,
+                "position_id": "P-1", "ts_opened": 100_000_000_000,
+                "avg_px_open": "995.25",
+            },),
+        }
+    )
+    held_teacher_state = factory.teacher_state(held_snapshot)
+    assert held_teacher_state["position_duration_ns"] == 900_000_000_000.0
+    assert held_teacher_state["position_avg_px_open"] == pytest.approx(995.25)
+
+    invalid = SimpleNamespace(
+        **{**vars(snapshot), "orders": ({"side": "UNKNOWN", "leaves_qty": "0.1"},)}
+    )
     with pytest.raises(DataError, match="pending order side/quantity"):
         factory.observation_state(invalid)
+
+
+def test_native_mark_excursion_tracker_is_decision_sampled_and_position_scoped():
+    tracker = NativeMarkExcursionTracker()
+    base = {
+        "position_id": "P-1", "ts_opened": 100, "side": "LONG",
+        "avg_px_open": "100",
+    }
+    first = SimpleNamespace(positions=(base,), mark=Decimal("101"), decision_ts_ns=200)
+    assert tracker.update(first) == {"position_mfe_bps": 100.0, "position_mae_bps": 0.0}
+    adverse = SimpleNamespace(positions=(base,), mark=Decimal("99"), decision_ts_ns=300)
+    assert tracker.update(adverse) == {"position_mfe_bps": 100.0, "position_mae_bps": 100.0}
+    restarted = NativeMarkExcursionTracker.reconstruct_open_position(
+        (
+            SimpleNamespace(positions=(), mark=Decimal("100"), decision_ts_ns=150),
+            first,
+            adverse,
+        ),
+        position_id="P-1", opened_ns=100, side="LONG",
+    )
+    assert restarted.current() == tracker.current()
+    with pytest.raises(DataError, match="gap or closed position"):
+        NativeMarkExcursionTracker.reconstruct_open_position(
+            (first, SimpleNamespace(
+                positions=(), mark=Decimal("99"), decision_ts_ns=300,
+            )),
+            position_id="P-1", opened_ns=100, side="LONG",
+        )
+    with pytest.raises(DataError, match="timestamps must increase"):
+        tracker.update(SimpleNamespace(
+            positions=(base,), mark=Decimal("99"), decision_ts_ns=300,
+        ))
+    flat = SimpleNamespace(positions=(), mark=Decimal("99"), decision_ts_ns=400)
+    assert tracker.update(flat) == {"position_mfe_bps": 0.0, "position_mae_bps": 0.0}
+
+    short = {**base, "position_id": "P-2", "side": "SHORT"}
+    short_mark = SimpleNamespace(positions=(short,), mark=Decimal("98"), decision_ts_ns=500)
+    assert tracker.update(short_mark) == {"position_mfe_bps": 200.0, "position_mae_bps": 0.0}
+    missing_open_time = SimpleNamespace(
+        positions=({**short, "ts_opened": None},), mark=Decimal("98"), decision_ts_ns=600,
+    )
+    with pytest.raises(DataError, match="identity, side, entry, mark and timestamp"):
+        tracker.update(missing_open_time)
+
+
+def test_p0_native_position_marks_survive_episode_replay_restart(tmp_path):
+    environment = recipe(tmp_path, price_jump=True, bar_count=40)
+    serialized_environment = {
+        key: str(value) if isinstance(value, Path) else value
+        for key, value in environment.items()
+    }
+    environment_path = tmp_path / "environment.json"
+    environment_path.write_text(
+        json.dumps(serialized_environment, sort_keys=True), encoding="utf-8"
+    )
+    replay_path = tmp_path / "episode-replay.json"
+    state_path = tmp_path / "teacher-state.json"
+    resumed_state_path = tmp_path / "resumed-teacher-state.json"
+    worker = r'''
+import json
+import os
+from pathlib import Path
+import sys
+
+import numpy as np
+
+from rles_gym_bridge.episode import EpisodeReplay
+from rles_gym_bridge.historical import HistoricalEnvironmentFactory
+
+phase, environment_path, replay_path, state_path = sys.argv[1:]
+environment = json.loads(Path(environment_path).read_text(encoding="utf-8"))
+state_path = Path(state_path)
+
+def durable_json(path, value):
+    with path.open("w", encoding="utf-8") as stream:
+        json.dump(value, stream, sort_keys=True)
+        stream.flush()
+        os.fsync(stream.fileno())
+    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+if phase == "checkpoint":
+    env = HistoricalEnvironmentFactory(**environment).make_env()
+    env.reset(seed=2401)
+    for _ in range(10):
+        env.rles_visible_context_inputs()
+        env.step(np.asarray([0.25], dtype=np.float32))
+    account = env.rles_visible_context_inputs()["account"]
+    fields = (
+        "position_duration_ns",
+        "position_avg_px_open",
+        "position_mfe_bps",
+        "position_mae_bps",
+        "native_last_fill_age_seconds",
+    )
+    expected = {field: account[field] for field in fields}
+    assert expected["position_duration_ns"] > 0
+    assert expected["position_mfe_bps"] > 0
+    durable_json(Path(replay_path), env.rles_export_replay())
+    durable_json(state_path, {
+        "pid": os.getpid(),
+        "account": expected,
+        "boundary_token": env.rles_boundary_token,
+    })
+    # Simulate process loss after the checkpoint reached disk: skip Python
+    # teardown and force the next process to rely only on durable replay data.
+    os._exit(0)
+
+if phase == "resume":
+    replay = EpisodeReplay.from_dict(
+        json.loads(Path(replay_path).read_text(encoding="utf-8"))
+    )
+    env = HistoricalEnvironmentFactory(**environment).make_env(replay=replay)
+    try:
+        env.reset(seed=2401)
+        account = env.rles_visible_context_inputs()["account"]
+        fields = (
+            "position_duration_ns",
+            "position_avg_px_open",
+            "position_mfe_bps",
+            "position_mae_bps",
+            "native_last_fill_age_seconds",
+        )
+        durable_json(state_path, {
+            "pid": os.getpid(),
+            "account": {field: account[field] for field in fields},
+            "boundary_token": env.rles_boundary_token,
+        })
+    finally:
+        env.close()
+else:
+    raise ValueError(f"unknown worker phase: {phase}")
+'''
+    project_root = Path(__file__).resolve().parents[1]
+
+    checkpoint = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            worker,
+            "checkpoint",
+            str(environment_path),
+            str(replay_path),
+            str(state_path),
+        ],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        timeout=90,
+        check=False,
+    )
+    assert checkpoint.returncode == 0, checkpoint.stdout + checkpoint.stderr
+    durable_state = json.loads(state_path.read_text(encoding="utf-8"))
+
+    resumed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            worker,
+            "resume",
+            str(environment_path),
+            str(replay_path),
+            str(resumed_state_path),
+        ],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        timeout=90,
+        check=False,
+    )
+    assert resumed.returncode == 0, resumed.stdout + resumed.stderr
+    recovered_state = json.loads(resumed_state_path.read_text(encoding="utf-8"))
+    assert recovered_state["pid"] != durable_state["pid"]
+    assert recovered_state["account"]["position_duration_ns"] == (
+        durable_state["account"]["position_duration_ns"]
+    )
+    assert recovered_state["account"]["position_avg_px_open"] == (
+        durable_state["account"]["position_avg_px_open"]
+    )
+    assert recovered_state["account"]["position_mfe_bps"] == pytest.approx(
+        durable_state["account"]["position_mfe_bps"]
+    )
+    assert recovered_state["account"]["position_mae_bps"] == pytest.approx(
+        durable_state["account"]["position_mae_bps"]
+    )
+    assert recovered_state["account"]["native_last_fill_age_seconds"] == (
+        durable_state["account"]["native_last_fill_age_seconds"]
+    )
+    assert recovered_state["boundary_token"] == durable_state["boundary_token"]
+
+    tampered_replay_path = tmp_path / "tampered-episode-replay.json"
+    tampered_replay = json.loads(replay_path.read_text(encoding="utf-8"))
+    assert tampered_replay["actions"]
+    tampered_replay["actions"][0] = "0"
+    tampered_replay_path.write_text(
+        json.dumps(tampered_replay, sort_keys=True), encoding="utf-8"
+    )
+    rejected = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            worker,
+            "resume",
+            str(environment_path),
+            str(tampered_replay_path),
+            str(tmp_path / "tampered-teacher-state.json"),
+        ],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        timeout=90,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    assert "checkpoint boundary" in rejected.stdout + rejected.stderr
+
+
+def test_p0_survives_synthetic_native_position_beyond_24h(tmp_path):
+    from rles_route_a.integration.l2_adapter import CAUSAL_MTF_V7_ROUTE_A_FEATURES
+    from rles_route_a.teachers.causal_position import CausalPositionTeacher
+    from rles_route_a.integration.l2_adapter import project_host_visible_context
+
+    # causal_mtf_v7 requires two completed 1d buckets before the first row.
+    environment = recipe(
+        tmp_path, bar_count=4500, start_minute=2900, include_flow=True,
+        funding_settlement_minutes=(3360, 3840, 4320),
+    )
+    environment["coverage_policy"]["settlement_times_ns"] = {
+        "ETHUSDT-PERP.SIM": tuple(
+            minute * MINUTE_NS for minute in (3360, 3840, 4320)
+        ),
+    }
+    factory = HistoricalEnvironmentFactory(
+        **environment, feature_profile="causal_mtf_v7",
+    )
+    env = factory.make_env()
+    teacher = CausalPositionTeacher()
+    try:
+        env.reset(seed=2301)
+        held_past_24h = False
+        max_seen_exposure = 0.0
+        max_seen_duration_ns = 0.0
+        native_funding_payments = 0
+        final_position_marks = None
+        for _ in range(1500):
+            context = env.rles_visible_context_inputs()
+            observation = project_host_visible_context(
+                context=context, fold_id="synthetic-train",
+                episode_id="synthetic-25h-native-replay",
+                market_feature_map=CAUSAL_MTF_V7_ROUTE_A_FEATURES,
+            )
+            max_seen_exposure = max(
+                max_seen_exposure, abs(observation.account_value("net_exposure")),
+            )
+            max_seen_duration_ns = max(
+                max_seen_duration_ns,
+                observation.account_value("position_duration_ns"),
+            )
+            if observation.pending_order_ids:
+                target = observation.account_value("net_exposure") or 0.25
+            elif abs(observation.account_value("net_exposure")) <= 1e-8:
+                target = 0.25
+            else:
+                advice = teacher.advise(observation)
+                assert advice.intent == "HOLD"
+                assert "position_mfe_bps" in observation.account
+                assert "position_mae_bps" in observation.account
+                target = advice.requested_exposure
+                if observation.account_value("position_duration_ns") > 24 * 60 * 60 * 1_000_000_000:
+                    held_past_24h = True
+                    final_position_marks = (
+                        observation.account_value("position_mfe_bps"),
+                        observation.account_value("position_mae_bps"),
+                    )
+                    native_funding_payments = sum(
+                        len(getattr(snapshot, "funding", ()))
+                        for snapshot in factory.snapshots
+                    )
+                    break
+            _obs, _reward, terminated, truncated, _info = env.step(
+                np.asarray([target], dtype=np.float32)
+            )
+            assert not terminated and not truncated
+        assert held_past_24h, (max_seen_exposure, max_seen_duration_ns)
+        assert native_funding_payments >= 2
+        assert final_position_marks is not None
+        current_position, = factory.snapshots[-1].positions
+        restored = NativeMarkExcursionTracker.reconstruct_open_position(
+            factory.snapshots,
+            position_id=current_position["position_id"],
+            opened_ns=current_position["ts_opened"],
+            side=current_position["side"],
+        )
+        assert restored.current()["position_mfe_bps"] == pytest.approx(final_position_marks[0])
+        assert restored.current()["position_mae_bps"] == pytest.approx(final_position_marks[1])
+    finally:
+        env.close()
+
+
+def test_historical_native_collector_runs_t3_recovery_teacher(tmp_path):
+    from rles_il_core.collector import collect_episode
+    from rles_il_core.experts import RecoveryExpert
+
+    factory = HistoricalEnvironmentFactory(**recipe(tmp_path, bar_count=30))
+    env = factory.make_env()
+    try:
+        episode = collect_episode(env, RecoveryExpert(), seed=101)
+    finally:
+        env.close()
+
+    assert episode.expert_id == "recovery_v1"
+    assert episode.transitions
+    assert all(row.action == 0.0 for row in episode.transitions)
+    assert all(row.execution["requested_action"] == row.action for row in episode.transitions)
+
+
+def test_t3_recovery_reduces_existing_native_position(tmp_path):
+    from rles_il_core.collector import collect_episode
+    from rles_il_core.experts import RecoveryExpert
+
+    class SeedPositionThenRecover:
+        expert_id = "recovery_v1"
+
+        def __init__(self):
+            self.recovery = RecoveryExpert(max_abs_exposure=0.1)
+            self.decisions = 0
+
+        def reset(self, metadata):
+            self.recovery.reset(metadata)
+            self.decisions = 0
+
+        def act(self, *, observation, context):
+            self.decisions += 1
+            if self.decisions == 1:
+                return 0.5
+            return self.recovery.act(observation=observation, context=context)
+
+    factory = HistoricalEnvironmentFactory(**recipe(tmp_path, bar_count=30))
+    env = factory.make_env()
+    try:
+        episode = collect_episode(env, SeedPositionThenRecover(), seed=101)
+    finally:
+        env.close()
+    opening, recovery = episode.transitions[:2]
+    assert opening.action == 0.5
+    assert float(opening.execution["native_net_exposure"]) > 0.1
+    assert 0 < recovery.action <= 0.1
+    assert recovery.execution["execution_plan_action"] == "SUBMIT"
+    assert recovery.native_fills
+    assert float(recovery.execution["native_net_exposure"]) < float(
+        opening.execution["native_net_exposure"]
+    )
+    assert recovery.native_equity_after and recovery.r_econ == pytest.approx(
+        np.log(float(recovery.native_equity_after) / float(recovery.native_equity_before))
+    )
+
+
+def test_t2_reversion_enters_and_exits_on_native_range_episode(tmp_path):
+    from rles_il_core.collector import collect_episode
+    from rles_il_core.experts import E2Config, E2ReversionExpert
+
+    environment = recipe(tmp_path, bar_count=100)
+    events = []
+    for event in read_curated(environment["market_path"]).events:
+        minute = event.ts_event_ns // MINUTE_NS
+        if event.kind not in {"ohlcv_1m", "mark", "index"}:
+            events.append(event)
+            continue
+        price = "1100" if 10 <= minute <= 13 else "1050" if minute == 70 else "1000"
+        payload = dict(event.payload)
+        if event.kind == "ohlcv_1m":
+            payload.update(open=price, high=price, low=price, close=price)
+        else:
+            payload["price"] = price
+        events.append(replace(event, payload=payload))
+    market = tmp_path / "range-market.parquet"
+    write_curated(market, CuratedStore(events))
+    environment.update(
+        market_path=market,
+        feature_profile="causal_mtf_v4",
+        start_ns=67 * MINUTE_NS,
+        end_ns=90 * MINUTE_NS,
+    )
+    environment["coverage_policy"]["known_schedule_times_ns"] = {
+        environment["instrument"]: (95 * MINUTE_NS,)
+    }
+    environment["execution"]["zero_target_policy"] = "close"
+    factory = HistoricalEnvironmentFactory(**environment)
+
+    class InspectingReversion(E2ReversionExpert):
+        def __init__(self):
+            super().__init__(
+                E2Config(
+                    entry_z=1.5,
+                    exit_z=0.3,
+                    target_exposure=0.2,
+                    max_holding_minutes=2,
+                    lookback_minutes=4,
+                )
+            )
+            self.seen = []
+
+        def act(self, *, observation, context):
+            self.seen.append((context.decision_ts_ns // MINUTE_NS, dict(context.market_features)))
+            return super().act(observation=observation, context=context)
+
+    teacher = InspectingReversion()
+    env = factory.make_env()
+    try:
+        episode = collect_episode(env, teacher, seed=23)
+    finally:
+        env.close()
+    actions = [row.action for row in episode.transitions]
+    assert any(action < 0 for action in actions), [
+        (minute, data.get("close_1m"), data.get("return_15m"), data.get("return_60m"))
+        for minute, data in teacher.seen
+        if 68 <= minute <= 73
+    ]
+    entry = next(index for index, action in enumerate(actions) if action < 0)
+    exit_index = next(index for index in range(entry + 1, len(actions)) if actions[index] == 0)
+    entry_row, exit_row = episode.transitions[entry], episode.transitions[exit_index]
+    assert entry_row.execution["requested_action"] < 0
+    assert entry_row.native_fills and exit_row.native_fills
+    assert abs(float(exit_row.execution["native_net_exposure"])) < 1e-6
+    assert all("commission" in fill for fill in (*entry_row.native_fills, *exit_row.native_fills))
+    assert all(row.native_equity_after for row in episode.transitions)
+
+
+def test_route_a_t1_t2_t3_teachers_run_registered_native_gym_and_m22_path(tmp_path):
+    """Synthetic engineering proof: registered prepare -> native Gym -> M2.2/L6."""
+    from hashlib import sha256
+
+    from rles_orchestrator import application
+    from rles_route_a.integration.gym_rollout import NativeGymTeacherProvider
+    from rles_route_a.integration.host_gym_projection import (
+        TerminalL6Receipt,
+        terminal_settlement_sha256,
+    )
+    from rles_route_a.teachers.mean_reversion import MeanReversionTeacher
+    from rles_route_a.teachers.recovery import RecoveryTeacher
+    from rles_route_a.teachers.trend import TrendTeacher
+
+    environment = recipe(tmp_path, bar_count=7005, start_minute=2890)
+    original_store = read_curated(environment["market_path"])
+    rising_events = []
+    for event in original_store.events:
+        if event.kind not in {"ohlcv_1m", "mark", "index"}:
+            rising_events.append(event)
+            continue
+        minute = event.ts_event_ns // MINUTE_NS
+        price = (
+            "1000.50"
+            if minute == 4050
+            else "1000"
+            if 3900 <= minute <= 4200
+            else "5400"
+            if 4300 <= minute <= 4359
+            else "5500"
+            if 4360 <= minute <= 4400
+            else "4300"
+            if 3200 <= minute <= 3259
+            else "4400"
+            if 3260 <= minute <= 3300
+            else str(1000 + minute)
+        )
+        payload = dict(event.payload)
+        if event.kind == "ohlcv_1m":
+            payload.update(open=price, high=price, low=price, close=price)
+        else:
+            payload["price"] = price
+        rising_events.append(replace(event, payload=payload))
+    market_path = tmp_path / "rising-synthetic-market.parquet"
+    write_curated(market_path, CuratedStore(rising_events), row_group_size=256)
+    environment.update(
+        market_path=str(market_path),
+        rules_path=str(environment["rules_path"]),
+        feature_profile="causal_mtf_v5",
+    )
+    environment["execution"]["zero_target_policy"] = "close"
+    marker_path = market_path.with_name(market_path.name + ".COMPLETED.json")
+    marker_sha = sha256(marker_path.read_bytes()).hexdigest()
+    config = {
+        "output": str(tmp_path / "route-a-run"),
+        "environment": environment,
+        "train_data_access": {
+            "start_ns": MINUTE_NS,
+            "end_ns": 7006 * MINUTE_NS,
+            "marker_sha256": marker_sha,
+            "label": "train-route-a-native-integration",
+        },
+    }
+    factory = application.prepare(
+        config,
+        fit_scaler=True,
+        compact_report_snapshots=False,
+        require_scoped_train_access=True,
+    )
+    source = marker_sha
+
+    def terminal_receipt(info, source_identity):
+        settlement = info["terminal_settlement"]
+        return TerminalL6Receipt(
+            receipt_id="synthetic-l6-" + info["execution_decision_id"],
+            source_identity=source_identity,
+            settlement_sha256=terminal_settlement_sha256(settlement),
+            policy_barrier_ts_ns=info["decision_ts_ns"],
+            settlement_barrier_ts_ns=info["settlement_after_ns"],
+            equity_before=float(info["policy_equity_before"]),
+            policy_equity_after=float(info["policy_equity_after"]),
+            settled_equity_after=float(settlement["equity_after"]),
+            currency=info["policy_equity_currency"],
+            gym_recorded_r_econ=float(info["r_econ"]),
+            recorded_r_econ=float(info["r_econ"]),
+        )
+
+    provider, grant = NativeGymTeacherProvider.from_prepared_factory(
+        factory,
+        fold_id="synthetic-route-a-fold",
+        teacher=TrendTeacher(size=0.2),
+        native_order_facts_verifier=lambda info, source_identity, facts: (
+            source_identity == source
+            and facts.native_order_status_receipt == info["native_order_status_receipt"]
+        ),
+        no_external_cashflow_receipt=lambda info: "synthetic-no-flow-" + info["evidence_hash"],
+        no_external_cashflow_verifier=lambda _info, source_identity, receipt: (
+            source_identity == source and receipt.startswith("synthetic-no-flow-")
+        ),
+        episode_id=lambda _env, _info: "synthetic-route-a-episode",
+        terminal_receipt_provider=terminal_receipt,
+        terminal_receipt_verifier=lambda info, source_identity, receipt: (
+            source_identity == source
+            and receipt.settlement_sha256 == terminal_settlement_sha256(info["terminal_settlement"])
+        ),
+    )
+    assert grant.source_identity == source
+    barriers, report = provider.rollout_with_m22_trace(
+        factory=factory,
+        host_rollout=application.rollout,
+        grant=grant,
+        seed=20261019,
+        episode_steps=3,
+        reset_options={"rles_episode_index": 10},
+    )
+
+    assert len(barriers) == 3
+    assert all(barrier.observation.market_value("trend_1h") > 0 for barrier in barriers), [
+        (
+            barrier.observation.decision_ts_ns // MINUTE_NS,
+            barrier.observation.market_value("trend_1h"),
+        )
+        for barrier in barriers
+    ]
+    assert all(barrier.observation.market_value("trend_1d") > 0 for barrier in barriers)
+    assert all(barrier.trace.native_equity_before > 0 for barrier in barriers)
+    assert barriers[-1].terminal_l6_receipt is not None
+    assert report["route_a_native_order_verification"]["barriers"] == 3
+    assert report["route_a_native_order_verification"]["policy_fill_events"] >= 1
+    assert float(report["metrics"]["total_fee"]) > 0
+
+    # The same native action/evidence contract also accepts the T2 alpha expert
+    # and T3 position-risk expert; this rising fixture deliberately keeps T2 in
+    # its trend-gated no-trade regime and T3 in its safe-flat regime.
+    for teacher in (MeanReversionTeacher(), RecoveryTeacher()):
+        teacher_provider, teacher_grant = NativeGymTeacherProvider.from_prepared_factory(
+            factory,
+            fold_id="synthetic-route-a-fold",
+            teacher=teacher,
+            native_order_facts_verifier=lambda info, source_identity, facts: (
+                source_identity == source
+                and facts.native_order_status_receipt == info["native_order_status_receipt"]
+            ),
+            no_external_cashflow_receipt=lambda info: "synthetic-no-flow-" + info["evidence_hash"],
+            no_external_cashflow_verifier=lambda _info, source_identity, receipt: (
+                source_identity == source and receipt.startswith("synthetic-no-flow-")
+            ),
+            episode_id=lambda _env, _info: "synthetic-route-a-episode",
+            terminal_receipt_provider=terminal_receipt,
+            terminal_receipt_verifier=lambda info, source_identity, receipt: (
+                source_identity == source
+                and receipt.settlement_sha256
+                == terminal_settlement_sha256(info["terminal_settlement"])
+            ),
+        )
+        teacher_barriers, teacher_report = teacher_provider.rollout_with_m22_trace(
+            factory=factory,
+            host_rollout=application.rollout,
+            grant=teacher_grant,
+            seed=20261019,
+            episode_steps=3,
+            reset_options={"rles_episode_index": 10},
+        )
+        assert len(teacher_barriers) == 3
+        assert all(barrier.advice.expert_id == teacher.expert_id for barrier in teacher_barriers)
+        assert all(
+            barrier.trace.native_equity_before > 0
+            and barrier.trace.native_equity_after > 0
+            and barrier.reward.recorded_r_econ is not None
+            for barrier in teacher_barriers
+        )
+        assert teacher_report["route_a_native_order_verification"]["barriers"] == 3
+        assert all(barrier.advice.requested_exposure == 0 for barrier in teacher_barriers)
+
+    # Exercise actual BC optimization and independent Train-inner teacher and
+    # student replays on disjoint native windows. All stores/rules/L6 receipts
+    # remain explicit synthetic fixtures; this is not historical economics.
+    from rles_route_a.config import BCConfig
+    from rles_route_a.training.native_bc import (
+        evaluate_bc_on_registered_train_inner_rollout,
+        train_bc_from_registered_native_rollout,
+    )
+
+    def prepare_window(start_minute, end_minute, label, *, scaler=None):
+        scoped_config = {
+            **config,
+            "environment": {
+                **environment,
+                "start_ns": start_minute * MINUTE_NS,
+                "end_ns": end_minute * MINUTE_NS,
+            },
+            "train_data_access": {
+                **config["train_data_access"],
+                "label": label,
+            },
+        }
+        return application.prepare(
+            scoped_config,
+            fit_scaler=scaler is None,
+            scaler=scaler,
+            compact_report_snapshots=False,
+            require_scoped_train_access=True,
+        )
+
+    fit_factory = prepare_window(2890, 3500, "train-route-a-bc-fit")
+    selection_factory = prepare_window(
+        6400,
+        7005,
+        "train-route-a-bc-selection",
+        scaler=fit_factory.scaler,
+    )
+    student_factory = prepare_window(
+        6400,
+        7005,
+        "train-route-a-bc-student",
+        scaler=fit_factory.scaler,
+    )
+
+    def registered_teacher(factory, teacher, *, verify_synthetic_economics=False):
+        economics_verifier = None
+        if verify_synthetic_economics:
+            # This verifier is deliberately scoped to the synthetic fixture:
+            # it exercises the complete case-attribution/BC path without
+            # claiming that the generated OHLC prices represent real fills.
+            def economics_verifier(info, source_identity, facts):
+                checks = {
+                    "source": source_identity == source,
+                    "order_receipt": (
+                        facts.native_order_status_receipt
+                        == info["native_order_status_receipt"]
+                    ),
+                    "equity_before": float(info["policy_equity_before"]) > 0,
+                    "equity_after": float(info["policy_equity_after"]) > 0,
+                    "reward": np.isfinite(float(info["r_econ"])),
+                }
+                assert all(checks.values()), checks
+                return True
+        return NativeGymTeacherProvider.from_prepared_factory(
+            factory,
+            fold_id="synthetic-route-a-fold",
+            teacher=teacher,
+            native_order_facts_verifier=lambda info, source_identity, facts: (
+                source_identity == source
+                and facts.native_order_status_receipt == info["native_order_status_receipt"]
+            ),
+            native_economic_evidence_verifier=economics_verifier,
+            no_external_cashflow_receipt=lambda info: "synthetic-no-flow-" + info["evidence_hash"],
+            no_external_cashflow_verifier=lambda _info, source_identity, receipt: (
+                source_identity == source and receipt.startswith("synthetic-no-flow-")
+            ),
+            episode_id=lambda _env, _info: "synthetic-route-a-bc-episode",
+            terminal_receipt_provider=terminal_receipt,
+            terminal_receipt_verifier=lambda info, source_identity, receipt: (
+                source_identity == source
+                and receipt.settlement_sha256
+                == terminal_settlement_sha256(info["terminal_settlement"])
+            ),
+        )
+
+    t2_factory = prepare_window(
+        4020,
+        4090,
+        "train-route-a-t2-active",
+        scaler=fit_factory.scaler,
+    )
+    t2_provider, t2_grant = registered_teacher(t2_factory, MeanReversionTeacher())
+    t2_barriers, t2_report = t2_provider.rollout_with_m22_trace(
+        factory=t2_factory,
+        host_rollout=application.rollout,
+        grant=t2_grant,
+        seed=20261023,
+        episode_steps=60,
+        reset_options={"rles_episode_index": 0},
+    )
+    t2_entries = [barrier for barrier in t2_barriers if barrier.advice.requested_exposure < 0]
+    assert t2_entries
+    assert any(
+        barrier.trace.planner_action == "SUBMIT" and barrier.trace.filled_order_ids
+        for barrier in t2_entries
+    )
+    assert any(
+        barrier.advice.requested_exposure == 0
+        and barrier.trace.planner_action == "SUBMIT"
+        and barrier.trace.filled_order_ids
+        for barrier in t2_barriers[t2_barriers.index(t2_entries[0]) + 1 :]
+    )
+    assert t2_report["route_a_native_order_verification"]["policy_fill_events"] >= 2
+
+    # A separate deterministic rise/hold segment gives the fit teacher enough
+    # time to open, close, and realize a fee-inclusive positive trade case.
+    bc_fit_factory = prepare_window(
+        3180,
+        3300,
+        "train-route-a-bc-positive-fit",
+        scaler=fit_factory.scaler,
+    )
+
+    from rles_route_a.contracts import ExpertAdvice
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class SyntheticRoundTripTeacher:
+        open_minute: int = 3200
+        close_minute: int = 3260
+        size: float = 0.2
+        expert_id: str = "synthetic_round_trip_v1"
+
+        def advise(self, observation):
+            minute = observation.decision_ts_ns // MINUTE_NS
+            current = observation.account_value("net_exposure")
+            target = self.size if self.open_minute <= minute < self.close_minute else 0.0
+            intent = (
+                "OPEN_LONG" if current == 0 and target > 0
+                else "EXIT" if current != 0 and target == 0
+                else "HOLD" if current != 0
+                else "FLAT"
+            )
+            return ExpertAdvice(
+                self.expert_id,
+                observation.decision_ts_ns,
+                intent,
+                target,
+                ("SYNTHETIC_SCHEDULED_ROUNDTRIP",),
+            )
+
+    class SeededRecoveryTeacher:
+        expert_id = "recovery_v1"
+
+        def __init__(self):
+            self.recovery = RecoveryTeacher(max_abs_exposure=0.1)
+
+        def advise(self, observation):
+            if abs(observation.account_value("net_exposure")) < 1e-8:
+                return ExpertAdvice(
+                    self.expert_id,
+                    observation.decision_ts_ns,
+                    "OPEN_LONG",
+                    0.5,
+                    ("TEST_SETUP_POSITION",),
+                )
+            return self.recovery.advise(observation)
+
+    t3_provider, t3_grant = registered_teacher(factory, SeededRecoveryTeacher())
+    t3_barriers, t3_report = t3_provider.rollout_with_m22_trace(
+        factory=factory,
+        host_rollout=application.rollout,
+        grant=t3_grant,
+        seed=20261024,
+        episode_steps=4,
+        reset_options={"rles_episode_index": 10},
+    )
+    assert t3_barriers[0].advice.requested_exposure == 0.5
+    assert t3_barriers[1].advice.reason_codes == ("POSITION_OVERSIZE",)
+    assert t3_barriers[1].advice.requested_exposure == 0.1
+    assert t3_barriers[1].trace.planner_action == "SUBMIT"
+    assert t3_barriers[1].trace.filled_order_ids
+    assert t3_barriers[1].trace.actual_exposure_after < t3_barriers[0].trace.actual_exposure_after
+    assert t3_report["route_a_native_order_verification"]["policy_fill_events"] >= 2
+
+    fit_provider, fit_grant = registered_teacher(
+        bc_fit_factory,
+        SyntheticRoundTripTeacher(),
+        verify_synthetic_economics=True,
+    )
+    selection_provider, selection_grant = registered_teacher(
+        selection_factory,
+        SyntheticRoundTripTeacher(),
+    )
+    student_teacher_provider, student_grant = registered_teacher(
+        student_factory,
+        SyntheticRoundTripTeacher(),
+    )
+    bc_config = BCConfig(
+        feature_names=(
+            "market.trend_1h",
+            "market.trend_1d",
+            "market.vol_1m",
+            "account.net_exposure",
+            "account.drawdown",
+            "account.unrealized_pnl_fraction",
+        ),
+        context_bars=4,
+        max_gap_ns=MINUTE_NS,
+        hidden_size=8,
+        layers=1,
+        batch_size=4,
+        learning_rate=0.01,
+        epochs=30,
+        seed=20261020,
+    )
+    bc_training = train_bc_from_registered_native_rollout(
+        factory=bc_fit_factory,
+        provider=fit_provider,
+        host_rollout=application.rollout,
+        grant=fit_grant,
+        config=bc_config,
+        seed=bc_config.seed,
+        # The synthetic pulse spans more than one hour so the trend teacher can
+        # close its position before the host's verified terminal settlement.
+        rollout_options={"episode_steps": 100, "reset_options": {"rles_episode_index": 10}},
+    )
+    assert bc_training.label_count == 100
+    assert bc_training.executable_label_count > 0
+    assert bc_training.native_summary.completed_native_trade_case_count == 1
+    assert bc_training.native_summary.positive_native_trade_case_count == 1
+    assert any(
+        row.economic_case_status == "OBSERVED_NATIVE_TRADE_POSITIVE"
+        and row.case_outcome_bps is not None
+        and row.case_outcome_bps > 0
+        for row in bc_training.labeled_steps
+    )
+    assert not bc_training.behavior_summary.collapsed_to_flat
+    assert bc_training.behavior_summary.prediction_nonzero_fraction > 0
+    assert len(bc_training.native_barrier_evidence) == 100
+    assert bc_training.execution_recipe_hash == bc_fit_factory.route_a_execution_recipe_hash
+
+    import random
+    import torch
+
+    random.seed(987)
+    np.random.seed(987)
+    torch.manual_seed(987)
+    repeat_provider, repeat_grant = registered_teacher(
+        bc_fit_factory,
+        SyntheticRoundTripTeacher(),
+        verify_synthetic_economics=True,
+    )
+    repeated_training = train_bc_from_registered_native_rollout(
+        factory=bc_fit_factory,
+        provider=repeat_provider,
+        host_rollout=application.rollout,
+        grant=repeat_grant,
+        config=bc_config,
+        seed=bc_config.seed,
+        rollout_options={"episode_steps": 100, "reset_options": {"rles_episode_index": 10}},
+    )
+    assert repeated_training.history == bc_training.history
+    for name, weight in bc_training.policy.model.state_dict().items():
+        assert torch.equal(weight, repeated_training.policy.model.state_dict()[name])
+
+    independently_evaluated = evaluate_bc_on_registered_train_inner_rollout(
+        training_result=bc_training,
+        fit_factory=bc_fit_factory,
+        selection_factory=selection_factory,
+        selection_provider=selection_provider,
+        student_factory=student_factory,
+        student_provider=student_teacher_provider,
+        host_rollout=application.rollout,
+        grant=selection_grant,
+        seed=20261021,
+        student_grant=student_grant,
+        student_seed=20261022,
+        rollout_options={"episode_steps": 8, "reset_options": {"rles_episode_index": 10}},
+    )
+    evaluation = independently_evaluated.independent_evaluation
+    assert evaluation is not None
+    assert evaluation.window_ns == (6400 * MINUTE_NS, 7005 * MINUTE_NS)
+    assert evaluation.purge_ns == selection_factory.features.max_lookback_ns
+    assert evaluation.transition_hash == selection_factory.transition_hash
+    assert evaluation.transition_hash != bc_training.transition_hash
+    assert evaluation.execution_recipe_hash == bc_training.execution_recipe_hash
+    assert len(evaluation.teacher_barrier_evidence) == 8
+    assert len(evaluation.student_barrier_evidence) == 8
+    assert evaluation.student_native_summary.decisions == 8
+    assert evaluation.student_behavior_summary.prediction_nonzero_fraction > 0
+    assert not evaluation.student_behavior_summary.collapsed_to_flat
+
+    from rles_route_a.integration.wfo_train import make_route_a_wfo_train
+
+    def verified_write(path, payload):
+        encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode("utf-8")
+        path.write_bytes(encoded)
+        return sha256(encoded).hexdigest()
+
+    output = tmp_path / "native-bc-wfo-bundle"
+    train = make_route_a_wfo_train(
+        fit_candidate=lambda _run: (independently_evaluated, bc_fit_factory),
+        validation_backtest=lambda *_args, **_kwargs: pytest.fail(
+            "Train-only engineering packaging must not read Validation"
+        ),
+        write_verified=verified_write,
+        digest=lambda payload: sha256(
+            json.dumps(payload, sort_keys=True, allow_nan=False).encode("utf-8")
+        ).hexdigest(),
+    )
+    with pytest.raises(PermissionError, match="multi-window student-beats-teacher"):
+        train(
+            {
+                "output": str(output),
+                "route": "route_a",
+                "algorithm": "route_a_bc_gru",
+                "environment": {
+                    **environment,
+                    "start_ns": 2890 * MINUTE_NS,
+                    "end_ns": 7006 * MINUTE_NS,
+                },
+            },
+            evaluate=False,
+        )
+    assert not (output / "route_a_bc").exists()
+    assert not (output / "bundle.json").exists()
+    assert not (output / "COMPLETED.json").exists()
 
 
 def test_production_factory_rejects_missing_rules_and_evaluation_fit(tmp_path):
@@ -506,15 +2633,98 @@ def test_production_factory_rejects_missing_rules_and_evaluation_fit(tmp_path):
         HistoricalEnvironmentFactory(**{**config, "rules_path": tmp_path / "missing.json"})
 
 
-def test_market_audit_reports_economic_coverage_without_granting_missing_rules(tmp_path):
-    from rles_orchestrator.application import audit_market
+def test_prepared_history_reuses_verified_store_and_preserves_native_trajectory(
+    tmp_path, monkeypatch
+):
+    import rles_gym_bridge.historical as historical
 
     config = recipe(tmp_path)
-    result = audit_market({"environment": config, "evaluation": {
-        "start_ns": config["start_ns"], "end_ns": config["end_ns"],
-        "coverage_policy": config["coverage_policy"],
-    }})
+    original = HistoricalEnvironmentFactory(**config)
+    monkeypatch.setattr(
+        historical, "read_curated", lambda *_: pytest.fail("verified history must be shared")
+    )
+    shared = HistoricalEnvironmentFactory(**config, prepared_store=original.store)
+    assert shared.store is original.store
+    assert shared.metadata() == original.metadata()
+    assert shared.transition_hash == original.transition_hash
+    trajectories = []
+    for factory in (original, shared):
+        env = factory.make_env()
+        try:
+            obs, _ = env.reset(seed=31)
+            rows = [(obs.tolist(),)]
+            while True:
+                obs, reward, terminated, truncated, info = env.step(
+                    np.array([0.5], dtype=np.float32)
+                )
+                rows.append(
+                    (
+                        obs.tolist(),
+                        reward,
+                        terminated,
+                        truncated,
+                        info["native_equity"],
+                        info["execution_plan_action"],
+                        info["execution_plan_reason"],
+                    )
+                )
+                if terminated or truncated:
+                    break
+            trajectories.append(rows)
+        finally:
+            env.close()
+    assert trajectories[0] == trajectories[1]
+
+
+def test_market_audit_reports_only_registered_train_coverage_without_granting_missing_rules(
+    monkeypatch,
+    tmp_path,
+):
+    from rles_orchestrator.application import audit_market
+    from rles_data.io import read_curated
+
+    config = recipe(tmp_path)
+    rules_document = json.loads(Path(config["rules_path"]).read_text(encoding="utf-8"))
+    rules_document["events"][0]["payload"]["instrument"] = "OTHER-PERP.SIM"
+    uncovered_rules = tmp_path / "uncovered-rules.json"
+    uncovered_rules.write_text(json.dumps(rules_document), encoding="utf-8")
+    config["rules_path"] = str(uncovered_rules)
+    calls = []
+
+    def read_train_window(
+        run, window, *, marker_sha256, label, allow_legacy_isolated_snapshot=False
+    ):
+        calls.append((run, window, marker_sha256, label, allow_legacy_isolated_snapshot))
+        return read_curated(run["environment"]["market_path"])
+
+    monkeypatch.setattr(
+        "rles_orchestrator.application.read_registered_train_window", read_train_window
+    )
+    access = {
+        "start_ns": config["start_ns"],
+        "end_ns": config["end_ns"],
+        "marker_sha256": "a" * 64,
+        "label": "train-market-audit-test",
+    }
+    run = {"output": str(tmp_path / "audit"), "environment": config, "train_data_access": access}
+    result = audit_market(run)
     report = result["splits"]["train"]
+    assert result["schema"] == "rles.market-audit.v2"
+    assert result["access_scope"] == {
+        "split": "train_inner",
+        "start_ns": config["start_ns"],
+        "end_ns": config["end_ns"],
+    }
+    assert set(result["splits"]) == {"train"}
+    assert calls == [
+        (
+            run,
+            {"start_ns": access["start_ns"], "end_ns": access["end_ns"]},
+            access["marker_sha256"],
+            access["label"],
+            False,
+        )
+    ]
     assert report["grade"] == "DQ-C"
     assert "instrument_rule_coverage_gap" in report["findings"]
     assert set(report["verified_coverage"]) >= {"mark", "index", "funding_update"}
@@ -526,44 +2736,83 @@ def test_application_rl_train_bundle_load_and_disjoint_native_backtest(tmp_path,
 
     config = recipe(tmp_path)
     config["end_ns"] = 12 * MINUTE_NS
-    config["market_path"], config["rules_path"] = str(config["market_path"]), str(config["rules_path"])
-    run = {"environment": config, "evaluation": {"start_ns": 12 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                                                   "coverage_policy": config["coverage_policy"]},
-           "output": str(tmp_path / "run"), "algorithm": algorithm, "steps": 4, "hidden_layers": [2],
-           "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1} if algorithm == "PPO" else
-                                {"learning_starts": 2, "buffer_size": 32, "batch_size": 2, "train_freq": 1, "gradient_steps": 1},
-           "normalize_observation": True}
+    config["market_path"], config["rules_path"] = (
+        str(config["market_path"]),
+        str(config["rules_path"]),
+    )
+    run = {
+        "environment": config,
+        "evaluation": {
+            "start_ns": 12 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": config["coverage_policy"],
+        },
+        "output": str(tmp_path / "run"),
+        "algorithm": algorithm,
+        "steps": 4,
+        "hidden_layers": [2],
+        "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1}
+        if algorithm == "PPO"
+        else {
+            "learning_starts": 2,
+            "buffer_size": 32,
+            "batch_size": 2,
+            "train_freq": 1,
+            "gradient_steps": 1,
+        },
+        "normalize_observation": True,
+        "rl_corpus_episode_steps": 2,
+    }
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps(run), encoding="utf-8")
     resolved = load_config(config_path)
     result = train(resolved)
-    restored = backtest(resolved, result["output"])
+    run_manifest = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert run_manifest["gpu_lease"] is None
+    exploratory = {**resolved, "evaluation": {**resolved["evaluation"], "split": "validation"}}
+    restored = backtest(exploratory, result["output"])
+    assert restored["evaluation_scope"]["formal"] is False
+    with pytest.raises(DataError, match="requires WFO research access"):
+        backtest(resolved, result["output"])
     assert result["terminal_flat"] and restored["terminal_flat"]
     assert result["metrics"] == restored["metrics"]
     assert restored["market_data_provenance"] == [
-        "synthetic:funding_update", "synthetic:index", "synthetic:mark", "synthetic:ohlcv_1m",
+        "synthetic:funding_update",
+        "synthetic:index",
+        "synthetic:mark",
+        "synthetic:ohlcv_1m",
     ]
     assert restored["rule_provenance"] == ["synthetic:factory-test-rule"]
     if algorithm == "PPO":
         learning = tmp_path / "run" / "R1-learning.json"
         learning_record = json.loads(learning.read_text(encoding="utf-8"))
-        assert learning_record["schema"] == "rles.r1-learning.v1"
+        assert learning_record["schema"] == "rles.r1-learning.v5"
         assert learning_record["final_steps"] == 4
         assert sum(block["samples"] for block in learning_record["blocks"]) == 4
+        resources = learning_record["blocks"][0]["resource_measurements"]
+        assert resources["scope"] == (
+            "cpu_rss_at_learn_call_end; torch_cuda_allocator_peaks_since_learn_call_start"
+        )
+        assert resources["cpu_rss_bytes"] is None or resources["cpu_rss_bytes"] > 0
+        assert resources["gpu_max_allocated_bytes"] is None
+        assert resources["gpu_max_reserved_bytes"] is None
         bundle_record = json.loads((tmp_path / "run" / "bundle.json").read_text(encoding="utf-8"))
-        assert bundle_record["actor"]["training_diagnostics_hash"] == sha256(
-            learning.read_bytes()
-        ).hexdigest()
+        assert bundle_record["runtime_resources"]["gpu_lease"] is None
+        assert bundle_record["runtime_resources"]["cuda_allocator_fraction"] is None
+        assert (
+            bundle_record["actor"]["training_diagnostics_hash"]
+            == sha256(learning.read_bytes()).hexdigest()
+        )
         original_learning = learning.read_bytes()
         learning.write_bytes(original_learning + b"\n")
         with pytest.raises(DataError, match="integrity mismatch"):
-            backtest(resolved, result["output"])
+            backtest(exploratory, result["output"])
         learning.write_bytes(original_learning)
         bundle = tmp_path / "run" / "bundle.json"
         original = bundle.read_bytes()
         bundle.write_bytes(original + b"\n")
         with pytest.raises(DataError, match="integrity mismatch"):
-            backtest(resolved, result["output"])
+            backtest(exploratory, result["output"])
         bundle.write_bytes(original)
 
 
@@ -572,13 +2821,24 @@ def test_application_parallel_rl_uses_rotating_rank_exclusive_train_lanes(tmp_pa
 
     config = recipe(tmp_path)
     config["end_ns"] = 13 * MINUTE_NS
-    config["market_path"], config["rules_path"] = str(config["market_path"]), str(config["rules_path"])
+    config["market_path"], config["rules_path"] = (
+        str(config["market_path"]),
+        str(config["rules_path"]),
+    )
     run = {
         "environment": config,
-        "evaluation": {"start_ns": 13 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                       "coverage_policy": config["coverage_policy"]},
-        "output": str(tmp_path / "parallel-run"), "algorithm": "PPO", "steps": 4,
-        "hidden_layers": [2], "rl_num_envs": 2, "rl_episode_steps": 2,
+        "evaluation": {
+            "start_ns": 13 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": config["coverage_policy"],
+        },
+        "output": str(tmp_path / "parallel-run"),
+        "algorithm": "PPO",
+        "steps": 4,
+        "hidden_layers": [2],
+        "rl_num_envs": 2,
+        "rl_episode_steps": 2,
+        "rl_corpus_episode_steps": 2,
         "hyperparameters": {"n_steps": 2, "batch_size": 4, "n_epochs": 1},
     }
     result = train(run)
@@ -588,9 +2848,9 @@ def test_application_parallel_rl_uses_rotating_rank_exclusive_train_lanes(tmp_pa
     assert coverage["sampling_policy"] == "rank_exclusive_coprime_rotating_windows_v1"
     assert coverage["initial_episode_start_offsets"][0] == 0
     assert coverage["initial_episode_start_offsets"][1] > 0
-    assert coverage["upper_bound_unique_train_window_steps"] == coverage[
-        "train_window_decision_steps"
-    ]
+    assert (
+        coverage["upper_bound_unique_train_window_steps"] == coverage["train_window_decision_steps"]
+    )
     assert coverage["upper_bound_train_window_coverage_fraction"] == 1.0
 
 
@@ -601,14 +2861,23 @@ def test_parallel_rl_checkpoint_restores_each_partition_mid_episode(tmp_path, mo
     environment = recipe(tmp_path)
     environment["end_ns"] = 13 * MINUTE_NS
     environment["market_path"], environment["rules_path"] = (
-        str(environment["market_path"]), str(environment["rules_path"]),
+        str(environment["market_path"]),
+        str(environment["rules_path"]),
     )
     run = {
         "environment": environment,
-        "evaluation": {"start_ns": 13 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                       "coverage_policy": environment["coverage_policy"]},
-        "output": str(tmp_path / "parallel-resume"), "algorithm": "PPO", "steps": 4,
-        "hidden_layers": [2], "rl_num_envs": 2, "rl_episode_steps": 2,
+        "evaluation": {
+            "start_ns": 13 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": environment["coverage_policy"],
+        },
+        "output": str(tmp_path / "parallel-resume"),
+        "algorithm": "PPO",
+        "steps": 4,
+        "hidden_layers": [2],
+        "rl_num_envs": 2,
+        "rl_episode_steps": 2,
+        "rl_corpus_episode_steps": 2,
         "hyperparameters": {"n_steps": 1, "batch_size": 2, "n_epochs": 1},
         "checkpoint_interval_steps": 2,
     }
@@ -640,25 +2909,43 @@ def test_parallel_rl_checkpoint_restores_each_partition_mid_episode(tmp_path, mo
 
 
 @pytest.mark.parametrize("route", ("A1", "A4"))
-def test_application_es_and_hybrid_use_installed_historical_spawn_factory(tmp_path, route, monkeypatch):
+def test_application_es_and_hybrid_use_installed_historical_spawn_factory(
+    tmp_path, route, monkeypatch
+):
     from rles_orchestrator.application import backtest, diagnose_train, train
 
     config = recipe(tmp_path)
     config["end_ns"] = 12 * MINUTE_NS
-    config["market_path"], config["rules_path"] = str(config["market_path"]), str(config["rules_path"])
-    run = {"environment": config, "evaluation": {"start_ns": 12 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                                                   "coverage_policy": config["coverage_policy"]},
-           "output": str(tmp_path / "run"), "algorithm": "PPO", "route": route,
-           "steps": 4, "hidden_layers": [2], "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
-           "distillation": {"epochs": 120, "tolerance": 0.12},
-           "checkpoint_interval_steps": 2}
+    config["market_path"], config["rules_path"] = (
+        str(config["market_path"]),
+        str(config["rules_path"]),
+    )
+    run = {
+        "environment": config,
+        "evaluation": {
+            "start_ns": 12 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": config["coverage_policy"],
+        },
+        "output": str(tmp_path / "run"),
+        "algorithm": "PPO",
+        "route": route,
+        "steps": 4,
+        "hidden_layers": [2],
+        "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+        "distillation": {"epochs": 120, "tolerance": 0.12},
+        "checkpoint_interval_steps": 2,
+        "rl_corpus_episode_steps": 2,
+    }
     if route == "A4":
         from rles_rl_sb3.provider import RLProvider
 
         original_train = RLProvider.train
         calls = 0
 
-        def interrupt_after_first_durable_chunk(provider, total_timesteps, *, resumed=False, callback=None):
+        def interrupt_after_first_durable_chunk(
+            provider, total_timesteps, *, resumed=False, callback=None
+        ):
             nonlocal calls
             if calls:
                 raise RuntimeError("injected A4 interruption after R1 checkpoint")
@@ -673,30 +2960,73 @@ def test_application_es_and_hybrid_use_installed_historical_spawn_factory(tmp_pa
         monkeypatch.setattr(RLProvider, "train", original_train)
         run["resume_checkpoint"] = str(checkpoint)
     result = train(run)
-    restored = backtest(run, result["output"])
+    restored = backtest(
+        {**run, "evaluation": {**run["evaluation"], "split": "validation"}}, result["output"]
+    )
     assert result["metrics"] == restored["metrics"]
     assert restored["terminal_flat"]
     bundle_root = Path(result["output"])
-    bundle_files_before = {str(path.relative_to(bundle_root)): sha256(path.read_bytes()).hexdigest()
-                           for path in bundle_root.rglob("*") if path.is_file()}
+    bundle_files_before = {
+        str(path.relative_to(bundle_root)): sha256(path.read_bytes()).hexdigest()
+        for path in bundle_root.rglob("*")
+        if path.is_file()
+    }
     with monkeypatch.context() as diagnostic_patch:
+        from rles_data.io import read_curated
+
+        diagnostic_receipt = object()
+
         def forbidden(*_args, **_kwargs):
             pytest.fail("Train diagnostics must not refit scaling or construct an evaluation")
+
         diagnostic_patch.setattr("rles_gym_bridge.historical.fit_train", forbidden)
         diagnostic_patch.setattr("rles_orchestrator.application._evaluation_factory", forbidden)
         diagnostic_patch.setattr("rles_orchestrator.application.ResearchLedger", forbidden)
-        diagnostic = diagnose_train({**run, "evaluation": None}, bundle_root)
+
+        def registered_read(scoped_config, _window, *, return_receipt=False, **_kwargs):
+            store = read_curated(scoped_config["environment"]["market_path"])
+            return (store, diagnostic_receipt) if return_receipt else store
+
+        diagnostic_patch.setattr(
+            "rles_orchestrator.application.read_registered_train_window",
+            registered_read,
+        )
+        diagnostic_patch.setattr(
+            "rles_orchestrator.application.verify_registered_train_read",
+            lambda receipt: receipt is diagnostic_receipt,
+        )
+        scoped_run = {
+            **run,
+            "evaluation": None,
+            "train_data_access": {
+                "start_ns": MINUTE_NS,
+                "end_ns": 31 * MINUTE_NS,
+                "marker_sha256": "a" * 64,
+                "label": "train-diagnostic-test",
+            },
+        }
+        diagnostic = diagnose_train(scoped_run, bundle_root)
         assert diagnostic["diagnostic_scope"]["split"] == "train_inner"
         assert diagnostic["diagnostic_scope"]["evaluation_queries"] == 0
         assert diagnostic["diagnostic_scope"]["end_ns"] == 12 * MINUTE_NS
         assert diagnostic["action_diagnostics"]["count"] > 0
         assert diagnostic["execution_attribution"]["components_known"] is True
+        assert diagnostic["execution_attribution"]["quantity_rounding_components_known"] is True
+        assert diagnostic["quantity_rounding_diagnostics"]["components_known"] is True
+        assert (
+            diagnostic["quantity_rounding_diagnostics"]["count"]
+            == diagnostic["action_diagnostics"]["count"]
+        )
         assert diagnostic["terminal_flat"] is True
+        assert "account_rows" not in diagnostic
         with pytest.raises(DataError, match="may not replace"):
-            diagnose_train({**run, "environment": {**config, "end_ns": 20 * MINUTE_NS}}, bundle_root)
+            diagnose_train(
+                {**scoped_run, "environment": {**config, "end_ns": 20 * MINUTE_NS}}, bundle_root
+            )
     assert bundle_files_before == {
         str(path.relative_to(bundle_root)): sha256(path.read_bytes()).hexdigest()
-        for path in bundle_root.rglob("*") if path.is_file()
+        for path in bundle_root.rglob("*")
+        if path.is_file()
     }
     from os import name as os_name
 
@@ -704,7 +3034,8 @@ def test_application_es_and_hybrid_use_installed_historical_spawn_factory(tmp_pa
     assert resource_paths
     resource_report = json.loads(resource_paths[0].read_text())
     assert resource_report["configured_policy"]["enforcement"] == (
-        "windows_job_commit_memory" if os_name == "nt" else "quota_only")
+        "windows_job_commit_memory" if os_name == "nt" else "quota_only"
+    )
     if os_name == "nt":
         assert resource_report["workers"][0]["active_processes"] == 0
         assert resource_report["workers"][0]["peak_process_commit_bytes"] > 0
@@ -727,7 +3058,8 @@ def test_application_es_and_hybrid_use_installed_historical_spawn_factory(tmp_pa
             json.loads((root / "run.json").read_text(encoding="utf-8"))["run_id"],
         )["stage_receipts"]
         assert {item["stage"] for item in receipts} == {"E1", "R1", "E2"}
-        assert sum(json.loads(item["usage_json"]).get("lane_requests", 0) for item in receipts) == 8
+        # E2 now includes one paired exact-neutral candidate in each generation.
+        assert sum(json.loads(item["usage_json"]).get("lane_requests", 0) for item in receipts) == 9
         assert len(list(root.glob("FAILED-*.json"))) == 1
         assert (root / "R1-transfer.json").is_file()
         checkpoint_dirs = sorted((Path(result["output"]) / "R1-checkpoints").glob("step-*"))
@@ -752,18 +3084,27 @@ def test_application_routes_resume_partial_r1_from_replay_checkpoint(tmp_path, m
     environment = recipe(tmp_path)
     environment["end_ns"] = 12 * MINUTE_NS
     environment["market_path"], environment["rules_path"] = (
-        str(environment["market_path"]), str(environment["rules_path"]),
+        str(environment["market_path"]),
+        str(environment["rules_path"]),
     )
-    run = {"environment": environment,
-           "evaluation": {"start_ns": 12 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                          "coverage_policy": environment["coverage_policy"]},
-           "output": str(tmp_path / f"resume-{route.lower()}-run"), "algorithm": "PPO", "route": route,
-           "steps": 4, "hidden_layers": [2],
-           "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
-           "checkpoint_interval_steps": 2}
+    run = {
+        "environment": environment,
+        "evaluation": {
+            "start_ns": 12 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": environment["coverage_policy"],
+        },
+        "output": str(tmp_path / f"resume-{route.lower()}-run"),
+        "algorithm": "PPO",
+        "route": route,
+        "steps": 4,
+        "hidden_layers": [2],
+        "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+        "checkpoint_interval_steps": 2,
+        "rl_corpus_episode_steps": 2,
+    }
     if route in {"A2", "A3"}:
-        run.update(population=4, generations=1,
-                   distillation={"epochs": 120, "tolerance": 0.12})
+        run.update(population=4, generations=1, distillation={"epochs": 120, "tolerance": 0.12})
     original_train = RLProvider.train
     calls = 0
 
@@ -782,8 +3123,7 @@ def test_application_routes_resume_partial_r1_from_replay_checkpoint(tmp_path, m
     assert (Path(run["output"]) / "FAILED.json").is_file()
 
     monkeypatch.setattr(RLProvider, "train", original_train)
-    changed_recipe = dict(run, seed=run.get("seed", 31) + 1,
-                          resume_checkpoint=str(checkpoint))
+    changed_recipe = dict(run, seed=run.get("seed", 31) + 1, resume_checkpoint=str(checkpoint))
     with pytest.raises(DataError, match="configuration differs"):
         train(changed_recipe)
     assert (Path(run["output"]) / "FAILED.json").is_file()
@@ -795,7 +3135,9 @@ def test_application_routes_resume_partial_r1_from_replay_checkpoint(tmp_path, m
     assert list(root.glob("FAILED-*.json"))
     bundle = json.loads((root / "bundle.json").read_text(encoding="utf-8"))
     assert [item["stage"] for item in bundle["lineage"]] == {
-        "A0": ["R1"], "A2": ["R1", "E2"], "A3": ["E1", "R1"],
+        "A0": ["R1"],
+        "A2": ["R1", "E2"],
+        "A3": ["E1", "R1"],
     }[route]
     rl_entry = next(item for item in bundle["lineage"] if item["stage"] == "R1")
     assert rl_entry["usage"]["rl_steps"] == 4
@@ -810,15 +3152,27 @@ def test_application_routes_resume_e1_from_completed_generation(tmp_path, monkey
     environment = recipe(tmp_path)
     environment["end_ns"] = 12 * MINUTE_NS
     environment["market_path"], environment["rules_path"] = (
-        str(environment["market_path"]), str(environment["rules_path"]),
+        str(environment["market_path"]),
+        str(environment["rules_path"]),
     )
-    run = {"environment": environment,
-           "evaluation": {"start_ns": 12 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                          "coverage_policy": environment["coverage_policy"]},
-           "output": str(tmp_path / f"resume-{route.lower()}-e1-run"), "algorithm": "PPO", "route": route,
-           "steps": 4, "population": 4, "generations": 2, "hidden_layers": [2],
-           "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
-           "checkpoint_interval_steps": 2}
+    run = {
+        "environment": environment,
+        "evaluation": {
+            "start_ns": 12 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": environment["coverage_policy"],
+        },
+        "output": str(tmp_path / f"resume-{route.lower()}-e1-run"),
+        "algorithm": "PPO",
+        "route": route,
+        "steps": 4,
+        "population": 4,
+        "generations": 2,
+        "hidden_layers": [2],
+        "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+        "checkpoint_interval_steps": 2,
+        "rl_corpus_episode_steps": 2,
+    }
     if route in {"A3", "A4"}:
         run["distillation"] = {"epochs": 120, "tolerance": 0.12}
 
@@ -837,9 +3191,14 @@ def test_application_routes_resume_e1_from_completed_generation(tmp_path, monkey
         train(run)
 
     root = Path(run["output"])
-    checkpoint = root / "E1" / "generation-00000001" / json.loads(
-        (root / "run.json").read_text(encoding="utf-8"),
-    )["run_id"]
+    checkpoint = (
+        root
+        / "E1"
+        / "generation-00000001"
+        / json.loads(
+            (root / "run.json").read_text(encoding="utf-8"),
+        )["run_id"]
+    )
     manifest = json.loads((checkpoint / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["generation"] == 1
     assert (root / "FAILED.json").is_file()
@@ -855,22 +3214,36 @@ def test_application_routes_resume_e1_from_completed_generation(tmp_path, monkey
 
 
 @pytest.mark.parametrize("route", ("A2", "A4"))
-def test_application_routes_resume_e2_and_revalidate_existing_r1_actor(tmp_path, monkeypatch, route):
+def test_application_routes_resume_e2_and_revalidate_existing_r1_actor(
+    tmp_path, monkeypatch, route
+):
     from rles_es_evotorch.provider import EvoTorchProvider
     from rles_orchestrator.application import backtest, train
 
     environment = recipe(tmp_path)
     environment["end_ns"] = 12 * MINUTE_NS
     environment["market_path"], environment["rules_path"] = (
-        str(environment["market_path"]), str(environment["rules_path"]),
+        str(environment["market_path"]),
+        str(environment["rules_path"]),
     )
-    run = {"environment": environment,
-           "evaluation": {"start_ns": 12 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                          "coverage_policy": environment["coverage_policy"]},
-           "output": str(tmp_path / f"resume-{route.lower()}-e2-run"), "algorithm": "PPO", "route": route,
-           "steps": 4, "population": 4, "generations": 2, "hidden_layers": [2],
-           "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
-           "checkpoint_interval_steps": 2}
+    run = {
+        "environment": environment,
+        "evaluation": {
+            "start_ns": 12 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": environment["coverage_policy"],
+        },
+        "output": str(tmp_path / f"resume-{route.lower()}-e2-run"),
+        "algorithm": "PPO",
+        "route": route,
+        "steps": 4,
+        "population": 4,
+        "generations": 2,
+        "hidden_layers": [2],
+        "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+        "checkpoint_interval_steps": 2,
+        "rl_corpus_episode_steps": 2,
+    }
     if route == "A4":
         run["distillation"] = {"epochs": 120, "tolerance": 0.12}
 
@@ -896,15 +3269,59 @@ def test_application_routes_resume_e2_and_revalidate_existing_r1_actor(tmp_path,
     assert manifest["generation"] == 1
     actor_hash = (root / "r1" / "COMPLETED").read_text(encoding="ascii")
     assert (root / "FAILED.json").is_file()
+    if route == "A4":
+        # Simulate interruption after the payload is durable but before its
+        # digest sidecar is restored by the E1 recovery pass.
+        e1_digest_path = root / "E1-selected-actor.json.sha256"
+        assert e1_digest_path.is_file()
+        e1_digest_path.unlink()
 
     monkeypatch.setattr(EvoTorchProvider, "continue_evolution", original_continue)
     run["resume_checkpoint"] = str(checkpoint)
     result = train(run)
-    report = backtest(run, result["output"])
+    report = backtest(
+        {**run, "evaluation": {**run["evaluation"], "split": "validation"}}, result["output"]
+    )
     assert report["terminal_flat"]
     assert (root / "r1" / "COMPLETED").read_text(encoding="ascii") == actor_hash
     assert (root / "E2" / "generation-00000002" / run_id / "COMPLETED").is_file()
     assert (root / "COMPLETED.json").is_file()
+    bundle = json.loads((root / "bundle.json").read_text(encoding="utf-8"))
+    if route == "A4":
+        e1_artifact = bundle["stage_actor_artifacts"]["E1"]
+        e1_path = root / e1_artifact["path"]
+        assert sha256(e1_path.read_bytes()).hexdigest() == e1_artifact["sha256"]
+        assert (
+            e1_path.with_suffix(e1_path.suffix + ".sha256").read_text(encoding="ascii")
+            == e1_artifact["sha256"]
+        )
+        e1_payload = json.loads(e1_path.read_text(encoding="utf-8"))
+        e1_lineage = next(row for row in bundle["lineage"] if row["stage"] == "E1")
+        assert e1_payload["actor_hash"] == e1_lineage["actor_hash"] == e1_artifact["actor_hash"]
+        assert (
+            e1_payload["lane_evidence_hash"]
+            == e1_artifact["lane_evidence_hash"]
+            == (e1_lineage["metadata"]["lane_evidence_hash"])
+        )
+        from rles_es_evotorch.actor import ActorGenomeSpec, genome_hash
+
+        e1_spec_values = dict(e1_payload["actor_spec"])
+        e1_spec_values["observation_names"] = tuple(e1_spec_values["observation_names"])
+        e1_spec_values["hidden_sizes"] = tuple(e1_spec_values["hidden_sizes"])
+        e1_spec_values["input_scale"] = (
+            None
+            if e1_spec_values.get("input_scale") is None
+            else tuple(e1_spec_values["input_scale"])
+        )
+        assert (
+            genome_hash(
+                ActorGenomeSpec(**e1_spec_values),
+                np.asarray(e1_payload["genome"], dtype=np.float32),
+            )
+            == e1_payload["actor_hash"]
+        )
+    else:
+        assert bundle["stage_actor_artifacts"] == {}
 
 
 def test_application_finalizes_full_budget_r1_checkpoint_without_retraining(tmp_path, monkeypatch):
@@ -914,15 +3331,25 @@ def test_application_finalizes_full_budget_r1_checkpoint_without_retraining(tmp_
     environment = recipe(tmp_path)
     environment["end_ns"] = 12 * MINUTE_NS
     environment["market_path"], environment["rules_path"] = (
-        str(environment["market_path"]), str(environment["rules_path"]),
+        str(environment["market_path"]),
+        str(environment["rules_path"]),
     )
-    run = {"environment": environment,
-           "evaluation": {"start_ns": 12 * MINUTE_NS, "end_ns": 20 * MINUTE_NS,
-                          "coverage_policy": environment["coverage_policy"]},
-           "output": str(tmp_path / "finalize-run"), "algorithm": "PPO", "route": "A0",
-           "steps": 4, "hidden_layers": [2],
-           "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
-           "checkpoint_interval_steps": 2}
+    run = {
+        "environment": environment,
+        "evaluation": {
+            "start_ns": 12 * MINUTE_NS,
+            "end_ns": 20 * MINUTE_NS,
+            "coverage_policy": environment["coverage_policy"],
+        },
+        "output": str(tmp_path / "finalize-run"),
+        "algorithm": "PPO",
+        "route": "A0",
+        "steps": 4,
+        "hidden_layers": [2],
+        "hyperparameters": {"n_steps": 2, "batch_size": 2, "n_epochs": 1},
+        "checkpoint_interval_steps": 2,
+        "rl_corpus_episode_steps": 2,
+    }
     original_export = RLProvider.export_inference
 
     def interrupt_before_inference_export(_provider, _directory, _fixed_observations):

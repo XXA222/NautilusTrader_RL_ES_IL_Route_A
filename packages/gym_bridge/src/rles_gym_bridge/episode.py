@@ -112,6 +112,7 @@ class RiskActionReview:
     components_known: bool
     soft_target: Decimal | None = None
     risk_target: Decimal | None = None
+    rounded_target_exposure: Decimal | None = None
 
     def __post_init__(self) -> None:
         if type(self.plan) is not ExecutionPlan or type(self.components_known) is not bool:
@@ -128,6 +129,10 @@ class RiskActionReview:
         for target in (self.soft_target, self.risk_target):
             if target is not None and (type(target) is not Decimal or not target.is_finite() or not -1 <= target <= 1):
                 raise ValueError("normalized risk targets must be finite Decimals in [-1,1]")
+        if (self.rounded_target_exposure is not None
+                and (type(self.rounded_target_exposure) is not Decimal
+                     or not self.rounded_target_exposure.is_finite())):
+            raise ValueError("quantity-rounded target exposure must be a finite Decimal")
 
 
 class BarrierEpisode:
@@ -138,7 +143,8 @@ class BarrierEpisode:
                  executed_exposure: Callable[[Any], Decimal], reward_config: RewardConfig,
                  replay: EpisodeReplay | None = None,
                  episode_index: int = 0, episode_start_offset: int = 0,
-                 observation_state: Callable[[Any], Mapping[str, Mapping[str, float]]] | None = None) -> None:
+                 observation_state: Callable[[Any], Mapping[str, Mapping[str, float]]] | None = None,
+                 teacher_state: Callable[[Any], Mapping[str, float]] | None = None) -> None:
         if re.fullmatch(r"[0-9a-f]{64}", transition_hash) is None:
             raise ValueError("complete transition fingerprint required")
         if set(native_identity) != {"dataset_hash", "fold_hash", "config_hash"}:
@@ -171,6 +177,7 @@ class BarrierEpisode:
         self._episode_index = episode_index
         self._episode_start_offset = episode_start_offset
         self._observation_state = observation_state
+        self._teacher_state = teacher_state
         self._snapshot: Any = None
         self._index = 0
         self._actions: list[Decimal] = []
@@ -188,6 +195,11 @@ class BarrierEpisode:
         if self._snapshot is None:
             raise RuntimeError("episode not bootstrapped")
         return self._snapshot.decision_ts_ns
+
+    @property
+    def native_identity(self) -> dict[str, str]:
+        """Detached source, fold and config identities for the active episode."""
+        return dict(self._identity)
 
     @property
     def episode_window(self) -> dict[str, int]:
@@ -261,12 +273,16 @@ class BarrierEpisode:
             raise
 
     def _read_exposure(self) -> Decimal:
-        value = self._exposure(self._snapshot)
+        return self.exposure_at(self._snapshot)
+
+    def exposure_at(self, snapshot: Any) -> Decimal:
+        """Read signed exposure from an explicitly supplied native account snapshot."""
+        value = self._exposure(snapshot)
         if type(value) is not Decimal or not value.is_finite():
             raise ValueError("executed exposure must come from finite native facts")
         return value
 
-    def action_to_plan(self, raw: float | Decimal) -> tuple[ExecutionPlan, Decimal]:
+    def _review_action(self, raw: float | Decimal) -> RiskActionReview:
         if self._state != "RUNNING" or self._pending is not None or self._index >= self._scoring_frames - 1:
             raise RuntimeError("action requires a live unused scoring barrier")
         action = Decimal(str(raw))
@@ -282,6 +298,20 @@ class BarrierEpisode:
             review = RiskActionReview(result[0], result[1], result[1], Decimal(0), False)
         else:
             raise ValueError("risk pipeline must return an L1 plan and intervention fraction")
+        return review
+
+    def project_action(self, raw: float | Decimal) -> RiskActionReview:
+        """Project an action through the live risk/planner stack without advancing it.
+
+        This is intended for counterfactual supervision at a student-visited
+        native barrier. It returns the same immutable review as action planning
+        while leaving the pending action slot and native session untouched.
+        """
+        return self._review_action(raw)
+
+    def action_to_plan(self, raw: float | Decimal) -> tuple[ExecutionPlan, Decimal]:
+        review = self._review_action(raw)
+        action = Decimal(str(raw))
         plan, guard = review.plan, review.total_intervention
         self._pending = plan, action, review
         return plan, guard
@@ -298,6 +328,7 @@ class BarrierEpisode:
         try:
             _plan, action, review = self._pending
             guard = review.total_intervention
+            previous_snapshot = self._snapshot
             next_frame = self._frames[self._index + 1]
             self._snapshot = self._session.advance(plan, batches=next_frame.batches,
                                                    next_decision_ts_ns=next_frame.timestamp_ns)
@@ -308,7 +339,8 @@ class BarrierEpisode:
             self._reward.calculate(native_equity=float(self._snapshot.equity), guard_intervention=float(guard))
             self._pending = None
             return SimpleNamespace(
-                snapshot=self._snapshot, decision_ts_ns=next_frame.timestamp_ns,
+                previous_snapshot=previous_snapshot, snapshot=self._snapshot,
+                decision_ts_ns=next_frame.timestamp_ns,
                 executed_action=float(self._executed),
                 evidence_hash=canonical_hash({"action": plan, "facts": self._financial_state()}),
                 terminated=self._snapshot.equity <= 0,
@@ -339,6 +371,38 @@ class BarrierEpisode:
                 inputs[group].update(values)
             inputs["execution"]["prev_raw_target"] = float(self._actions[-1]) if self._actions else 0.0
         return inputs
+
+    def visible_context_inputs(self) -> dict[str, Any]:
+        """Return a detached view of the current completed decision barrier.
+
+        Route A teachers may inspect these raw point-in-time inputs before
+        choosing an action.  The method never advances the native engine and
+        refuses a barrier while a reviewed plan is pending.
+        """
+        if self._state != "RUNNING" or self._snapshot is None or self._pending is not None:
+            raise RuntimeError("visible context requires a completed live decision barrier")
+        inputs = self.observation_inputs(
+            snapshot=self._snapshot,
+            reward_state=self._reward,
+            guard_intervention=float(self._last_guard),
+        )
+        pending_ids = tuple(sorted(
+            str(order["client_order_id"])
+            for order in self._snapshot.orders
+        ))
+        if any(not identity for identity in pending_ids) or len(set(pending_ids)) != len(pending_ids):
+            raise ValueError("native pending order identities are missing or duplicated")
+        teacher_account = (dict(self._teacher_state(self._snapshot))
+                           if self._teacher_state is not None else {})
+        return {
+            "decision_ts_ns": int(inputs["decision_ts_ns"]),
+            "market": dict(inputs["market"]),
+            "account": {**inputs["account"], **teacher_account},
+            "risk": dict(inputs["risk"]),
+            "execution": dict(inputs["execution"]),
+            "time": dict(inputs["time"]),
+            "pending_order_ids": pending_ids,
+        }
 
     def drain_and_close(self, policy: str) -> Any:
         if self._state != "RUNNING" or self._pending is not None:

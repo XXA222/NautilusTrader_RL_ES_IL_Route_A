@@ -31,6 +31,23 @@ def validate_payload(kind: str, p: dict[str, Any], ts: int) -> None:
         l = _number(p, "low")
         c = _number(p, "close")
         _number(p, "volume", allow_zero=True)
+        flow_fields = {
+            "quote_asset_volume", "number_of_trades",
+            "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume",
+        }
+        present_flow_fields = flow_fields.intersection(p)
+        if present_flow_fields and present_flow_fields != flow_fields:
+            raise DataError("kline flow metadata must be present as a complete set")
+        if present_flow_fields:
+            quote_volume = _number(p, "quote_asset_volume", allow_zero=True)
+            taker_buy_base = _number(p, "taker_buy_base_asset_volume", allow_zero=True)
+            taker_buy_quote = _number(p, "taker_buy_quote_asset_volume", allow_zero=True)
+            trade_count = p.get("number_of_trades")
+            if type(trade_count) is not int or trade_count < 0:
+                raise DataError("number_of_trades must be a nonnegative integer")
+            if (taker_buy_base > _number(p, "volume", allow_zero=True) + 1e-12
+                    or taker_buy_quote > quote_volume + 1e-8):
+                raise DataError("taker buy volume exceeds total kline volume")
         if l > min(o, c) or h < max(o, c) or l > h:
             raise DataError("invalid OHLC high/low relation")
     elif kind in ("mark", "index"):
@@ -45,6 +62,19 @@ def validate_payload(kind: str, p: dict[str, Any], ts: int) -> None:
         for key in ("update_id", "transaction_time_ns"):
             if type(p.get(key)) is not int or p[key] < 0:
                 raise DataError(f"{key} must be a nonnegative integer")
+    elif kind == "trade_flow_1s":
+        for key in ("aggressor_buy_qty", "aggressor_sell_qty",
+                    "aggressor_buy_notional", "aggressor_sell_notional",
+                    "first_price", "last_price", "high_price", "low_price"):
+            _number(p, key, allow_zero=key.startswith("aggressor_"))
+        if (type(p.get("trade_count")) is not int or p["trade_count"] <= 0
+                or type(p.get("first_trade_id")) is not int or p["first_trade_id"] < 0
+                or type(p.get("last_trade_id")) is not int or p["last_trade_id"] < p["first_trade_id"]):
+            raise DataError("trade_flow_1s requires positive count and ordered nonnegative trade IDs")
+        if _number(p, "high_price") < max(_number(p, "first_price"), _number(p, "last_price")):
+            raise DataError("trade_flow_1s high price is below an observed endpoint")
+        if _number(p, "low_price") > min(_number(p, "first_price"), _number(p, "last_price")):
+            raise DataError("trade_flow_1s low price is above an observed endpoint")
     elif kind in ("funding_update", "funding_settlement"):
         _number(p, "rate", signed=True)
         if kind == "funding_settlement":

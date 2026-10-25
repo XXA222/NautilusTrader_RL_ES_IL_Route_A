@@ -1,0 +1,19 @@
+{
+  "schema": "rles.il.iql.v1",
+  "purpose": "synthetic_smoke",
+  "run_label": "IQL_TOY_SMOKE",
+  "selection_dataset": null,
+  "dataset": "../../.tmp/il_worker_toy.npz",
+  "output_dir": "../../.tmp/il_worker_toy_run",
+  "device": "cpu:0",
+  "seed": 11,
+  "n_steps": 4,
+  "n_steps_per_epoch": 2,
+  "batch_size": 2,
+  "gamma": 0.99,
+  "expectile": 0.7,
+  "weight_temp": 1.0,
+  "max_weight": 20.0,
+  "reward_scale": 1.0,
+  "truncation_policy": "terminal_no_bootstrap"
+}

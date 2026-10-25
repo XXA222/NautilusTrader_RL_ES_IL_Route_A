@@ -1,0 +1,143 @@
+{
+  "schema": "rles.route-a-teacher-e0-reproduction.v1",
+  "date": "2026-10-25",
+  "runtime": {
+    "distribution": "Ubuntu-24.04",
+    "python": "3.14.7",
+    "project_root": "/mnt/d/Program Files/NautilusTrader_RL_ES_IL_Route_A"
+  },
+  "protocol": {
+    "plan": "configs/train_signal_baselines_20261016.json",
+    "plan_sha256": "f1a736f6e26c42fb2aa4ee4d276776e555616294f33cdf72b3c0412593bc6c67",
+    "bundle_sha256": "ea2ea516780f25756c7dae35636ee59eca7e3443a24259c6b58526b2536fec68",
+    "market_sha256": "06323e909997909dee35b4abf1543444ae230f30cbc1f672ded033b3bc41fe70",
+    "rules_sha256": "690292b508ce722d6ba2f5b9fb745671f56fc396d2026943fd36668e9028c93b",
+    "train_windows": [
+      {"start_ns": 1705276800000000000, "end_ns": 1705363200000000000},
+      {"start_ns": 1707955200000000000, "end_ns": 1708041600000000000},
+      {"start_ns": 1710460800000000000, "end_ns": 1710547200000000000}
+    ],
+    "modes": ["base", "stress"],
+    "policies": [
+      "B0_no_trade",
+      "B1_always_long",
+      "B4_always_short",
+      "B2_simple_momentum",
+      "B5_simple_reversal",
+      "frozen_rl"
+    ],
+    "run_count": 36,
+    "formal_evaluation_queries": 0,
+    "scaler_refitted": false,
+    "project_development_access_receipts": 6,
+    "project_development_access_labels": ["train_inner", "train-signal-baselines"]
+  },
+  "result": {
+    "candidate_gate": "FAIL_NO_CROSS_WINDOW_BASELINE_ADVANTAGE",
+    "historical_economics": "scenario-only; historical rule validity unproven",
+    "frozen_rl_net_return": 0.0,
+    "pairs": [
+      {
+        "window": 0,
+        "mode": "base",
+        "net_returns": {
+          "B0_no_trade": 0.0,
+          "B1_always_long": 0.0013949507740014244,
+          "B4_always_short": -0.0016353448000021586,
+          "B2_simple_momentum": -0.011932569247001923,
+          "B5_simple_reversal": -0.010096921863999797,
+          "frozen_rl": 0.0
+        },
+        "rl_beats_flat": false,
+        "rl_beats_all_baselines": false
+      },
+      {
+        "window": 0,
+        "mode": "stress",
+        "net_returns": {
+          "B0_no_trade": 0.0,
+          "B1_always_long": 0.0012146356319953089,
+          "B4_always_short": -0.0018156605340010623,
+          "B2_simple_momentum": -0.028198685198998263,
+          "B5_simple_reversal": -0.026379769948000176,
+          "frozen_rl": 0.0
+        },
+        "rl_beats_flat": false,
+        "rl_beats_all_baselines": false
+      },
+      {
+        "window": 1,
+        "mode": "base",
+        "net_returns": {
+          "B0_no_trade": 0.0,
+          "B1_always_long": 0.00157836107599163,
+          "B4_always_short": -0.0018188225980011463,
+          "B2_simple_momentum": -0.013523981945000152,
+          "B5_simple_reversal": -0.00810894861400091,
+          "frozen_rl": 0.0
+        },
+        "rl_beats_flat": false,
+        "rl_beats_all_baselines": false
+      },
+      {
+        "window": 1,
+        "mode": "stress",
+        "net_returns": {
+          "B0_no_trade": 0.0,
+          "B1_always_long": 0.0013969581899961891,
+          "B4_always_short": -0.002000225228001251,
+          "B2_simple_momentum": -0.029529830625997344,
+          "B5_simple_reversal": -0.024227686355997258,
+          "frozen_rl": 0.0
+        },
+        "rl_beats_flat": false,
+        "rl_beats_all_baselines": false
+      },
+      {
+        "window": 2,
+        "mode": "base",
+        "net_returns": {
+          "B0_no_trade": 0.0,
+          "B1_always_long": -0.0040056440170007646,
+          "B4_always_short": 0.0037708302989982734,
+          "B2_simple_momentum": -0.0017962870940044784,
+          "B5_simple_reversal": -0.017186813382999322,
+          "frozen_rl": 0.0
+        },
+        "rl_beats_flat": false,
+        "rl_beats_all_baselines": false
+      },
+      {
+        "window": 2,
+        "mode": "stress",
+        "net_returns": {
+          "B0_no_trade": 0.0,
+          "B1_always_long": -0.004181430779999329,
+          "B4_always_short": 0.00359504734400673,
+          "B2_simple_momentum": -0.01602653081800054,
+          "B5_simple_reversal": -0.03121818726299974,
+          "frozen_rl": 0.0
+        },
+        "rl_beats_flat": false,
+        "rl_beats_all_baselines": false
+      }
+    ]
+  },
+  "reproduction": {
+    "prior_summary": "docs/audit_evidence/20261016/train_signal_baselines_summary.json",
+    "all_six_pair_tables_exact_match": true,
+    "non_numeric_or_decision_field_differences": 0,
+    "maximum_absolute_numeric_difference": 9.881575913084362e-7,
+    "difference_source": "small floating-point drift in diagnostics/turnover; pair net returns are exactly equal",
+    "reports_directory": ".artifacts/route-a-teacher-e0-20261025",
+    "report_count": 36,
+    "report_sha256_sidecars_verified": 36,
+    "summary_sha256": "6fdb3c40d6dba3d294a89071d8367df4dfcae6d60611705cf172f96ae27bad85"
+  },
+  "limitations": [
+    "Train-inner scenario-only reproduction; not independent OOS, native account economics, or profitability evidence.",
+    "Complete project-wide consumed-window ledger and unused Train-window authorization remain unverified.",
+    "Historical account fees, instrument rules/margin, funding and execution-cost authority remain unavailable.",
+    "The frozen candidate fails to beat no-trade and all fixed baselines; do not proceed to teacher ML or promotion on this evidence."
+  ]
+}

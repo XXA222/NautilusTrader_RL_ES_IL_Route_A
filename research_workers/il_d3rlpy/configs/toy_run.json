@@ -1,0 +1,19 @@
+{
+  "reward_scale": 1.0,
+  "gamma": 0.99,
+  "n_steps": 4,
+  "schema": "rles.il.iql.v1",
+  "purpose": "synthetic_smoke",
+  "selection_dataset": null,
+  "truncation_policy": "terminal_no_bootstrap",
+  "dataset": "D:\\Program Files\\NautilusTrader_RL_ES_IL_Route_A\\research_workers\\il_d3rlpy\\.tmp\\toy_dataset.npz",
+  "expectile": 0.7,
+  "weight_temp": 1.0,
+  "seed": 11,
+  "batch_size": 2,
+  "n_steps_per_epoch": 2,
+  "max_weight": 20.0,
+  "run_label": "IQL_TOY_SMOKE",
+  "device": "cpu:0",
+  "output_dir": "D:\\Program Files\\NautilusTrader_RL_ES_IL_Route_A\\research_workers\\il_d3rlpy\\.tmp\\toy_run"
+}

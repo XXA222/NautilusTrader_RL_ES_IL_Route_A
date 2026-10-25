@@ -16,11 +16,13 @@ members = [
     "rles-es-evotorch",
     "rles-execution",
     "rles-gym-bridge",
+    "rles-il-core",
     "rles-nautilus-adapter",
     "rles-orchestrator",
     "rles-research",
     "rles-risk",
     "rles-rl-sb3",
+    "rles-route-a-imitation",
 ]
 
 [[package]]
@@ -1270,6 +1272,27 @@ requires-dist = [
 provides-extras = ["historical"]
 
 [[package]]
+name = "rles-il-core"
+version = "0.1.0"
+source = { editable = "packages/il_core" }
+dependencies = [
+    { name = "gymnasium" },
+    { name = "numpy" },
+    { name = "pyarrow" },
+    { name = "rles-gym-bridge", extra = ["historical"] },
+    { name = "rles-rl-sb3" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "gymnasium", specifier = ">=1.2,<2" },
+    { name = "numpy", specifier = ">=2,<3" },
+    { name = "pyarrow", specifier = ">=20,<26" },
+    { name = "rles-gym-bridge", extras = ["historical"], editable = "packages/gym_bridge" },
+    { name = "rles-rl-sb3", editable = "packages/rl_sb3" },
+]
+
+[[package]]
 name = "rles-nautilus-adapter"
 version = "0.4.0.dev2"
 source = { editable = "packages/nautilus_adapter" }
@@ -1382,6 +1405,28 @@ requires-dist = [
     { name = "stable-baselines3", specifier = "==2.9.0" },
     { name = "torch", specifier = ">=2.14,<2.15" },
 ]
+
+[[package]]
+name = "rles-route-a-imitation"
+version = "0.3.0"
+source = { editable = "packages/route_a_imitation" }
+dependencies = [
+    { name = "numpy" },
+    { name = "torch" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2,<3" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=9,<10" },
+    { name = "torch", specifier = ">=2.14,<2.15" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "rpds-py"

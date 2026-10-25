@@ -1,0 +1,77 @@
+{
+  "schema": "rles.route-a.teacher-e1-e2-g1-train-prereg.v1",
+  "status": "frozen_before_candidate_outcome_analysis",
+  "scope": {
+    "market": "ETHUSDT",
+    "product": "Binance USD-M perpetual",
+    "split": "Train-inner only",
+    "source_start_utc_inclusive": "2026-08-12T00:00:00Z",
+    "scored_start_utc_inclusive": "2026-08-14T00:00:00Z",
+    "end_utc_exclusive": "2026-10-01T00:00:00Z",
+    "formal_test_or_holdout_access": false,
+    "independent_oos_claim": false
+  },
+  "source": {
+    "provider": "Binance Public Data",
+    "streams": ["USD-M 1m klines", "USD-M 1m markPriceKlines", "USD-M 1m indexPriceKlines", "USD-M fundingRate history"],
+    "importer": "packages/data/src/rles_data/binance_archive.py",
+    "archive_interval": "daily",
+    "availability_delay_ns": 1000000,
+    "instrument_rules_supplied": false,
+    "account_specific_fees_or_margin_supplied": false
+  },
+  "windows": {
+    "train_fit": ["2026-08-14T00:00:00Z", "2026-09-01T00:00:00Z"],
+    "train_fit_blocks": [
+      ["2026-08-14T00:00:00Z", "2026-08-18T12:00:00Z"],
+      ["2026-08-18T12:00:00Z", "2026-08-23T00:00:00Z"],
+      ["2026-08-23T00:00:00Z", "2026-08-27T12:00:00Z"],
+      ["2026-08-27T12:00:00Z", "2026-09-01T00:00:00Z"]
+    ],
+    "train_calibration": ["2026-09-01T00:00:00Z", "2026-09-11T00:00:00Z"],
+    "train_calibration_blocks": [
+      ["2026-09-01T00:00:00Z", "2026-09-06T00:00:00Z"],
+      ["2026-09-06T00:00:00Z", "2026-09-11T00:00:00Z"]
+    ],
+    "train_inner_screen": ["2026-09-11T00:00:00Z", "2026-10-01T00:00:00Z"],
+    "screen_blocks": [
+      ["2026-09-11T00:00:00Z", "2026-09-16T00:00:00Z"],
+      ["2026-09-16T00:00:00Z", "2026-09-21T00:00:00Z"],
+      ["2026-09-21T00:00:00Z", "2026-09-26T00:00:00Z"],
+      ["2026-09-26T00:00:00Z", "2026-10-01T00:00:00Z"]
+    ]
+  },
+  "candidate_generation": {
+    "families": ["breakout", "pullback"],
+    "decision_cadence_minutes": 5,
+    "rule_version": "route_a_candidates_v2",
+    "breakout_threshold": 0.015,
+    "pullback_z_threshold": 1.0,
+    "minimum_efficiency": 0.2,
+    "candidate_universe": "retain_all_generated_events_including_rejected_or_censored"
+  },
+  "label_recipe": {
+    "exit_policy_id": "fixed-240m-label-only-v1",
+    "execution_recipe": "first-1m-open-strictly-after-decision-availability-market-like-scenario-v1",
+    "prediction_horizon_minutes": 240,
+    "block_boundary_policy": "censor_if_entry_or_exit_is_not_strictly_inside_candidate_block",
+    "base_cost_bps_per_leg": {"taker_fee": 5, "slippage": 1, "round_trip": 12},
+    "stress_cost_bps_per_leg": {"taker_fee": 10, "slippage": 5, "round_trip": 30},
+    "funding": "apply only funding settlements observed between entry and exit; no future rate lookahead",
+    "economic_status": "SCENARIO_ONLY"
+  },
+  "decision_rule": {
+    "fit": "fixed Logistic win-probability plus Ridge conditional net-return baseline; scaler fit only on train_fit",
+    "calibration": "Platt calibration and residual q10 only on later train_calibration outcomes",
+    "screen_selection": "Base-cost model only: in fit support, calibrated probability_positive > 0.5, expected_net_increment_bps > 0, and q10_increment_bps > 0; reuse identical selected event ids for Stress",
+    "negative_control": "within each screen block select a deterministic SHA-256-ranked random subset equal in size to model-selected entries",
+    "risk_adjusted_excess": "mean completed-trade net bps minus 0.5 times completed-trade net-bps standard deviation",
+    "screen": "four consecutive non-overlapping five-day Train-inner blocks; no threshold adjustment after screen outcomes are read",
+    "qualification": "diagnostic only; cannot pass production teacher gate or establish Alpha Teacher eligibility"
+  },
+  "limitations": [
+    "The project access registry can prove only known in-repository reservations; unledgered external reads cannot be excluded.",
+    "Public market data does not establish account fee tier, historical margin/leverage rules, actual fills, or account cashflows.",
+    "Kline counterfactual labels are not Nautilus native fills or proof of executable historical profit."
+  ]
+}

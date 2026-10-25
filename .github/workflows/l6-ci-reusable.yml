@@ -26,15 +26,15 @@ jobs:
         run: uv sync --locked --all-packages --all-extras --group dev
       - name: Build all workspace distributions
         run: uv build --all-packages --out-dir artifacts/wheels
-      - name: Install the eleven built wheels into the locked environment
+      - name: Install all built workspace wheels into the locked environment
         shell: python
         run: |
           import os
           from pathlib import Path
           import subprocess
           wheels = sorted(Path('artifacts/wheels').glob('*.whl'))
-          if len(wheels) != 11:
-              raise SystemExit(f'Expected eleven workspace wheels, got {len(wheels)}')
+          if not wheels:
+              raise SystemExit('No workspace wheels were built')
           python = Path('.venv') / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
           subprocess.run(['uv', 'pip', 'install', '--python', str(python),
                           '--no-deps', '--reinstall', *map(str, wheels)], check=True)
@@ -61,9 +61,15 @@ jobs:
       - name: PR contract and unit layers
         if: ${{ inputs.lane == 'pr' }}
         run: uv run --locked --no-sync python -m pytest -q tests/ -m 'contracts or unit or micro_golden or algorithm_smoke'
+      - name: PR Route A complete test suite
+        if: ${{ inputs.lane == 'pr' }}
+        run: uv run --locked --no-sync python -m pytest -q packages/route_a_imitation/tests
       - name: Nightly golden, WFO and recovery layers
         if: ${{ inputs.lane == 'nightly' }}
         run: uv run --locked --no-sync python -m pytest -q tests/ -m 'real_golden or short_wfo or dependency_resolver or artifact_restore or perf' --junitxml artifacts/nightly.xml -o junit_family=xunit1 --basetemp artifacts/nightly-tmp
+      - name: Nightly Route A complete test suite
+        if: ${{ inputs.lane == 'nightly' }}
+        run: uv run --locked --no-sync python -m pytest -q packages/route_a_imitation/tests
       - name: Preserve nightly measurements and test results
         if: ${{ always() && inputs.lane == 'nightly' }}
         uses: actions/upload-artifact@v4
@@ -74,7 +80,7 @@ jobs:
             artifacts/nightly-tmp/**/snapshot-perf.json
       - name: Release complete regression
         if: ${{ inputs.lane == 'release' }}
-        run: uv run --locked --no-sync python -m pytest -q tests/
+        run: uv run --locked --no-sync python -m pytest -q tests/ packages/route_a_imitation/tests
       - name: Lint workspace packages
         if: ${{ inputs.lane == 'pr' || inputs.lane == 'nightly' || inputs.lane == 'release' }}
         run: uv run --locked --no-sync python -m ruff check packages ci qa tests
