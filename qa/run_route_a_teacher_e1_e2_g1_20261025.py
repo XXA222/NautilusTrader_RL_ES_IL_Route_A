@@ -23,11 +23,19 @@ from rles_route_a.teacher_research.candidate_events import (
     CausalOpportunityGenerator,
     OpportunityEvent,
 )
+from rles_route_a.teacher_research.gate_funnel import summarize_frozen_gate_funnel
+from rles_route_a.teacher_research.opportunity_diagnostics import (
+    audit_screen_ablation_outcomes_after_prediction,
+    audit_screen_outcomes_after_prediction,
+    build_diagnostic_ablation_sets,
+    build_opportunity_prediction_report,
+)
 from rles_route_a.teacher_research.opportunity_labels import (
     CounterfactualTradeReplay,
     label_counterfactual_candidates,
 )
-from rles_route_a.teacher_research.opportunity_models import fit_opportunity_model
+from rles_route_a.teacher_research.opportunity_models import OpportunityOutcome, fit_opportunity_model
+from rles_route_a.teacher_research.portfolio_replay import replay_single_position_portfolio
 from rles_gym_bridge.historical import historical_feature_spec
 
 
@@ -271,38 +279,45 @@ def _replay_factory(*, bars, bar_times, opens, closes, funding, funding_times,
 
 
 def _portfolio(chosen_ids: set[str], block_events: tuple[OpportunityEvent, ...],
-               outcome_by_id: dict[str, object], replay_by_id: dict[str, CounterfactualTradeReplay],
-               *, bars, bar_times, open_times, closes, funding, funding_times):
+               outcome_by_id: dict[str, OpportunityOutcome],
+               replay_by_id: dict[str, CounterfactualTradeReplay],
+               *, bars, bar_times, open_times, closes, funding, funding_times,
+               block_end_ns: int):
+    """Replay frozen selections in event order without outcome-based entry filtering.
+
+    This remains a historical fixed-exit diagnostic, not the dynamic runtime
+    authority. A censored position stays open to the block boundary and is
+    terminal-marked only; it is not converted into a synthetic forced close.
+    """
     event_by_id = {event.event_id: event for event in block_events}
-    candidates = sorted((event_by_id[value] for value in chosen_ids),
-                        key=lambda event: event.decision_ts_ns)
-    accepted: list[str] = []
-    busy: set[str] = set()
-    last_exit_ns = -1
-    returns: list[float] = []
-    total_fees = 0.0
-    total_funding = 0.0
-    total_exposure = 0.0
-    for event in candidates:
-        replay = replay_by_id[event.event_id]
-        outcome = outcome_by_id[event.event_id]
-        if outcome.net_return_bps is None or replay.exit_ts_ns is None:
-            continue
-        if replay.entry_ts_ns <= last_exit_ns:
-            busy.add(event.event_id)
-            continue
-        accepted.append(event.event_id)
-        last_exit_ns = replay.exit_ts_ns
-        returns.append(float(outcome.net_return_bps))
-        total_fees += replay.entry_fee_bps + replay.exit_fee_bps
-        total_funding += replay.funding_cashflow_bps
-        total_exposure += 240.0
+    terminal_marks = {}
+    for event_id in chosen_ids:
+        replay = replay_by_id[event_id]
+        if replay.exit_ts_ns is None and replay.entry_ts_ns < block_end_ns:
+            mark_index = bisect_left(bar_times, block_end_ns) - 1
+            if mark_index >= 0:
+                terminal_marks[event_id] = (bar_times[mark_index], closes[mark_index])
+    ledger = replay_single_position_portfolio(
+        chosen_ids,
+        block_events,
+        replay_by_id,
+        outcome_by_id,
+        terminal_marks,
+        block_end_ns=block_end_ns,
+        gross_return_method="log",
+    )
+    accepted = list(ledger.admission.accepted_ids)
+    busy = set(ledger.admission.busy_ids)
+    returns = [trade.net_return_bps for trade in ledger.trades]
+
     equity = 0.0
     peak = 0.0
     max_dd = 0.0
     for event_id in accepted:
         event = event_by_id[event_id]
         replay = replay_by_id[event_id]
+        if replay.exit_ts_ns is None:
+            continue
         entry_index = bisect_left(open_times, replay.entry_ts_ns)
         exit_index = bisect_left(bar_times, replay.exit_ts_ns - 1_000_000)
         entry_cost = replay.entry_fee_bps + replay.entry_slippage_bps
@@ -323,20 +338,32 @@ def _portfolio(chosen_ids: set[str], block_events: tuple[OpportunityEvent, ...],
             ) * 10_000.0 + paid - entry_cost
             if index == exit_index:
                 marked -= exit_cost
-                equity = starting_equity + float(outcome_by_id[event_id].net_return_bps)
+                net_return = outcome_by_id[event_id].net_return_bps
+                if net_return is None:
+                    raise ValueError("realized drawdown path has no complete outcome")
+                equity = starting_equity + float(net_return)
             peak = max(peak, marked)
             max_dd = max(max_dd, peak - marked)
+    if ledger.open_censored_count:
+        terminal_equity = equity + ledger.terminal_mark_only_bps
+        max_dd = max(max_dd, peak - terminal_equity)
     tail = max(0.0, -float(np.quantile(returns, 0.10))) if returns else 0.0
     risk_adj = (float(np.mean(returns) - 0.5 * np.std(returns, ddof=0))
                 if returns else 0.0)
     return {
-        "accepted": tuple(accepted), "busy": busy, "returns": returns,
-        "net": math.fsum(returns), "risk_adjusted": risk_adj,
+        "accepted": tuple(accepted), "busy": busy,
+        "no_in_block_entry": set(ledger.admission.no_in_block_entry_ids),
+        "returns": returns,
+        "net": ledger.total_net_bps,
+        "realized_net": ledger.realized_net_bps,
+        "terminal_mark_only": ledger.terminal_mark_only_bps,
+        "open_censored": ledger.open_censored_count, "risk_adjusted": risk_adj,
         "tail_loss": tail, "max_drawdown": max_dd,
         "turnover": len(accepted) * 20_000.0,
-        "fees": total_fees, "funding": total_funding,
-        "filled_orders": len(accepted) * 2,
-        "exposure_minutes": total_exposure,
+        "fees": ledger.fees_bps + ledger.slippage_bps,
+        "funding": ledger.funding_bps,
+        "filled_orders": ledger.filled_orders,
+        "exposure_minutes": ledger.exposure_minutes,
     }
 
 
@@ -472,30 +499,79 @@ def main() -> int:
     selection_rule = prereg["decision_rule"]["screen_selection"]
     screen_events = split_events["train_inner_screen"]
     base_estimates = estimates["base"]
-    proposed: set[str] = set()
-    reject_reasons: dict[str, str] = {}
-    for event in screen_events:
-        estimate = base_estimates[event.event_id]
-        if not estimate.in_support:
-            reject_reasons[event.event_id] = "OUT_OF_FIT_SUPPORT"
-        elif estimate.probability_positive <= 0.5:
-            reject_reasons[event.event_id] = "CALIBRATED_PROBABILITY_NOT_ABOVE_0_5"
-        elif estimate.expected_net_increment_bps <= 0:
-            reject_reasons[event.event_id] = "EXPECTED_NET_INCREMENT_NOT_POSITIVE"
-        elif estimate.q10_increment_bps <= 0:
-            reject_reasons[event.event_id] = "Q10_INCREMENT_NOT_POSITIVE"
-        else:
-            proposed.add(event.event_id)
+    screen_block_by_id = {event.event_id: block_ids[event.event_id] for event in screen_events}
+    screen_split_by_id = {event.event_id: "train_inner_screen" for event in screen_events}
+    screen_feature_rows = {
+        event.event_id: {
+            **dict(zip(FEATURE_NAMES, features[event.event_id], strict=True)),
+            "side": float(event.side),
+            "family_code": float(event.family == "pullback"),
+        }
+        for event in screen_events
+    }
+    prediction_diagnostics = {}
+    for scenario in ("base", "stress"):
+        model = models[scenario]
+        support_names = (*FEATURE_NAMES, "side", "family_code")
+        fit_extrema = {
+            name: (float(model.fit_min[index]), float(model.fit_max[index]))
+            for index, name in enumerate(support_names)
+        }
+        prediction_diagnostics[scenario] = build_opportunity_prediction_report(
+            screen_events, estimates[scenario], screen_block_by_id, screen_split_by_id,
+            feature_rows=screen_feature_rows, fit_extrema=fit_extrema,
+        )
+    gate_funnel = summarize_frozen_gate_funnel(
+        base_estimates,
+        {
+            event.event_id: (block_ids[event.event_id], event.family, event.side)
+            for event in screen_events
+        },
+    )
+    proposed = set(gate_funnel.selected_ids)
+    reject_reasons = dict(gate_funnel.rejection_reasons)
+    diagnostic_ablation_sets = build_diagnostic_ablation_sets(
+        prediction_diagnostics["base"],
+        negative_control_count=len(proposed),
+        frozen_seed=int(prereg_id[:16], 16),
+    )
+    if set(diagnostic_ablation_sets[0].selected_ids) != proposed:
+        raise RuntimeError("prediction diagnostics and frozen gate funnel disagree on F0")
+    screen_outcomes_by_scenario = {
+        scenario: {
+            row.event_id: row for row in outputs[(scenario, "train_inner_screen")].outcomes
+        }
+        for scenario in ("base", "stress")
+    }
+    screen_outcome_audits = {
+        scenario: audit_screen_outcomes_after_prediction(
+            prediction_diagnostics[scenario], screen_outcomes_by_scenario[scenario],
+            residual_q10_bps=models[scenario].residual_q10_bps,
+        )
+        for scenario in ("base", "stress")
+    }
+    ablation_outcome_audits = {
+        scenario: audit_screen_ablation_outcomes_after_prediction(
+            prediction_diagnostics["base"], screen_outcomes_by_scenario[scenario],
+            diagnostic_ablation_sets,
+            expected_outcome_cost_scenario_id=scenario,
+        )
+        for scenario in ("base", "stress")
+    }
+    ablation_ids_by_name = {
+        row.ablation_id: set(row.selected_ids) for row in diagnostic_ablation_sets
+    }
 
     block_table = _block_table(prereg)
     screen_batch_by_scenario = {s: outputs[(s, "train_inner_screen")]
                                 for s in ("base", "stress")}
     gate_rows = []
+    diagnostic_ablation_account_rows = []
+    empty_screen_blocks = []
     screen_block_ids = [value[3] for value in block_table.values()
                         if value[0] == "train_inner_screen"]
     for block_id in screen_block_ids:
         block_events = tuple(event for event in screen_events if block_ids[event.event_id] == block_id)
-        block_start, block_end = block_intervals[block_events[0].event_id]
         outcome_by_scenario = {
             scenario: {row.event_id: row
                        for row in screen_batch_by_scenario[scenario].outcomes
@@ -503,17 +579,24 @@ def main() -> int:
             for scenario in ("base", "stress")
         }
         if not block_events:
-            raise RuntimeError(f"screen block has no candidate universe: {block_id}")
+            block_start, block_end = next(
+                (start, end) for split, start, end, found_id in block_table.values()
+                if split == "train_inner_screen" and found_id == block_id
+            )
+            empty_screen_blocks.append({
+                "independent_block_id": block_id,
+                "block_start_ts_ns": block_start,
+                "block_end_ts_ns": block_end,
+                "candidate_count": 0,
+                "gate_row_status": "OMITTED_NO_CANDIDATE_DENOMINATOR",
+            })
+            continue
+        block_start, block_end = block_intervals[block_events[0].event_id]
         proposed_block = {event.event_id for event in block_events} & proposed
         # A deterministic random-ranked negative control has exactly the same
         # intended count as the frozen model in each time block.
-        control_order = sorted(
-            block_events,
-            key=lambda event: sha256(
-                f"teacher-e1-e2-negative-control-v1:{prereg_id}:{block_id}:{event.event_id}".encode()
-            ).hexdigest(),
-        )
-        control_ids = {event.event_id for event in control_order[:len(proposed_block)]}
+        block_event_ids = {event.event_id for event in block_events}
+        control_ids = ablation_ids_by_name["F5"] & block_event_ids
         for scenario in ("base", "stress"):
             rows_for_scenario = outcome_by_scenario[scenario]
             replay_map = replays[(scenario, "train_inner_screen")]
@@ -521,28 +604,71 @@ def main() -> int:
                 proposed_block, block_events, rows_for_scenario, replay_map,
                 bars=bars, bar_times=bar_times,
                 open_times=open_times, closes=closes, funding=funding,
-                funding_times=funding_times,
+                funding_times=funding_times, block_end_ns=block_end,
             )
-            baseline_ids = {
-                event.event_id for event in block_events
-                if rows_for_scenario[event.event_id].net_return_bps is not None
-            }
+            baseline_ids = {event.event_id for event in block_events}
             baseline_portfolio = _portfolio(
                 baseline_ids, block_events, rows_for_scenario, replay_map,
                 bars=bars, bar_times=bar_times,
                 open_times=open_times, closes=closes, funding=funding,
-                funding_times=funding_times,
+                funding_times=funding_times, block_end_ns=block_end,
             )
             control_portfolio = _portfolio(
                 control_ids, block_events, rows_for_scenario, replay_map,
                 bars=bars, bar_times=bar_times,
                 open_times=open_times, closes=closes, funding=funding,
-                funding_times=funding_times,
+                funding_times=funding_times, block_end_ns=block_end,
             )
+            portfolios_by_ablation = {
+                "F0": candidate_portfolio,
+                "F4": baseline_portfolio,
+                "F5": control_portfolio,
+            }
+            for ablation in diagnostic_ablation_sets:
+                if ablation.ablation_id in portfolios_by_ablation:
+                    continue
+                selected_block_ids = set(ablation.selected_ids) & block_event_ids
+                portfolios_by_ablation[ablation.ablation_id] = _portfolio(
+                    selected_block_ids, block_events, rows_for_scenario, replay_map,
+                    bars=bars, bar_times=bar_times,
+                    open_times=open_times, closes=closes, funding=funding,
+                    funding_times=funding_times, block_end_ns=block_end,
+                )
+            for ablation in diagnostic_ablation_sets:
+                portfolio = portfolios_by_ablation[ablation.ablation_id]
+                diagnostic_ablation_account_rows.append({
+                    "ablation_id": ablation.ablation_id,
+                    "evidence_status": ablation.evidence_status,
+                    "cost_scenario_id": scenario,
+                    "independent_block_id": block_id,
+                    "candidate_count": len(ablation_ids_by_name[ablation.ablation_id]
+                                            & block_event_ids),
+                    "selected_candidate_ids": tuple(sorted(
+                        ablation_ids_by_name[ablation.ablation_id] & block_event_ids,
+                    )),
+                    "accepted_candidate_ids": tuple(sorted(portfolio["accepted"])),
+                    "realized_net_bps": portfolio["realized_net"],
+                    "terminal_mark_only_bps": portfolio["terminal_mark_only"],
+                    "net_bps": portfolio["net"],
+                    "fees_and_slippage_bps": portfolio["fees"],
+                    "funding_bps": portfolio["funding"],
+                    "filled_orders": portfolio["filled_orders"],
+                    "open_censored_count": portfolio["open_censored"],
+                    "exposure_minutes": portfolio["exposure_minutes"],
+                    "turnover_bps": portfolio["turnover"],
+                    "tail_loss_bps": portfolio["tail_loss"],
+                    "max_drawdown_bps": portfolio["max_drawdown"],
+                    "risk_adjusted_excess_bps": portfolio["risk_adjusted"],
+                })
             actual_selected = set(candidate_portfolio["accepted"])
             for event in block_events:
                 if event.event_id not in actual_selected and event.event_id in proposed_block:
-                    reject_reasons[event.event_id] = "POSITION_BUSY_OR_CENSORED"
+                    if event.event_id in candidate_portfolio["no_in_block_entry"]:
+                        reject_reasons[event.event_id] = "NO_IN_BLOCK_ENTRY"
+                    elif event.event_id in candidate_portfolio["busy"]:
+                        reject_reasons[event.event_id] = "POSITION_BUSY"
+                    else:
+                        reject_reasons[event.event_id] = "PORTFOLIO_REPLAY_VETO"
             model = models[scenario]
             predictions, labels = [], []
             fit_outcomes = outputs[(scenario, "train_fit")].outcomes
@@ -650,8 +776,25 @@ def main() -> int:
             reason: sum(value == reason for value in reject_reasons.values())
             for reason in sorted(set(reject_reasons.values()))
         },
+        "gate_funnel": asdict(gate_funnel),
+        "diagnostic_status": "DIAGNOSTIC_REUSE_NOT_OOS",
+        "prediction_diagnostics": {
+            scenario: asdict(prediction_diagnostics[scenario])
+            for scenario in ("base", "stress")
+        },
+        "screen_outcome_audits": {
+            scenario: asdict(screen_outcome_audits[scenario])
+            for scenario in ("base", "stress")
+        },
+        "diagnostic_ablation_sets": [asdict(row) for row in diagnostic_ablation_sets],
+        "diagnostic_ablation_outcome_audits": {
+            scenario: [asdict(row) for row in ablation_outcome_audits[scenario]]
+            for scenario in ("base", "stress")
+        },
+        "diagnostic_ablation_account_rows": diagnostic_ablation_account_rows,
         "g1": asdict(result),
         "g1_block_rows": [asdict(row) for row in gate_rows],
+        "empty_screen_blocks": empty_screen_blocks,
         "economic_status": "SCENARIO_ONLY",
         "qualification": "diagnostic_only_no_alpha_teacher_promotion",
         "limitations": prereg["limitations"],

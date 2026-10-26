@@ -1,0 +1,55 @@
+{
+  "schema": "rles.route-a.1m-multi-teacher.v1",
+  "design_identity": "route_a_1m_multiteacher_v1",
+  "decision": {
+    "primary_timeframe_minutes": 1,
+    "require_closed_bar": true,
+    "require_available_at": true,
+    "on_missing_bar": "fail_closed_no_new_entry"
+  },
+  "timeframes": {
+    "optional_context_minutes": [5, 15, 60, 240, 1440],
+    "higher_timeframe_mode": "FEATURE_ONLY"
+  },
+  "market": {
+    "instrument": "ETHUSDT-PERP.SIM",
+    "position_mode": "NETTING",
+    "order_type_first_pass": "MARKET"
+  },
+  "exposure": {
+    "requested_target_fraction_of_risk_budget": 0.3,
+    "use_native_planner": true,
+    "max_holding_minutes": null
+  },
+  "cost_scenarios": {
+    "base": {"taker_fee_bps_per_leg": 5, "slippage_bps_per_leg": 1},
+    "stress": {"taker_fee_bps_per_leg": 10, "slippage_bps_per_leg": 5}
+  },
+  "exit_variants": ["X1_INDICATOR", "X2_ATR_TRAIL_3"],
+  "x1_rule_by_teacher": {
+    "T01_EMA_9_21": "X1_EMA_REVERSE_CROSS_V1",
+    "T02_ROC_20_60": "X1_ROC_CONSENSUS_BROKEN_V1",
+    "T03_DONCHIAN_20": "X1_DONCHIAN_10_OPPOSITE_V1",
+    "T04_ZSCORE_60": "X1_ZSCORE_MEAN_OR_OPPOSITE_V1",
+    "T05_MACD_12_26_9": "X1_MACD_REVERSE_CROSS_V1",
+    "T06_RSI_14": "X1_RSI_NEUTRAL_V1",
+    "T07_BOLL_20_2": "X1_BOLLINGER_MID_V1",
+    "T08_PULLBACK_1M": "X1_PULLBACK_TREND_OR_CHANNEL_V1"
+  },
+  "teachers": [
+    {"teacher_id": "T01_EMA_9_21", "kind": "ema_cross", "fast": 9, "slow": 21, "reentry_mode": "NEW_CROSS_ONLY"},
+    {"teacher_id": "T02_ROC_20_60", "kind": "roc_consensus", "fast": 20, "slow": 60, "event": "FIRST_CONSENSUS_ONLY"},
+    {"teacher_id": "T03_DONCHIAN_20", "kind": "donchian", "entry_window": 20, "exit_window": 10, "breakout_margin": 0.0},
+    {"teacher_id": "T04_ZSCORE_60", "kind": "zscore_reentry", "lookback": 60, "entry_abs": 2.0, "reentry_abs": 1.8},
+    {"teacher_id": "T05_MACD_12_26_9", "kind": "macd_cross", "fast": 12, "slow": 26, "signal": 9},
+    {"teacher_id": "T06_RSI_14", "kind": "rsi_reentry", "lookback": 14, "oversold": 30, "overbought": 70, "exit_neutral": 50},
+    {"teacher_id": "T07_BOLL_20_2", "kind": "bollinger_reentry", "lookback": 20, "std_multiplier": 2.0},
+    {"teacher_id": "T08_PULLBACK_1M", "kind": "ema_trend_pullback", "ema_fast": 9, "ema_slow": 21, "atr": 14, "recovery_close_breakout": 3, "pullback_lookback": 5, "pullback_atr_min": 0.3, "pullback_atr_max": 2.0}
+  ],
+  "research": {
+    "source_authority": "REQUIRES_REGISTERED_TRAIN_SOURCE",
+    "economic_status_until_native_authority": "SCENARIO_ONLY",
+    "allow_test_holdout_reads": false,
+    "allow_student_training": false
+  }
+}

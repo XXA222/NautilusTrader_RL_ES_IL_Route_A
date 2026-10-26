@@ -86,11 +86,16 @@ def make_causal_exit_replay(
         )
         exit_index = bisect_right(open_times, decision) if decision is not None else len(opens)
         closed = exit_index < len(opens) and open_times[exit_index] < block_end
-        exit_ts, exit_price = opens[exit_index] if closed else (None, None)
-        end = exit_ts if closed else block_end - 1
+        exit_ts: int | None
+        exit_price: float | None
+        if closed:
+            exit_ts, exit_price = opens[exit_index]
+        else:
+            exit_ts, exit_price = None, None
+        end = exit_ts if exit_ts is not None else block_end - 1
         payments = funding[bisect_right(funding_times, entry_ts):bisect_right(funding_times, end)]
         funding_cashflow = -event.side * fsum(rate * mark / entry_price for _, rate, mark in payments) * 10_000
-        exit_ratio = exit_price / entry_price if closed else 0.0
+        exit_ratio = exit_price / entry_price if exit_price is not None else 0.0
         facts = [event.event_id, exit_policy, recipe, scenario, entry_ts, entry_price,
                  decision, exit_ts, exit_price, payments, fee_bps, slippage_bps, block_end]
         receipt = sha256(json.dumps(facts, allow_nan=False, separators=(",", ":")).encode()).hexdigest()

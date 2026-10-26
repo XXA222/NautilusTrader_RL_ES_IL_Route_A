@@ -78,6 +78,33 @@ class NativeAccountFacts:
     timestamp_ns: int
 
 
+def _native_orders_for_account(cache: Any, *, scope: dict[str, Any],
+                               instrument_id: Any,
+                               policy_order_ids: frozenset[str]) -> tuple[Any, ...]:
+    orders_by_id = {
+        str(order.client_order_id): order
+        for order in cache.orders(**scope)
+    }
+    if policy_order_ids:
+        # A native strategy order can exist before a venue account ID is
+        # attached. Query only this session's submitted client IDs in addition
+        # to the account-scoped history; never broaden the ledger query.
+        from nautilus_trader.model import ClientOrderId
+
+        for client_order_id in sorted(policy_order_ids):
+            if client_order_id in orders_by_id:
+                continue
+            native_order = cache.order(ClientOrderId(client_order_id))
+            if native_order is not None:
+                if (native_order.instrument_id != instrument_id
+                        or str(native_order.client_order_id) != client_order_id):
+                    raise EngineBoundaryError(
+                        "policy client order lookup returned a different native identity"
+                    )
+                orders_by_id[client_order_id] = native_order
+    return tuple(orders_by_id[key] for key in sorted(orders_by_id))
+
+
 class NativeFactsReader:
     """Read public portfolio/cache queries. Never infer fees or funding from prices."""
 
@@ -98,7 +125,8 @@ class NativeFactsReader:
         self._position_last_updates: dict[tuple[str, int], int] = {}
         self._funding_facts: dict[str, dict] = {}
 
-    def read(self, engine: Any, timestamp_ns: int) -> NativeAccountFacts:
+    def read(self, engine: Any, timestamp_ns: int, *,
+             policy_order_ids: frozenset[str] = frozenset()) -> NativeAccountFacts:
         native = engine.portfolio.build_snapshot(self.account_id)
         if native is None or native.is_stale or native.unpriced_instruments:
             raise EngineBoundaryError("unpriced or stale native equity is not scoreable")
@@ -154,7 +182,10 @@ class NativeFactsReader:
                 raise EngineBoundaryError("inconsistent native open/inflight order state")
             pending_by_id[client_id] = record
         orders = tuple(pending_by_id[k] for k in sorted(pending_by_id))
-        native_orders = tuple(sorted(cache.orders(**scope), key=lambda o: str(o.client_order_id)))
+        native_orders = _native_orders_for_account(
+            cache, scope=scope, instrument_id=self.instrument_id,
+            policy_order_ids=policy_order_ids,
+        )
         all_orders = tuple(o.to_dict() for o in native_orders)
         from nautilus_trader.model import OrderFilled, PositionAdjustmentType
         # NETTING reuses a position ID after closing. Its current Position.events
@@ -337,6 +368,7 @@ class EngineSession:
         self._state = "CREATED"
         self._last_ts = 0
         self._action_ids: set[str] = set()
+        self._policy_order_ids: set[str] = set()
         self._event_ids: set[str] = set()
         self._fingerprint: str | None = None
 
@@ -435,7 +467,10 @@ class EngineSession:
     def _native_facts(self) -> NativeAccountFacts:
         if self._engine is None:
             raise EngineBoundaryError("native engine missing")
-        return self._read.read(self._engine, self._last_ts)
+        return self._read.read(
+            self._engine, self._last_ts,
+            policy_order_ids=frozenset(self._policy_order_ids),
+        )
 
     def _snapshot_of(self, facts: NativeAccountFacts) -> Any:
         return self._make_snapshot(
@@ -520,6 +555,10 @@ class EngineSession:
                 if action == "SUBMIT" and self._prepare_submit is not None:
                     self._prepare_submit(self._engine, plan, self._last_ts)
                 self._submit(self._engine, plan)
+                if action == "SUBMIT":
+                    self._policy_order_ids.add(
+                        "RLES-" + sha256(plan.idempotency_key.encode("utf-8")).hexdigest()
+                    )
             self._replay(prepared)
             return self.snapshot()
         except BaseException:
@@ -579,6 +618,9 @@ class EngineSession:
                     self._submit.submit_flatten(self._engine, flatten_plan)
                 else:
                     self._submit(self._engine, flatten_plan)
+                self._policy_order_ids.add(
+                    "RLES-" + sha256(flatten_plan.idempotency_key.encode("utf-8")).hexdigest()
+                )
             self._replay(prepared_close)
             if self._engine is None:
                 raise EngineBoundaryError("native engine disappeared before terminal shutdown")

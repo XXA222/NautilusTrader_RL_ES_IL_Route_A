@@ -159,7 +159,9 @@ class FrozenOpportunityModel:
     evidence_type: str
     economic_status: str
 
-    def predict(self, event: OpportunityEvent, features: Sequence[float]) -> NetValueEstimate:
+    def predict(
+        self, event: OpportunityEvent, features: Sequence[float] | np.ndarray,
+    ) -> NetValueEstimate:
         if not isinstance(event, OpportunityEvent):
             raise TypeError("prediction requires an auditable causal OpportunityEvent")
         if (event.feature_spec_hash != self.feature_spec_hash
@@ -300,8 +302,8 @@ def fit_opportunity_model(
             raise ValueError(f"fit/calibration mismatch in {field_name}")
     fit_x = _matrix(purged, feature_rows, names)
     cal_x = _matrix(calibration, feature_rows, names)
-    fit_y = np.asarray([float(row.net_return_bps) for row in purged], dtype=np.float64)
-    cal_y = np.asarray([float(row.net_return_bps) for row in calibration], dtype=np.float64)
+    fit_y = np.asarray([_complete_return(row) for row in purged], dtype=np.float64)
+    cal_y = np.asarray([_complete_return(row) for row in calibration], dtype=np.float64)
     fit_positive = (fit_y > 0).astype(np.float64)
     cal_positive = (cal_y > 0).astype(np.float64)
     if len(np.unique(fit_positive)) != 2 or len(np.unique(cal_positive)) != 2:
@@ -331,7 +333,7 @@ def fit_opportunity_model(
     calibration_material = json.dumps({
         "records": sorted((
             row.event_id, row.decision_ts_ns, row.label_end_ts_ns,
-            float(row.net_return_bps).hex(), row.feature_vector_sha256,
+            _complete_return(row).hex(), row.feature_vector_sha256,
             row.simulation_receipt_id,
         ) for row in calibration),
         "fold_id": purged[0].fold_id,
@@ -382,7 +384,7 @@ def fit_opportunity_model(
     )
 
 
-def _feature_row(values: Sequence[float], width: int) -> np.ndarray:
+def _feature_row(values: Sequence[float] | np.ndarray, width: int) -> np.ndarray:
     row = np.asarray(values, dtype=np.float64)
     if row.shape != (width,) or not np.all(np.isfinite(row)):
         raise ValueError("feature row has wrong shape or non-finite values")
@@ -415,7 +417,7 @@ def _validate_independent_block_intervals(
 
 def _matrix(
     outcomes: Sequence[OpportunityOutcome],
-    feature_rows: Mapping[str, Sequence[float]],
+    feature_rows: Mapping[str, Sequence[float] | np.ndarray],
     feature_names: Sequence[str],
 ) -> np.ndarray:
     missing = [row.event_id for row in outcomes if row.event_id not in feature_rows]
@@ -435,11 +437,18 @@ def _matrix(
     return np.vstack(features)
 
 
+def _complete_return(outcome: OpportunityOutcome) -> float:
+    value = outcome.net_return_bps
+    if value is None or not math.isfinite(value):
+        raise ValueError("complete opportunity return is required and must be finite")
+    return float(value)
+
+
 def feature_vector_sha256(
     event_id: str,
     feature_spec_hash: str,
     feature_names: Sequence[str],
-    values: Sequence[float],
+    values: Sequence[float] | np.ndarray,
 ) -> str:
     """Bind ordered causal feature values to one candidate and feature schema."""
     if (not isinstance(event_id, str) or not re.fullmatch(r"[0-9a-f]{64}", event_id)

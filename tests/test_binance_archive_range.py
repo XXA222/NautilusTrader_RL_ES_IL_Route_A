@@ -15,6 +15,21 @@ from rles_data.io import read_curated
 pytestmark = [pytest.mark.unit, pytest.mark.micro_golden]
 
 
+@pytest.fixture(autouse=True)
+def synthetic_project_scope(tmp_path, monkeypatch):
+    """Give fixture imports an isolated empty ledger, never the live project registry."""
+    project = tmp_path / "synthetic-project"
+    registry = project / ".artifacts" / "research-access.sqlite"
+    registry.parent.mkdir(parents=True)
+    with sqlite3.connect(registry) as db:
+        for table in ("access", "query_intent"):
+            db.execute(
+                f"CREATE TABLE {table} (market TEXT, family TEXT, purpose TEXT, "
+                "start_ns INTEGER, end_ns INTEGER)"
+            )
+    monkeypatch.setattr(binance_archive, "PROJECT_ROOT", project)
+
+
 def test_project_import_rejects_monthly_funding_archive_touching_holdout_before_io(
         tmp_path, monkeypatch):
     project = tmp_path / "canonical"
@@ -76,6 +91,36 @@ def test_project_import_rejects_formal_query_intent_and_missing_registry_before_
             delay_ns=1_000_000,
         )
     assert not destination.exists()
+
+
+def test_external_temporary_target_cannot_bypass_project_physical_scope(
+        tmp_path, monkeypatch):
+    project = tmp_path / "canonical"
+    registry = project / ".artifacts" / "research-access.sqlite"
+    registry.parent.mkdir(parents=True)
+    start = int(datetime(2026, 8, 8, tzinfo=timezone.utc).timestamp()) * 1_000_000_000
+    end = int(datetime(2026, 8, 9, tzinfo=timezone.utc).timestamp()) * 1_000_000_000
+    with sqlite3.connect(registry) as db:
+        for table in ("access", "query_intent"):
+            db.execute(
+                f"CREATE TABLE {table} (market TEXT, family TEXT, purpose TEXT, "
+                "start_ns INTEGER, end_ns INTEGER)"
+            )
+        db.execute("INSERT INTO access VALUES(?,?,?,?,?)", (
+            "ETHUSDT", "perpetual-market-v1", "holdout", start, end,
+        ))
+    monkeypatch.setattr(binance_archive, "PROJECT_ROOT", project)
+    monkeypatch.setattr(
+        binance_archive, "fetch_archive",
+        lambda *_args, **_kwargs: pytest.fail("external target bypassed scope guard"),
+    )
+    external_target = tmp_path / "scratch" / "bundle"
+    with pytest.raises(binance_archive.DataError, match="monthly funding physical archive"):
+        binance_archive.import_day(
+            symbol="ETHUSDT", day="2026-08-04", output=external_target,
+            delay_ns=1_000_000,
+        )
+    assert not external_target.exists()
 
 
 def test_import_range_fetches_each_day_and_month_once_and_clips_funding(tmp_path, monkeypatch):
@@ -281,6 +326,7 @@ def test_funding_api_events_preserve_settlement_facts_and_observed_interval():
         content, symbol="ETHUSDT", instrument="ETHUSDT-PERP.SIM",
         source_url="https://fapi.binance.com/fapi/v1/fundingRate?fixture",
         expected_sha256=digest, delay_ns=1_000_000,
+        start_time_ms=1_800_000_000_000, end_time_ms=1_800_028_800_000,
     )
 
     settlements = [event for event in events if event.kind == "funding_settlement"]
@@ -307,7 +353,56 @@ def test_funding_api_events_reject_unsorted_or_non_minute_settlement_gaps():
             binance_archive.funding_api_events(
                 content, symbol="ETHUSDT", instrument="ETHUSDT-PERP.SIM", source_url="fixture",
                 expected_sha256=sha256(content).hexdigest(), delay_ns=1_000_000,
+                start_time_ms=1_800_000_000_000, end_time_ms=1_800_028_800_000,
             )
+
+
+def test_funding_api_events_reject_settlements_outside_requested_range():
+    import json
+
+    base = {"symbol": "ETHUSDT", "fundingRate": "0.0001", "markPrice": "2000",
+            "rateType": "Regular"}
+    for timestamp in (1_799_999_999_999, 1_800_000_000_001):
+        content = json.dumps([
+            dict(base, fundingTime=timestamp),
+            dict(base, fundingTime=timestamp + 28_800_000),
+        ]).encode("utf-8")
+        with pytest.raises(binance_archive.DataError, match="outside the requested range"):
+            binance_archive.funding_api_events(
+                content, symbol="ETHUSDT", instrument="ETHUSDT-PERP.SIM", source_url="fixture",
+                expected_sha256=sha256(content).hexdigest(), delay_ns=1_000_000,
+                start_time_ms=1_800_000_000_000, end_time_ms=1_800_028_800_000,
+            )
+
+
+def test_fetch_funding_api_uses_exact_preregistered_date_bounds(tmp_path, monkeypatch):
+    import json
+    from urllib.parse import parse_qs, urlsplit
+
+    start_day = date(2026, 10, 2)
+    end_day = date(2026, 10, 22)
+    expected_start = 1_790_899_200_000
+    expected_end = 1_792_713_599_999
+    captured = {}
+    content = json.dumps([]).encode("utf-8")
+
+    def fake_read(url, *, limit, temp_parent):
+        captured.update(parse_qs(urlsplit(url).query))
+        assert limit == 8 * 1024 * 1024
+        assert temp_parent == tmp_path
+        return content
+
+    monkeypatch.setattr(binance_archive, "_read_remote", fake_read)
+    source, response = binance_archive.fetch_funding_api(
+        "ETHUSDT", date(2026, 10, 1), start_day, end_day, tmp_path,
+    )
+
+    assert captured == {
+        "symbol": ["ETHUSDT"], "startTime": [str(expected_start)],
+        "endTime": [str(expected_end)], "limit": ["1000"],
+    }
+    assert response == content
+    assert source["verification"] == "captured_response_sha256"
 
 
 def test_import_range_uses_rest_only_for_missing_current_month_funding(tmp_path, monkeypatch):

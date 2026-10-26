@@ -7,6 +7,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 from rles_route_a.contracts import PointInTimeObservation
+from rles_route_a.indicators_1m import IndicatorSnapshot
 
 
 CAUSAL_MTF_V5_ROUTE_A_FEATURES = {
@@ -45,6 +46,37 @@ CAUSAL_MTF_V7_ROUTE_A_FEATURES = {
     "breakout_1h": "breakout_1h",
 }
 
+# New profile for the independent one-minute teacher library. Earlier maps are
+# intentionally unchanged. The host names match the versioned streaming output
+# and can be supplied only after the corresponding completed bar is available.
+CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES = {
+    name: name
+    for name in (
+        "bar_open_1m",
+        "bar_high_1m",
+        "bar_low_1m",
+        "bar_close_1m",
+        "bar_volume_1m",
+        "ema_9",
+        "ema_21",
+        "roc_20",
+        "roc_60",
+        "donchian_upper_20",
+        "donchian_lower_20",
+        "donchian_upper_10",
+        "donchian_lower_10",
+        "zscore_60",
+        "atr_14",
+        "macd_dif",
+        "macd_dea",
+        "macd_hist",
+        "rsi_14",
+        "bollinger_mid_20",
+        "bollinger_upper_20_2",
+        "bollinger_lower_20_2",
+    )
+}
+
 
 def project_visible_observation(*, fold_id: str, episode_id: str,
                                 decision_ts_ns: int,
@@ -53,7 +85,9 @@ def project_visible_observation(*, fold_id: str, episode_id: str,
                                 native_account_fields: Mapping[str, float],
                                 pending_order_ids: tuple[str, ...] = (),
                                 source_id: str = "", snapshot_id: str = "",
-                                feature_spec_hash: str = "") -> PointInTimeObservation:
+                                feature_spec_hash: str = "",
+                                exact_market_clocks_ns: tuple[tuple[str, int], ...] = ()
+                                ) -> PointInTimeObservation:
     """Validation is fail-closed if any 1h/1d feature was not yet available."""
     return PointInTimeObservation(
         episode_id=episode_id, decision_ts_ns=decision_ts_ns,
@@ -61,6 +95,31 @@ def project_visible_observation(*, fold_id: str, episode_id: str,
         account=dict(native_account_fields), pending_order_ids=tuple(pending_order_ids),
         fold_id=fold_id, source_id=source_id, snapshot_id=snapshot_id,
         feature_spec_hash=feature_spec_hash,
+        exact_market_clocks_ns=exact_market_clocks_ns,
+    )
+
+
+def project_indicator_snapshot(*, fold_id: str, episode_id: str,
+                               snapshot: IndicatorSnapshot,
+                               native_account_fields: Mapping[str, float],
+                               pending_order_ids: tuple[str, ...] = (),
+                               source_id: str = "", snapshot_id: str = "",
+                               feature_spec_hash: str = "") -> PointInTimeObservation:
+    """Project one already-authorized streaming snapshot without opening data."""
+    values = dict(snapshot.values)
+    availability = {name: snapshot.available_at_ns for name in values}
+    return project_visible_observation(
+        fold_id=fold_id,
+        episode_id=episode_id,
+        decision_ts_ns=snapshot.decision_ts_ns,
+        feature_values=values,
+        feature_available_at_ns=availability,
+        native_account_fields=native_account_fields,
+        pending_order_ids=pending_order_ids,
+        source_id=source_id,
+        snapshot_id=snapshot_id,
+        feature_spec_hash=feature_spec_hash,
+        exact_market_clocks_ns=(("latest_1m_close_ts_ns", snapshot.close_time_ns),),
     )
 
 
@@ -113,6 +172,13 @@ def project_host_visible_context(*, context: Mapping[str, Any], fold_id: str,
     pending = context.get("pending_order_ids")
     if not isinstance(pending, tuple):
         raise ValueError("native pending order identities are missing from host context")
+    raw_exact_clocks = context.get("exact_market_clocks_ns", ())
+    if isinstance(raw_exact_clocks, Mapping):
+        exact_clocks = tuple(raw_exact_clocks.items())
+    elif isinstance(raw_exact_clocks, (tuple, list)):
+        exact_clocks = tuple(raw_exact_clocks)
+    else:
+        raise ValueError("host exact market clocks must be a mapping or immutable pairs")
     return project_visible_observation(
         fold_id=fold_id, episode_id=episode_id, decision_ts_ns=decision_ts_ns,
         feature_values=values, feature_available_at_ns=availability,
@@ -120,4 +186,5 @@ def project_host_visible_context(*, context: Mapping[str, Any], fold_id: str,
         source_id=context.get("source_id", ""),
         snapshot_id=context.get("snapshot_id", ""),
         feature_spec_hash=context.get("feature_spec_hash", ""),
+        exact_market_clocks_ns=exact_clocks,
     )

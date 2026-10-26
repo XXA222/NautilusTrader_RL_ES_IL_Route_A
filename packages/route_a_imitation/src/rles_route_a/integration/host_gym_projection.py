@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
+from functools import lru_cache
 from hashlib import sha256
 import json
 from math import isfinite
@@ -108,32 +109,81 @@ class L3OrderFacts:
             fill_ids.add(event_id)
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class _ReadOnlyOrderStatus(Mapping[str, str]):
+    """Immutable mapping used for shared native status facts."""
+
+    client_order_id: str
+    status: str
+    side: str
+    quantity: str
+    filled_qty: str
+
+    def __getitem__(self, key: str) -> str:
+        if key not in {"client_order_id", "status", "side", "quantity", "filled_qty"}:
+            raise KeyError(key)
+        return getattr(self, key)
+
+    def __iter__(self):
+        return iter(("client_order_id", "status", "side", "quantity", "filled_qty"))
+
+    def __len__(self) -> int:
+        return 5
+
+    def __hash__(self) -> int:
+        return hash((self.client_order_id, self.status, self.side, self.quantity, self.filled_qty))
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Mapping) and dict(self) == dict(other)
+
+
+@lru_cache(maxsize=131072)
+def _intern_order_status(
+    client_order_id: str, status: str, side: str, quantity: str, filled_qty: str,
+) -> _ReadOnlyOrderStatus:
+    """Share immutable identical M2.2 status facts across adjacent decisions."""
+    return _ReadOnlyOrderStatus(client_order_id, status, side, quantity, filled_qty)
+
+
+@lru_cache(maxsize=2048)
+def _intern_order_status_rows(
+    rows: tuple[_ReadOnlyOrderStatus, ...],
+) -> tuple[_ReadOnlyOrderStatus, ...]:
+    """Share repeated full account-status vectors without dropping any order row."""
+    return rows
+
+
 def _validate_order_statuses(rows: tuple[Mapping[str, str], ...], label: str
-                             ) -> tuple[dict[str, str], ...]:
+                             ) -> tuple[Mapping[str, str], ...]:
     if not isinstance(rows, tuple):
         raise ValueError(f"native order status {label} must be a tuple")
-    normalized: list[dict[str, str]] = []
+    normalized: list[_ReadOnlyOrderStatus] = []
     identities: set[str] = set()
     required = {"client_order_id", "status", "side", "quantity", "filled_qty"}
     for row in rows:
         if not isinstance(row, Mapping) or set(row) != required:
             raise ValueError(f"native order status {label} has an invalid schema")
-        item = dict(row)
-        if any(type(value) is not str or not value.strip() for value in item.values()):
+        values = tuple(row[field] for field in (
+            "client_order_id", "status", "side", "quantity", "filled_qty",
+        ))
+        if any(type(value) is not str or not value.strip() for value in values):
             raise ValueError(f"native order status {label} has missing native fields")
-        identity = item["client_order_id"]
+        identity = values[0]
         if identity in identities:
             raise ValueError(f"duplicate native order status {label} identity")
         identities.add(identity)
-        normalized.append(item)
+        normalized.append(_intern_order_status(*values))
     if tuple(row["client_order_id"] for row in normalized) != tuple(sorted(identities)):
         raise ValueError(f"native order status {label} rows are not deterministically ordered")
-    return tuple(normalized)
+    return _intern_order_status_rows(tuple(normalized))
 
 
-def _order_status_receipt(before: tuple[dict[str, str], ...],
-                           after: tuple[dict[str, str], ...]) -> str:
-    encoded = json.dumps({"before": before, "after": after}, sort_keys=True,
+def _order_status_receipt(before: tuple[Mapping[str, str], ...],
+                           after: tuple[Mapping[str, str], ...]) -> str:
+    encoded = json.dumps({
+        "before": [dict(row) for row in before],
+        "after": [dict(row) for row in after],
+    }, sort_keys=True,
                          separators=(",", ":"), allow_nan=False).encode("utf-8")
     return sha256(encoded).hexdigest()
 
@@ -187,7 +237,19 @@ def l3_order_facts_from_gym_info(gym_info: Mapping[str, Any]) -> L3OrderFacts:
     status_ids = {row["client_order_id"] for row in statuses_after}
     required_after = expected_sources | set(pending_after_ids)
     if not required_after.issubset(status_ids):
-        raise ValueError("native order status trace omits a referenced policy order")
+        missing = sorted(required_after - status_ids)
+        raise ValueError(
+            "native order status trace omits referenced policy order identities: "
+            f"{missing}; submitted={sorted(submitted_ids)}; "
+            f"related={sorted(related_ids)}; pending_after={sorted(pending_after_ids)}; "
+            f"barrier_ts={gym_info.get('settlement_after_ns')}; "
+            f"decision_id={gym_info.get('execution_decision_id')}; "
+            f"plan_reason={gym_info.get('execution_plan_reason')}; "
+            f"delta_qty={gym_info.get('execution_delta_qty')}; "
+            f"status_after_count={len(status_ids)}; status_after_tail={sorted(status_ids)[-3:]}; "
+            f"fill_ids={sorted(set(filled_ids))}; "
+            f"idempotency_key={gym_info.get('execution_idempotency_key')}"
+        )
     if not set(before_pending_ids).issubset(
             {row["client_order_id"] for row in statuses_before}):
         raise ValueError("native pre-barrier status trace omits a pending order")

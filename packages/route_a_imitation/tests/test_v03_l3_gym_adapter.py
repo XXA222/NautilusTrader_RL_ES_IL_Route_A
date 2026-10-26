@@ -50,3 +50,28 @@ def test_l3_adapter_rejects_missing_or_tampered_native_order_receipt():
     }
     with pytest.raises(ValueError, match="receipt mismatch"):
         l3_order_facts_from_gym_info(info)
+
+
+def test_repeated_native_order_status_rows_are_shared_read_only_facts():
+    status = {"client_order_id": "RLES-open", "status": "ACCEPTED", "side": "BUY",
+              "quantity": "1", "filled_qty": "0"}
+    before = (status,)
+    after = (status,)
+    info = {
+        "execution_plan_action": "NOOP", "execution_client_order_id": None,
+        "execution_related_order_ids": (),
+        "native_pending_order_ids_before": ("RLES-open",),
+        "native_pending_order_ids_after": ("RLES-open",),
+        "native_policy_fills": (),
+        "native_order_statuses_before": before,
+        "native_order_statuses_after": after,
+        "native_order_status_receipt": _receipt(before, after),
+    }
+
+    first = l3_order_facts_from_gym_info(info)
+    second = l3_order_facts_from_gym_info(info)
+
+    assert first.native_order_statuses_after is second.native_order_statuses_after
+    assert first.native_order_statuses_after[0] is second.native_order_statuses_after[0]
+    with pytest.raises(TypeError):
+        first.native_order_statuses_after[0]["status"] = "FILLED"  # type: ignore[index]

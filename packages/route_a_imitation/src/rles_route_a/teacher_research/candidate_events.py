@@ -89,7 +89,7 @@ class CausalOpportunityGenerator:
             raise ValueError(
                 "candidate provenance requires source, snapshot, and feature-spec identities"
             )
-        found: list[tuple[CandidateFamily, int, tuple[str, ...]]] = []
+        found: list[tuple[CandidateFamily, Literal[-1, 1], tuple[str, ...]]] = []
         breakout = observation.market_value("breakout_1h")
         trend_1d = observation.market_value("trend_1d")
         if breakout > self.breakout_threshold:

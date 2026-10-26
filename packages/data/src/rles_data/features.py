@@ -13,6 +13,7 @@ from .core import (CuratedStore, DataError, FeatureField, FeatureSpec,
                    MAX_NS, MINUTE_NS, Window, digest, require_ns)
 
 TIMEFRAMES = (5, 15, 60, 240, 480, 1440)
+CAUSAL_1M_INDICATORS_V1_INPUT_PROFILE_ID = "causal_1m_indicators_v1"
 
 
 def _indexed_closed_bars(store: CuratedStore, instrument: str,
@@ -120,6 +121,75 @@ def _bars_1m(store: CuratedStore, decision_ns: int, instrument: str,
                            "taker_buy_quote_asset_volume",
                        ) if name in e.payload}})
     return tuple(result)
+
+
+@dataclass(frozen=True, slots=True)
+class CausalBarInput1m:
+    """Authorized closed 1m input passed to a downstream pure calculator."""
+
+    open_time_ns: int
+    close_time_ns: int
+    available_at_ns: int
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+def causal_1m_indicator_inputs(
+    store: CuratedStore,
+    decision_ns: int,
+    *,
+    instrument: str | None = None,
+    start_event_ns: int | None = None,
+    require_latest: bool = True,
+) -> tuple[CausalBarInput1m, ...]:
+    """Return the cached L2 closed-bar stream for the versioned 1m calculator.
+
+    This function performs no indicator computation and opens no data source.
+    It only exposes already-authorized CuratedStore events whose availability
+    clock is no later than ``decision_ns``.
+    """
+    require_ns(decision_ns)
+    if start_event_ns is not None:
+        require_ns(start_event_ns)
+        if start_event_ns > decision_ns:
+            raise DataError("1m indicator input start follows the decision clock")
+    if type(require_latest) is not bool:
+        raise DataError("require_latest must be Boolean")
+    symbol = _instrument(store, instrument)
+    rows = _bars_1m(store, decision_ns, symbol, start_event_ns=start_event_ns)
+    if not rows:
+        raise DataError("no authorized closed 1m input is available")
+    _assert_contiguous(rows, 1)
+    expected_close = (decision_ns // MINUTE_NS) * MINUTE_NS
+    if require_latest and rows[-1]["close_ns"] != expected_close:
+        raise DataError("latest expected closed 1m indicator input is missing or stale")
+    output = []
+    for row in rows:
+        available_at_ns = row["available_at_ns"]
+        close_time_ns = row["close_ns"]
+        prices = tuple(float(row[name]) for name in ("open", "high", "low", "close"))
+        volume = float(row["volume"])
+        if (type(available_at_ns) is not int or available_at_ns > decision_ns
+                or type(close_time_ns) is not int or close_time_ns > decision_ns
+                or any(not math.isfinite(value) or value <= 0 for value in prices)
+                or not math.isfinite(volume) or volume < 0):
+            raise DataError("invalid or future 1m indicator input")
+        if prices[1] < max(prices[0], prices[3]) or prices[2] > min(prices[0], prices[3]):
+            raise DataError("inconsistent 1m indicator OHLC input")
+        output.append(CausalBarInput1m(
+            open_time_ns=close_time_ns - MINUTE_NS,
+            close_time_ns=close_time_ns,
+            available_at_ns=available_at_ns,
+            open=prices[0],
+            high=prices[1],
+            low=prices[2],
+            close=prices[3],
+            volume=volume,
+        ))
+    return tuple(output)
 
 
 def aggregate_closed(store: CuratedStore, decision_ns: int, timeframe_minutes: int,

@@ -1,0 +1,13 @@
+{
+  "schema": "rles.route-a.teacher-core-train-directional-errata.v1",
+  "status": "frozen_after_dq_c_preparation_failure_before_any_native_outcome",
+  "supersedes_prereg": "configs/route_a_teacher_core_train_20230601_20231210_prereg.json",
+  "supersedes_prereg_sha256": "aa0eddadbc9fb5489129bedf3e03e9f2344cf11a0af8a9da7eeaad32b46a6340",
+  "failure_receipt": ".artifacts/route-a-teacher-core-train-20230601-20231210/failure.json",
+  "failure_receipt_sha256": "69dfd9ad9902575b61ba2232a119e02a499ab284970b632b8ed803d47128fb19",
+  "repair_reason": "The first block stopped in data-quality preparation with DQ-C before any arm was rolled out or any strategy outcome was read. DQ-C is permitted for directional-only low-leverage research, while the shared historical factory defaulted unconditionally to rl_es. Select the existing directional quality use without changing market windows, arms, entry/exit parameters, or costs.",
+  "quality_purpose": "directional",
+  "rl_training_allowed": false,
+  "economic_status": "SCENARIO_ONLY",
+  "student_promotion": false
+}

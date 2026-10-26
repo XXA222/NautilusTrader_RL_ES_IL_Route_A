@@ -472,19 +472,20 @@ def evaluate_teacher_research_gate_v2(
         ))
     mean_increment = float(np.mean(conservative_candidate)) if len(ordered_blocks) else None
 
+    status_reasons: tuple[str, ...]
     if len(ordered_blocks) < minimum_independent_blocks:
-        status, reasons = "INSUFFICIENT_EVIDENCE", ("TOO_FEW_INDEPENDENT_BLOCKS",)
+        status, status_reasons = "INSUFFICIENT_EVIDENCE", ("TOO_FEW_INDEPENDENT_BLOCKS",)
     elif selected_events == 0:
-        status, reasons = "NO_ELIGIBLE_ALPHA_TEACHER", ("ALL_FLAT_NO_TRADE",)
+        status, status_reasons = "NO_ELIGIBLE_ALPHA_TEACHER", ("ALL_FLAT_NO_TRADE",)
     elif candidate_ci is None or candidate_ci[0] <= 0:
-        status, reasons = "NO_PREDICTABLE_INCREMENT", ("NONPOSITIVE_BLOCK_BOOTSTRAP_LOWER_BOUND",)
+        status, status_reasons = "NO_PREDICTABLE_INCREMENT", ("NONPOSITIVE_BLOCK_BOOTSTRAP_LOWER_BOUND",)
     elif control_gap_ci is None or control_gap_ci[0] <= 0:
-        status, reasons = "NO_PREDICTABLE_INCREMENT", ("NEGATIVE_CONTROL_NOT_BEATEN",)
+        status, status_reasons = "NO_PREDICTABLE_INCREMENT", ("NEGATIVE_CONTROL_NOT_BEATEN",)
     else:
-        status, reasons = "G1_TRAIN_INNER_SIGNAL_SCENARIO_ONLY", ()
+        status, status_reasons = "G1_TRAIN_INNER_SIGNAL_SCENARIO_ONLY", ()
     return TeacherResearchGateV2Result(
         status=status,
-        reason_codes=reasons,
+        reason_codes=status_reasons,
         independent_blocks=len(ordered_blocks),
         candidate_events=candidate_events,
         selected_events=selected_events,

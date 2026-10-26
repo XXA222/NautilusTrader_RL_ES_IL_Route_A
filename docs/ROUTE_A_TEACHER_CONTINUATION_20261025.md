@@ -83,3 +83,10 @@
 公开市场数据可自行下载，但账户历史费用/保证金权威不能由代码猜测。本轮再次核对 [Binance 官方账户 API](https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/account)：用户佣金是 USER_DATA 账户端点，公开 K 线和 funding 归档不包含账户历史费率证明。未访问账户凭证、未调用交易接口。即使后续情景收益改善，也必须保持 `SCENARIO_ONLY`，直至项目既有 verifier 真正核验经济证据。
 
 后续研究需要新的可检验机制和预注册未消费时间段，并补齐成本权威；本报告不能被当作继续训练学生的授权收据。
+
+## 2026-10-25 后续工程整改追加
+
+- 本轮将 packages 范围 mypy 从 20 项错误修复到 0，增加无收益输入的单仓位因果准入与闭仓现金流对账模块，修正固定 240 分钟旧 screen runner 对完整结果的未来筛选、删失仓位的块末记账、空 screen block 索引，并封闭 Binance importer 临时输出路径绕过物理保留区守卫的问题；同时增加冻结四门的 16 组合/顺序/分组诊断代码。
+- Ubuntu-24.04 `.venv-ubuntu` 最终 mypy 为 223 个源文件无错误，Ruff 全仓检查通过，Route A + 历史工厂 + 注册 Train 读 + 归档测试合计 **387 passed**。18 个依赖兼容告警不影响退出码。
+- 本轮未读取/下载新市场数据，未复用旧 screen 调参，也未启动新市场实验；现有 E1/E2 报告仍为零选中，不能修改或覆盖成新结果。教师资格状态维持不合格，正式学生开发仍未晋级。
+- 研究账本只读汇总显示 development access 最新到期为 2026-10-02；本轮未打开市场价格数据。旧 E1/E2 screen 已消费，且其原始 source 有 Test/Holdout 月度 funding 物理重叠，不能重跑。现存报告不含逐候选 score/四门位图；新增 runner 现已连接预测分布、Q10/support、screen outcome 校准、F0–F5 的 Base/Stress 配对审计和账户回放，但没有用旧聚合值伪造缺失表。完整执行结果仍待合法新 source 与账本登记。详见 [ROUTE_A_TEACHER_REMEDIATION_EXECUTION_20261025.md](ROUTE_A_TEACHER_REMEDIATION_EXECUTION_20261025.md)。状态仍为 `BLOCKED_BY_SOURCE`。

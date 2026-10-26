@@ -14,6 +14,12 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from rles_route_a.contracts import ExpertAdvice, ExpertTeacher
+from rles_route_a.evaluation.teacher_funnel_1m import (
+    TeacherDecisionRecord,
+    TeacherFunnelResearchHook1m,
+    TeacherPreDecision,
+    validate_staged_teacher_decision,
+)
 from rles_route_a.teacher_research import (
     CausalOpportunityGenerator,
     audit_candidate_decision,
@@ -368,6 +374,7 @@ class NativeGymTeacherProvider:
             self, *, factory: Any, host_rollout: Callable[..., Any],
             grant: HostTrainGrant, seed: int, rollout_id: str | None = None,
             decision_policy: BCInferencePolicy | None = None,
+            teacher_funnel_hook: TeacherFunnelResearchHook1m | None = None,
             student_policy_id: str | None = None,
             dagger_projection_recipe: str | None = None,
             dagger_state_sink: Callable[[tuple[VisitedStudentState, ...]], None] | None = None,
@@ -406,6 +413,8 @@ class NativeGymTeacherProvider:
                 )
         if decision_policy is not None and not isinstance(decision_policy, BCInferencePolicy):
             raise TypeError("native student replay requires a frozen Route A BC inference policy")
+        if teacher_funnel_hook is not None and decision_policy is not None:
+            raise ValueError("1m teacher research hooks cannot be attached to a student replay")
         actor_identity = None
         active_student_policy_id: str = ""
         if decision_policy is not None:
@@ -443,8 +452,10 @@ class NativeGymTeacherProvider:
         collected_order_facts = []
         policy_barrier_equity_by_id: dict[str, Mapping[str, Any]] = {}
         current: list[tuple[Any, Any, ExpertAdvice | None,
-                             ProjectedTeacherTarget | None, tuple[Any, ...]]] = []
+                             ProjectedTeacherTarget | None, tuple[Any, ...],
+                             TeacherPreDecision | None]] = []
         candidate_audit_records: list[dict[str, Any]] = []
+        teacher_research_records: list[TeacherDecisionRecord] = []
 
         def predictor_factory(env: Any, reset_info: Mapping[str, Any]):
             episode = self.episode_id(env, reset_info)
@@ -498,8 +509,18 @@ class NativeGymTeacherProvider:
                     else:
                         teacher_label = None
                         projected_target = None
+                research_pre: TeacherPreDecision | None = None
+                if teacher_funnel_hook is not None:
+                    research_pre = teacher_funnel_hook.capture_pre_decision(
+                        observation, advice, visible_context, self.teacher,
+                    )
+                    if not isinstance(research_pre, TeacherPreDecision):
+                        raise TypeError("1m research hook must capture a pre-decision row")
+                    if (research_pre.decision_ts_ns != observation.decision_ts_ns
+                            or research_pre.teacher_id != advice.expert_id):
+                        raise ValueError("1m research pre-decision identity/time mismatch")
                 current.append((observation, advice, teacher_label, projected_target,
-                                candidate_events))
+                                candidate_events, research_pre))
                 return [advice.requested_exposure]
 
             return predict
@@ -519,7 +540,8 @@ class NativeGymTeacherProvider:
                     "policy_equity_before", "policy_equity_after", "policy_equity_change",
                 )
             }
-            observation, advice, teacher_label, projected_target, candidate_events = current.pop()
+            (observation, advice, teacher_label, projected_target, candidate_events,
+             research_pre) = current.pop()
             facts = l3_order_facts_from_gym_info(info)
             collected_order_facts.append(facts)
             barrier = self._project_step(
@@ -528,6 +550,17 @@ class NativeGymTeacherProvider:
                 trajectory_id=trajectory_id,
             )
             barriers.append(barrier)
+            if teacher_funnel_hook is not None:
+                if research_pre is None:
+                    raise RuntimeError("1m research pre-decision row was not retained")
+                research_record = teacher_funnel_hook.capture_post_decision(
+                    research_pre, advice, info, barrier, facts,
+                )
+                validate_staged_teacher_decision(
+                    research_record, observation=observation, advice=advice,
+                    gym_info=info, barrier=barrier, order_facts=facts,
+                )
+                teacher_research_records.append(research_record)
             candidate_audit_records.extend(
                 audit_candidate_decision(event, advice, barrier.trace)
                 for event in candidate_events
@@ -580,6 +613,63 @@ class NativeGymTeacherProvider:
             "order_status_facts": order_verification.order_status_facts,
             "policy_fill_events": order_verification.policy_fill_events,
         }
+        if teacher_funnel_hook is not None:
+            if len(teacher_research_records) != len(barriers):
+                raise ValueError("1m research rows do not exactly cover verified native decisions")
+            trace_submission_rows = tuple(
+                order_id for barrier in barriers for order_id in barrier.trace.submitted_order_ids
+            )
+            if len(trace_submission_rows) != len(set(trace_submission_rows)):
+                raise ValueError(
+                    "INCONSISTENT_NATIVE_ACCOUNTING: one native order was submitted "
+                    "by multiple Route A decisions"
+                )
+            submitted_from_trace = set(trace_submission_rows)
+            submitted_from_rows = {
+                order_id for row in teacher_research_records if row.planner is not None
+                for order_id in row.planner.submitted_order_ids
+            }
+            filled_from_trace = {
+                order_id for barrier in barriers for order_id in barrier.trace.filled_order_ids
+            }
+            filled_from_rows = {
+                order_id for row in teacher_research_records if row.execution is not None
+                for order_id in row.execution.native_filled_order_ids
+            }
+            if (submitted_from_rows != submitted_from_trace
+                    or filled_from_rows != filled_from_trace):
+                raise ValueError(
+                    "INCONSISTENT_NATIVE_ACCOUNTING: teacher row order identities "
+                    "differ from retained native barriers"
+                )
+            native_cases = teacher_funnel_hook.build_native_cases(
+                tuple(teacher_research_records),
+            )
+            if not isinstance(native_cases, tuple):
+                raise TypeError("1m research commit must return its native trade-case tuple")
+            case_ids = tuple(getattr(case, "trade_case_id", None) for case in native_cases)
+            row_case_ids = {
+                row.execution.case_id for row in teacher_research_records
+                if row.execution is not None and row.execution.case_id is not None
+            }
+            if (any(not isinstance(case_id, str) or not case_id for case_id in case_ids)
+                    or len(case_ids) != len(set(case_ids))
+                    or set(case_ids) != row_case_ids):
+                raise ValueError(
+                    "INCONSISTENT_NATIVE_ACCOUNTING: native trade cases differ from "
+                    "staged decision lifecycle identities"
+                )
+            teacher_funnel_hook.commit(
+                tuple(teacher_research_records), native_cases,
+            )
+            report["route_a_teacher_1m_research"] = {
+                "decision_rows": len(teacher_research_records),
+                "submitted_order_ids": len(submitted_from_trace),
+                "filled_order_ids": len(filled_from_trace),
+                "native_trade_cases": len(native_cases),
+                "classification": "M22_VERIFIED_NATIVE_FACTS",
+                "accounting_authority": "retained_m22_session_snapshots",
+            }
         report["route_a_economic_evidence"] = {
             "classification": (
                 "OBSERVED_NATIVE_AUTHORIZED"

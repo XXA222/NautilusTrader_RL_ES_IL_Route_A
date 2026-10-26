@@ -150,6 +150,7 @@ def make_config(
     scaler: Any = None,
     source_mode: str = "whole_snapshot_isolated_v1",
     prepare_factory: bool = True,
+    share_snapshot_histories: bool = False,
 ) -> tuple[dict, Any]:
     if source_mode not in {"row_group_scoped_v1", "whole_snapshot_isolated_v1"}:
         raise ValueError("unsupported registered Train source mode")
@@ -199,6 +200,7 @@ def make_config(
         scaler=scaler,
         compact_report_snapshots=False,
         require_scoped_train_access=True,
+        share_snapshot_histories=share_snapshot_histories,
     )
     return config, factory
 

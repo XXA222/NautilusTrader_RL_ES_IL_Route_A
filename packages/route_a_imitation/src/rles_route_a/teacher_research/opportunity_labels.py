@@ -186,6 +186,8 @@ def label_counterfactual_candidates(
         elif replay.exit_ts_ns is None:
             label_end_ts_ns = None
             net_return_bps = None
+            if replay.censor_ts_ns is None:
+                raise ValueError("open counterfactual replay must declare its censor time")
             censor_ts_ns = min(replay.censor_ts_ns, block_end_ts_ns)
         elif replay.exit_ts_ns >= block_end_ts_ns:
             # An outcome beyond the independent block boundary must not leak
@@ -194,9 +196,13 @@ def label_counterfactual_candidates(
             net_return_bps = None
             censor_ts_ns = block_end_ts_ns
         else:
-            if replay.exit_ts_ns <= event.decision_ts_ns:
+            exit_ts_ns = replay.exit_ts_ns
+            exit_price = replay.exit_price
+            if exit_price is None:
+                raise ValueError("closed counterfactual replay must declare its exit price")
+            if exit_ts_ns <= event.decision_ts_ns:
                 raise ValueError("counterfactual exit precedes its candidate decision")
-            price_ratio = replay.exit_price / replay.entry_price
+            price_ratio = exit_price / replay.entry_price
             price_return = math.log(price_ratio) if gross_return_method == "log" else price_ratio - 1
             gross_bps = event.side * price_return * 10_000.0
             modeled_cost_bps = (
@@ -204,7 +210,7 @@ def label_counterfactual_candidates(
                 + replay.entry_slippage_bps + replay.exit_slippage_bps
             )
             net_return_bps = gross_bps - modeled_cost_bps + replay.funding_cashflow_bps
-            label_end_ts_ns = replay.exit_ts_ns
+            label_end_ts_ns = exit_ts_ns
             censor_ts_ns = None
         outcomes.append(OpportunityOutcome(
             event_id=event.event_id,

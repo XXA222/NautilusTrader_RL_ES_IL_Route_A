@@ -33,10 +33,15 @@ def _snapshot_status_rows(
     snapshot: Any, order_ids: set[str], *, label: str
 ) -> tuple[dict[str, str], ...]:
     all_orders = getattr(snapshot, "all_orders", None)
-    if not isinstance(all_orders, (tuple, list)):
+    by_requested_ids = getattr(all_orders, "for_ids", None)
+    if callable(by_requested_ids):
+        rows = by_requested_ids(order_ids)
+    elif isinstance(all_orders, (tuple, list)):
+        rows = all_orders
+    else:
         raise ValueError(f"M2.2 {label} snapshot lacks complete native order history")
     by_id: dict[str, dict[str, str]] = {}
-    for row in all_orders:
+    for row in rows:
         if not isinstance(row, Mapping):
             raise ValueError(f"M2.2 {label} order row is malformed")
         identity = row.get("client_order_id")
@@ -85,10 +90,15 @@ def _snapshot_status_rows(
 
 def _snapshot_fills(snapshot: Any, *, start_ns: int, end_ns: int) -> tuple[Mapping[str, Any], ...]:
     fills = getattr(snapshot, "fills", None)
-    if not isinstance(fills, (tuple, list)):
+    in_interval = getattr(fills, "for_event_interval", None)
+    if callable(in_interval):
+        records = in_interval(start_ns, end_ns)
+    elif isinstance(fills, (tuple, list)):
+        records = fills
+    else:
         raise ValueError("M2.2 snapshot lacks native fill history")
     result = []
-    for fill in fills:
+    for fill in records:
         if not isinstance(fill, Mapping):
             raise ValueError("M2.2 native fill row is malformed")
         timestamp = fill.get("ts_event", fill.get("ts_event_ns"))

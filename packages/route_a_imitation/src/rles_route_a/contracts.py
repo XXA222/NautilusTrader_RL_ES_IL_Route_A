@@ -63,6 +63,7 @@ class PointInTimeObservation:
     source_id: str = ""
     snapshot_id: str = ""
     feature_spec_hash: str = ""
+    exact_market_clocks_ns: tuple[tuple[str, int], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.episode_id or type(self.decision_ts_ns) is not int or self.decision_ts_ns <= 0:
@@ -83,6 +84,16 @@ class PointInTimeObservation:
             raise ValueError("invalid market feature keys")
         if any(not isinstance(k, str) or not k or not k.strip() for k in self.account):
             raise ValueError("invalid native account field names")
+        if (not isinstance(self.exact_market_clocks_ns, tuple)
+                or any(not isinstance(row, tuple) or len(row) != 2 for row in self.exact_market_clocks_ns)):
+            raise ValueError("exact market clocks must be immutable (name, ns) pairs")
+        clock_names: set[str] = set()
+        for name, timestamp in self.exact_market_clocks_ns:
+            if (not isinstance(name, str) or not name.strip() or name in clock_names
+                    or type(timestamp) is not int or timestamp <= 0
+                    or timestamp > self.decision_ts_ns):
+                raise ValueError("invalid or future exact market clock")
+            clock_names.add(name)
         for k, v in self.market.items():
             finite_number(v, k)
             at = self.feature_available_at_ns[k]
@@ -102,6 +113,7 @@ class PointInTimeObservation:
                            FrozenMap(self.feature_available_at_ns))
         object.__setattr__(self, "account", FrozenMap(self.account))
         object.__setattr__(self, "pending_order_ids", tuple(self.pending_order_ids))
+        object.__setattr__(self, "exact_market_clocks_ns", tuple(self.exact_market_clocks_ns))
 
     def account_value(self, name: str) -> float:
         if name not in self.account:
@@ -112,6 +124,26 @@ class PointInTimeObservation:
         if name not in self.market:
             raise KeyError(f"required causal feature is missing: {name}")
         return finite_number(self.market[name], name)
+
+    def exact_market_clock(self, name: str) -> int:
+        """Return an exact integer market clock, never a float-encoded ns value."""
+        for clock_name, timestamp in self.exact_market_clocks_ns:
+            if clock_name == name:
+                return timestamp
+        raise KeyError(f"required exact market clock is missing: {name}")
+
+    def market_clock_ns(self, name: str) -> int:
+        """Read an exact clock, allowing legacy float values only in the safe range."""
+        try:
+            return self.exact_market_clock(name)
+        except KeyError:
+            pass
+        if name not in self.market:
+            raise KeyError(f"required causal market clock is missing: {name}")
+        value = self.market_value(name)
+        if abs(value) > 2**53 or not value.is_integer():
+            raise ValueError("epoch-ns market clock requires exact integer metadata")
+        return int(value)
 
 
 @dataclass(frozen=True, slots=True)

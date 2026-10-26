@@ -392,7 +392,8 @@ def _read_registered_train_store(config: dict, *, with_receipt: bool = False
 
 def prepare(config: dict, *, fit_scaler: bool = True, scaler: Scaler | None = None,
             compact_report_snapshots: bool = False,
-            require_scoped_train_access: bool = False) -> HistoricalEnvironmentFactory:
+            require_scoped_train_access: bool = False,
+            share_snapshot_histories: bool = False) -> HistoricalEnvironmentFactory:
     access = config.get("train_data_access")
     if require_scoped_train_access and access is None:
         raise DataError("this Train-only operation requires registered scoped Train data access")
@@ -407,6 +408,7 @@ def prepare(config: dict, *, fit_scaler: bool = True, scaler: Scaler | None = No
     factory = HistoricalEnvironmentFactory(**{
         **config["environment"], "split": "train_inner", "fit_scaler": fit_scaler,
         "scaler": scaler, "compact_report_snapshots": compact_report_snapshots,
+        "share_snapshot_histories": share_snapshot_histories,
         "reward_scale": config.get("reward_scale", 1.0), "prepared_store": prepared_store,
     })
     factory.application_training_recipe_hash = _training_factory_recipe_hash(config)
@@ -1094,6 +1096,12 @@ def _rl_gpu_memory_fraction(value: Any, learner_device: str) -> float | None:
 
 def train(config: dict, *, evaluate: bool = True,
           prepared_training: HistoricalEnvironmentFactory | None = None) -> dict:
+    environment = config.get("environment", {})
+    if (not isinstance(environment, dict)
+            or environment.get("quality_purpose", "rl_es") != "rl_es"
+            or (prepared_training is not None
+                and getattr(prepared_training, "quality_purpose", "rl_es") != "rl_es")):
+        raise DataError("directional-only data quality cannot be used for RL training")
     if "train_data_access" in config and evaluate:
         raise DataError("scoped Train data access requires evaluate=False")
     import torch

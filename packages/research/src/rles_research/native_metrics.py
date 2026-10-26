@@ -72,6 +72,12 @@ def _new_facts(records: Any, seen: dict[str, dict], label: str) -> Iterator[dict
         yield normalized
 
 
+def _snapshot_new_facts(snapshot: Any, label: str) -> Any:
+    """Use append-only event deltas when present, preserving legacy snapshot behavior."""
+    delta = getattr(snapshot, f"new_{label}", None)
+    return getattr(snapshot, label) if delta is None else delta
+
+
 def _liquidation_order_facts(snapshots: Sequence[Any]) -> dict[str, dict]:
     """Collect each liquidation order once, allowing only native state updates."""
     facts: dict[str, dict] = {}
@@ -181,7 +187,8 @@ def iter_account_rows(snapshots: Sequence[Any], *, fill_references: Mapping[str,
         same_time = tuple(group)
         snapshot = same_time[-1]
         fee = funding = turnover = slippage = Decimal(0)
-        for fill in _new_facts((fill for item in same_time for fill in item.fills),
+        for fill in _new_facts((fill for item in same_time
+                                for fill in _snapshot_new_facts(item, "fills")),
                                fill_facts, "fill"):
             quantity, price = _fill_values(fill)
             reference = fill_references.get(fill["client_order_id"])
@@ -197,7 +204,8 @@ def iter_account_rows(snapshots: Sequence[Any], *, fill_references: Mapping[str,
             slippage += cost
             turnover += quantity * price
             fee += _money(fill["commission"], snapshot.currency)
-        for adjustment in _new_facts((adjustment for item in same_time for adjustment in item.funding),
+        for adjustment in _new_facts((adjustment for item in same_time
+                                      for adjustment in _snapshot_new_facts(item, "funding")),
                                      funding_facts, "funding"):
             funding += _money(adjustment["pnl_change"], snapshot.currency)
         yield {"ts_ns": timestamp, "equity": float(snapshot.equity),
@@ -249,13 +257,14 @@ def reconcile_linear_equity(snapshots: Sequence[Any], *,
     rows = []
     for index, snapshot in enumerate(ordered):
         external_cashflow += cashflows_by_time.get(snapshot.decision_ts_ns, Decimal(0))
-        for fill in _new_facts(snapshot.fills, fills, "fill"):
+        for fill in _new_facts(_snapshot_new_facts(snapshot, "fills"), fills, "fill"):
             size, price = _fill_values(fill)
             signed = size if fill["order_side"] == "BUY" else -size
             quantity += signed
             cash -= signed * price
             fee += _money(fill["commission"], snapshot.currency)
-        for adjustment in _new_facts(snapshot.funding, adjustments, "funding"):
+        for adjustment in _new_facts(_snapshot_new_facts(snapshot, "funding"),
+                                     adjustments, "funding"):
             funding += _money(adjustment["pnl_change"], snapshot.currency)
         if quantity != 0:
             open_barriers += 1
@@ -368,8 +377,9 @@ def native_report(snapshots: Sequence[Any], *, fill_references: Mapping[str, Dec
     fill_facts: dict[str, dict] = {}
     funding_facts: dict[str, dict] = {}
     for snapshot in ordered:
-        for record, facts, label in ((snapshot.fills, fill_facts, "fill"),
-                                     (snapshot.funding, funding_facts, "funding")):
+        for record, facts, label in ((_snapshot_new_facts(snapshot, "fills"), fill_facts, "fill"),
+                                     (_snapshot_new_facts(snapshot, "funding"),
+                                      funding_facts, "funding")):
             for item in record:
                 identity = str(item.get("event_id", ""))
                 if not identity:

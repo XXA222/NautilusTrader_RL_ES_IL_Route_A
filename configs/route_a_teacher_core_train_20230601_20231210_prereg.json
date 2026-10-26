@@ -1,0 +1,81 @@
+{
+  "schema": "rles.route-a.teacher-core-train-prereg.v1",
+  "protocol_id": "route-a-teacher-core-train-20230601-20231210-v1",
+  "status": "frozen_before_source_read",
+  "qualification_scope": "train_inner_only_not_oos_not_g2",
+  "scope": {
+    "market": "ETHUSDT",
+    "product": "Binance USD-M perpetual",
+    "source_start_utc_inclusive": "2023-05-29T00:00:00Z",
+    "scored_start_utc_inclusive": "2023-06-01T00:00:00Z",
+    "end_utc_exclusive": "2023-12-10T00:00:00Z",
+    "market_data_read": "Train only",
+    "formal_test_or_holdout_access": false,
+    "account_specific_economic_authority": false
+  },
+  "source": {
+    "provider": "Binance Public Data",
+    "streams": [
+      "USD-M 1m klines",
+      "USD-M 1m markPriceKlines",
+      "USD-M 1m indexPriceKlines",
+      "USD-M fundingRate monthly archives"
+    ],
+    "archive_interval": "monthly",
+    "availability_delay_ns": 1000000,
+    "instrument_rules_supplied": false,
+    "account_specific_fees_or_margin_supplied": false,
+    "physical_source_preflight": "reject if any source month overlaps a registered Test/Holdout interval"
+  },
+  "roles": {
+    "train_fit": ["2023-06-01T00:00:00Z", "2023-09-01T00:00:00Z"],
+    "train_calibration": ["2023-09-01T00:00:00Z", "2023-10-01T00:00:00Z"],
+    "train_inner_screen_blocks": [
+      ["2023-10-01T00:00:00Z", "2023-10-15T00:00:00Z"],
+      ["2023-10-15T00:00:00Z", "2023-10-29T00:00:00Z"],
+      ["2023-10-29T00:00:00Z", "2023-11-12T00:00:00Z"],
+      ["2023-11-12T00:00:00Z", "2023-11-26T00:00:00Z"],
+      ["2023-11-26T00:00:00Z", "2023-12-10T00:00:00Z"]
+    ],
+    "label_boundary_policy": "right-censor at each role/block end; never consume future block prices or funding"
+  },
+  "arms": [
+    "flat",
+    "fixed_long_size_0.3",
+    "fixed_short_size_0.3",
+    "route_a_candidates_v2_both_exit",
+    "route_a_candidates_v3_recovery_both_exit",
+    "route_a_candidates_v3_recovery_either_exit"
+  ],
+  "teacher": {
+    "candidate_families": ["breakout", "pullback"],
+    "v2_breakout_threshold": 0.015,
+    "pullback_z_threshold": 1.0,
+    "minimum_efficiency": 0.2,
+    "v3_requires_confirmed_5m_recovery": true,
+    "entry_cadence_minutes": 5,
+    "exit_cadence_minutes": 1,
+    "entry_size": 0.3,
+    "trend_invalidation_threshold": 0.002,
+    "normal_max_holding_time": null,
+    "hard_risk_overlay": "FrozenTeacherSelector and RecoveryTeacher defaults"
+  },
+  "execution": {
+    "host": "Nautilus native Gym/Execution/M2.2/L6",
+    "source_mode": "row_group_scoped_v1",
+    "scenario_modes": ["base", "stress"],
+    "seed": 20261025,
+    "terminal_force_flat": "excluded from ordinary teacher-closed trade count",
+    "economic_status": "SCENARIO_ONLY"
+  },
+  "costs_bps_per_leg": {
+    "base": {"taker_fee": 5, "slippage": 1},
+    "stress": {"taker_fee": 10, "slippage": 5}
+  },
+  "decision_rule": "Do not tune thresholds on these outcomes. Report every block, scenario, and arm; require positive paired net excess over both fixed sides across blocks for evidence of timing alpha. Otherwise stop as NO_STABLE_ALPHA or BETA_NOT_ALPHA.",
+  "limitations": [
+    "This is one historical Train-inner study, not an unseen OOS test.",
+    "Public scenario costs and candles do not establish account-specific economic authority.",
+    "No teacher or student is qualified by this study alone."
+  ]
+}

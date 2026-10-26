@@ -33,11 +33,9 @@ def _guard_project_archive_scope(*, symbol: str, first: date, last: date,
     """Reject physical archive spans touching reserved Test/Holdout before IO.
 
     A monthly funding ZIP is decoded before the requested daily interval is
-    clipped. Checking only the scored dates would silently read protected rows.
-    Temporary/test imports outside this checkout have no project ledger scope.
+    clipped. Checking only the scored dates or only project-local output paths
+    would let a temporary target bypass the physical-read reservation.
     """
-    if PROJECT_ROOT not in target.parents:
-        return
     registry = PROJECT_ROOT / ".artifacts/research-access.sqlite"
     if not registry.is_file():
         raise DataError("project research registry missing before Binance archive import")
@@ -380,7 +378,8 @@ def archive_events(path: Path, *, stream: str, instrument: str, source_url: str,
 
 
 def funding_api_events(content: bytes, *, symbol: str, instrument: str, source_url: str,
-                       expected_sha256: str, delay_ns: int) -> tuple[Event, ...]:
+                       expected_sha256: str, delay_ns: int,
+                       start_time_ms: int, end_time_ms: int) -> tuple[Event, ...]:
     """Normalize official REST funding history without claiming archive checksums.
 
     Funding interval is derived from adjacent observed settlement timestamps because
@@ -390,6 +389,9 @@ def funding_api_events(content: bytes, *, symbol: str, instrument: str, source_u
     """
     if type(delay_ns) is not int or delay_ns <= 0:
         raise DataError("funding API ingress requires an explicit positive availability delay")
+    if (type(start_time_ms) is not int or type(end_time_ms) is not int
+            or start_time_ms < 0 or end_time_ms < start_time_ms):
+        raise DataError("funding API request range must be an ordered inclusive millisecond interval")
     if sha256(content).hexdigest() != expected_sha256:
         raise DataError("funding API response changed after capture")
     try:
@@ -405,6 +407,8 @@ def funding_api_events(content: bytes, *, symbol: str, instrument: str, source_u
         ts_ms, rate = row.get("fundingTime"), row.get("fundingRate")
         if type(ts_ms) is not int or ts_ms < 0 or not isinstance(rate, str):
             raise DataError("funding API row has invalid timestamp or rate")
+        if not start_time_ms <= ts_ms <= end_time_ms:
+            raise DataError("funding API response contains a settlement outside the requested range")
         if row.get("rateType") not in {"Regular", "Special"}:
             raise DataError("funding API row has an unknown rate type")
         normalized.append((ts_ms * 1_000_000, rate))
@@ -433,10 +437,19 @@ def funding_api_events(content: bytes, *, symbol: str, instrument: str, source_u
     return tuple(result)
 
 
-def fetch_funding_api(symbol: str, month: date, end_day: date, raw: Path) -> tuple[dict, bytes]:
-    """Fetch and retain a current-month REST supplement with an explicit receipt."""
-    start_ms = int(datetime(month.year, month.month, 1, tzinfo=timezone.utc).timestamp() * 1000)
-    end_ms = int(datetime(end_day.year, end_day.month, end_day.day, tzinfo=timezone.utc).timestamp() * 1000) + 86_400_000 - 1
+def fetch_funding_api(symbol: str, month: date, start_day: date, end_day: date,
+                      raw: Path) -> tuple[dict, bytes]:
+    """Fetch a date-bounded current-month REST supplement with an explicit receipt."""
+    if (month != date(month.year, month.month, 1)
+            or start_day < month
+            or start_day.year != month.year or start_day.month != month.month
+            or end_day < start_day
+            or end_day.year != month.year or end_day.month != month.month):
+        raise DataError("funding API fallback dates must be an ordered interval inside one month")
+    start_ms = int(datetime(start_day.year, start_day.month, start_day.day,
+                            tzinfo=timezone.utc).timestamp() * 1000)
+    end_ms = int(datetime(end_day.year, end_day.month, end_day.day,
+                          tzinfo=timezone.utc).timestamp() * 1000) + 86_400_000 - 1
     query = urlencode({"symbol": symbol, "startTime": start_ms, "endTime": end_ms, "limit": 1000})
     url = f"https://fapi.binance.com/fapi/v1/fundingRate?{query}"
     destination = raw / f"fundingRate-{month:%Y-%m}-api.json"
@@ -651,11 +664,20 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
             except HTTPError as exc:
                 if exc.code != 404 or month != final_month or month != current_month:
                     raise
-                source, content = fetch_funding_api(symbol, month, last, raw)
+                api_start_day = max(first, month)
+                source, content = fetch_funding_api(symbol, month, api_start_day, last, raw)
                 sources.append(source)
+                start_time_ms = int(datetime(
+                    api_start_day.year, api_start_day.month, api_start_day.day,
+                    tzinfo=timezone.utc,
+                ).timestamp() * 1000)
+                end_time_ms = int(datetime(
+                    last.year, last.month, last.day, tzinfo=timezone.utc,
+                ).timestamp() * 1000) + 86_400_000 - 1
                 events.extend(funding_api_events(
                     content, symbol=symbol, instrument=instrument or f"{symbol}-PERP.SIM",
                     source_url=source["url"], expected_sha256=source["sha256"], delay_ns=delay_ns,
+                    start_time_ms=start_time_ms, end_time_ms=end_time_ms,
                 ))
             else:
                 sources.append(source)

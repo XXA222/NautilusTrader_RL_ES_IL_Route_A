@@ -8,11 +8,17 @@ import pytest
 
 from rles_route_a.contracts import ExpertAdvice
 from rles_route_a.config import BCConfig
+from rles_route_a.evaluation.teacher_funnel_1m import TeacherPreDecision
 from rles_route_a.export.inference import BCInferencePolicy
 from rles_route_a.integration.gym_rollout import NativeGymTeacherProvider
+from rles_route_a.integration.m22_trace import _snapshot_fills, _snapshot_status_rows
 from rles_route_a.integration.host_gym_projection import TerminalL6Receipt
 from rles_route_a.integration.scope import HostTrainGrant
 from rles_route_a.models.bc import BCGRUPolicy
+from rles_gym_bridge.historical import (
+    _AppendOnlyNativeHistory,
+    _VersionedNativeOrdersView,
+)
 from test_v03_host_context import _context, _feature
 
 
@@ -149,6 +155,84 @@ def test_m22_teacher_rollout_uses_the_provider_feature_mapping():
         )
     assert len(observed) == 1
     assert dict(observed[0].market) == {"trend_1h": 0.01}
+
+
+def test_teacher_funnel_hook_captures_predecision_before_native_step():
+    class StopAfterPrediction(Exception):
+        pass
+
+    env = _TerminalEnv()
+    observations = []
+    teacher = SimpleNamespace(advise=lambda obs: observations.append(obs) or ExpertAdvice(
+        "trend", obs.decision_ts_ns, "FLAT", 0.0, ("synthetic",),
+    ))
+    provider = NativeGymTeacherProvider(
+        env_factory=lambda: env, teacher=teacher, fold_id="fold-1",
+        execution_recipe="exec-v1", source_identity="source-marker",
+        native_order_facts_verifier=lambda _info, _source, _facts: True,
+        no_external_cashflow_receipt=lambda _info: "receipt",
+        no_external_cashflow_verifier=lambda _info, _source, _receipt: True,
+        episode_id=lambda _env, _info: "episode-1",
+        visible_context=lambda _env: _context(),
+        market_feature_map={"trend_1h": "closed_return_1h"},
+    )
+    grant = HostTrainGrant("fold-1", "owner", "reservation", "source-marker", "train", True)
+
+    class Hook:
+        def __init__(self):
+            self.pre = []
+
+        def capture_pre_decision(self, observation, advice, _context, _teacher):
+            self.pre.append((observation.decision_ts_ns, advice.intent))
+            close_ts = observation.decision_ts_ns - 60_000_000_000
+            return TeacherPreDecision(
+                teacher_id=advice.expert_id,
+                recipe_id="route_a_1m_multiteacher_v1",
+                fold_id=observation.fold_id,
+                source_identity=observation.source_id,
+                decision_ts_ns=observation.decision_ts_ns,
+                latest_1m_close_ts_ns=close_ts,
+                latest_1m_available_at_ns=observation.decision_ts_ns - 1,
+                bar_status="READY",
+                indicator_values={},
+                raw_signal="NONE",
+                raw_signal_reason="NO_SIGNAL",
+                position_before=observation.account_value("net_exposure"),
+                native_pending_orders=len(observation.pending_order_ids),
+                risk_veto_reason=None,
+                order_state_veto_reason="PENDING_ACK",
+                exit_policy_id="X1_TEST",
+                scenario_id="base",
+                economic_status="SCENARIO_ONLY",
+                block_id="synthetic-block",
+            )
+
+        def capture_post_decision(self, *_args):
+            pytest.fail("post-decision native facts were requested before env.step")
+
+        def build_native_cases(self, *_args):
+            pytest.fail("native cases cannot be built before native order reconciliation")
+
+        def commit(self, *_args):
+            pytest.fail("research output cannot be committed before M2.2 reconciliation")
+
+    hook = Hook()
+
+    def host_rollout(_factory, _predict, *, predictor_factory, **_kwargs):
+        predictor_factory(env, {})(None)
+        raise StopAfterPrediction
+
+    with pytest.raises(StopAfterPrediction):
+        provider.rollout_with_m22_trace(
+            factory=SimpleNamespace(
+                transition_hash="exec-v1",
+                execution=SimpleNamespace(zero_target_policy="close"),
+                make_env=lambda: env,
+            ),
+            host_rollout=host_rollout, grant=grant, seed=7,
+            teacher_funnel_hook=hook,
+        )
+    assert hook.pre == [(observations[0].decision_ts_ns, "FLAT")]
 
 
 def test_candidate_provider_binds_registered_source_feature_spec_and_snapshot():
@@ -380,3 +464,40 @@ def test_terminal_rollout_requires_l6_to_verify_settlement_receipt():
     with pytest.raises(PermissionError, match="L6 authority did not verify terminal"):
         tuple(provider.rollout(fold_id="fold-1", grant=grant, seed=7))
     assert env.closed
+
+
+def test_shared_full_native_snapshot_views_preserve_exact_barrier_facts():
+    order_before = {
+        "client_order_id": "RLES-order-1", "status": "ACCEPTED", "side": "BUY",
+        "quantity": "1", "filled_qty": "0", "instrument_id": "ETHUSDT-PERP.SIM",
+    }
+    order_after = {**order_before, "status": "FILLED", "filled_qty": "1"}
+    order_versions = {"RLES-order-1": ([0, 2], [order_before, order_after])}
+    before_orders = _VersionedNativeOrdersView(order_versions, 1)
+    after_orders = _VersionedNativeOrdersView(order_versions, 2)
+    fill_history = _AppendOnlyNativeHistory()
+    fill_start = len(fill_history.rows)
+    fill = {
+        "event_id": "fill-1", "client_order_id": "RLES-order-1", "ts_event": 20,
+        "order_side": "BUY", "last_qty": "1", "last_px": "100",
+        "commission": "0.1 USDT",
+    }
+    fill_history.append(fill, timestamp_ns=20)
+    fill_view = fill_history.view()
+
+    assert _snapshot_status_rows(
+        SimpleNamespace(all_orders=before_orders), {"RLES-order-1"}, label="pre-barrier",
+    ) == ({
+        "client_order_id": "RLES-order-1", "status": "ACCEPTED", "side": "BUY",
+        "quantity": "1", "filled_qty": "0",
+    },)
+    assert _snapshot_status_rows(
+        SimpleNamespace(all_orders=after_orders), {"RLES-order-1"}, label="post-barrier",
+    )[0]["status"] == "FILLED"
+    assert list(fill_history.view(end=fill_start)) == []
+    assert _snapshot_fills(
+        SimpleNamespace(fills=fill_view), start_ns=10, end_ns=20,
+    ) == (fill,)
+    assert _snapshot_fills(
+        SimpleNamespace(fills=fill_view), start_ns=20, end_ns=30,
+    ) == ()

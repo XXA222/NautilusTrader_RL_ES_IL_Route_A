@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from math import isfinite
 from typing import Literal
 
-from rles_route_a.contracts import ExpertAdvice, PointInTimeObservation
+from rles_route_a.contracts import ExpertAdvice, Intent, PointInTimeObservation
 from rles_route_a.teacher_research import CausalOpportunityGenerator
 from rles_route_a.teacher_research.causal_exit import TrendInvalidationExit
 from .protocol import advice
@@ -107,7 +107,7 @@ class CausalPositionTeacher:
             )
         candidate = candidates[0]
         target = self.size * candidate.side
-        intent = "OPEN_LONG" if candidate.side > 0 else "OPEN_SHORT"
+        intent: Intent = "OPEN_LONG" if candidate.side > 0 else "OPEN_SHORT"
         return advice(
             observation, self.expert_id, intent, target,
             f"CANDIDATE_{candidate.family.upper()}",

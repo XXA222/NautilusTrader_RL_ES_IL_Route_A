@@ -7,6 +7,7 @@ from dataclasses import asdict
 from decimal import Decimal
 from hashlib import sha256
 from bisect import bisect_left, bisect_right
+from itertools import islice
 import json
 from math import gcd
 from pathlib import Path
@@ -49,6 +50,115 @@ from .reward import RewardConfig
 
 
 _FUNDING_TIME_HORIZON_NS = 24 * 60 * 60 * 1_000_000_000
+
+
+class _AppendOnlyNativeHistory:
+    """Own every detached native fact once; snapshots expose bounded read-only views."""
+
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        self.timestamps: list[int] = []
+        self.rows_by_timestamp: dict[int, list[tuple[int, dict]]] = {}
+
+    def append(self, row: dict, *, timestamp_ns: int | None = None) -> int:
+        index = len(self.rows)
+        self.rows.append(row)
+        if timestamp_ns is not None:
+            if type(timestamp_ns) is not int or timestamp_ns < 0:
+                raise DataError("native event history has an invalid timestamp")
+            if timestamp_ns not in self.rows_by_timestamp:
+                self.rows_by_timestamp[timestamp_ns] = []
+                position = bisect_left(self.timestamps, timestamp_ns)
+                self.timestamps.insert(position, timestamp_ns)
+            self.rows_by_timestamp[timestamp_ns].append((index, row))
+        return len(self.rows)
+
+    def view(self, *, start: int = 0, end: int | None = None) -> _AppendOnlyNativeHistoryView:
+        return _AppendOnlyNativeHistoryView(self, start=start, end=len(self.rows) if end is None else end)
+
+
+class _AppendOnlyNativeHistoryView:
+    """Full cumulative native event history bounded to one exact snapshot revision."""
+
+    __slots__ = ("_history", "_start", "_end")
+
+    def __init__(self, history: _AppendOnlyNativeHistory, *, start: int, end: int) -> None:
+        if type(start) is not int or type(end) is not int or not 0 <= start <= end <= len(history.rows):
+            raise DataError("native event snapshot view bounds are invalid")
+        self._history, self._start, self._end = history, start, end
+
+    def __len__(self) -> int:
+        return self._end - self._start
+
+    def __iter__(self):
+        return islice(self._history.rows, self._start, self._end)
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            start, stop, step = index.indices(len(self))
+            return tuple(self._history.rows[self._start + offset]
+                         for offset in range(start, stop, step))
+        if type(index) is not int:
+            raise TypeError("native history view indexes must be integers or slices")
+        normalized = index if index >= 0 else len(self) + index
+        if not 0 <= normalized < len(self):
+            raise IndexError(index)
+        return self._history.rows[self._start + normalized]
+
+    def for_event_interval(self, start_ns: int, end_ns: int):
+        if type(start_ns) is not int or type(end_ns) is not int or start_ns > end_ns:
+            raise DataError("native event interval is invalid")
+        left = bisect_right(self._history.timestamps, start_ns)
+        right = bisect_right(self._history.timestamps, end_ns)
+        for timestamp in self._history.timestamps[left:right]:
+            for index, row in self._history.rows_by_timestamp[timestamp]:
+                if self._start <= index < self._end:
+                    yield row
+
+
+class _VersionedNativeOrdersView:
+    """Exact full native order state at one revision, structurally shared by barriers."""
+
+    __slots__ = ("_versions", "_revision")
+
+    def __init__(self, versions: dict[str, tuple[list[int], list[dict]]], revision: int) -> None:
+        self._versions, self._revision = versions, revision
+
+    def _row_at(self, identity: str) -> dict | None:
+        versions = self._versions.get(identity)
+        if versions is None:
+            return None
+        revisions, rows = versions
+        position = bisect_right(revisions, self._revision) - 1
+        return rows[position] if position >= 0 else None
+
+    def for_ids(self, identities: set[str]) -> tuple[dict, ...]:
+        rows = []
+        for identity in sorted(identities):
+            row = self._row_at(identity)
+            if row is not None:
+                rows.append(row)
+        return tuple(rows)
+
+    def __iter__(self):
+        for identity in self._versions:
+            row = self._row_at(identity)
+            if row is not None:
+                yield row
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self)
+
+    def __getitem__(self, index):
+        if type(index) is not int:
+            raise TypeError("native order view indexes must be integers")
+        normalized = index if index >= 0 else len(self) + index
+        if not 0 <= normalized < len(self):
+            raise IndexError(index)
+        for position, row in enumerate(self):
+            if position == normalized:
+                return row
+        raise IndexError(index)
 
 
 def scheduled_funding_time_features(
@@ -435,10 +545,12 @@ class HistoricalEnvironmentFactory:
         split: str = "train_inner",
         compact_native_history: bool = True,
         compact_report_snapshots: bool = False,
+        share_snapshot_histories: bool = False,
         feature_profile: str = "legacy",
         reward_scale: float = 1.0,
         reward_lambda_dd: float = 0.0,
         reward_lambda_guard: float = 0.0,
+        quality_purpose: str = "rl_es",
         prepared_store: CuratedStore | None = None,
     ) -> None:
         # Set only by the application layer after prepare() computes its
@@ -454,6 +566,10 @@ class HistoricalEnvironmentFactory:
             raise DataError("native history compaction flag must be Boolean")
         if type(compact_report_snapshots) is not bool:
             raise DataError("report snapshot compaction flag must be Boolean")
+        if type(share_snapshot_histories) is not bool:
+            raise DataError("snapshot history sharing flag must be Boolean")
+        if share_snapshot_histories and compact_report_snapshots:
+            raise DataError("shared full snapshot histories cannot be combined with report compaction")
         if not isinstance(feature_profile, str) or feature_profile not in {
             "legacy",
             "causal_mtf_v1",
@@ -467,6 +583,7 @@ class HistoricalEnvironmentFactory:
             raise DataError("unsupported historical feature profile")
         self.compact_native_history = compact_native_history
         self.compact_report_snapshots = compact_report_snapshots
+        self.share_snapshot_histories = share_snapshot_histories
         self.feature_profile = feature_profile
         self.reward_config = RewardConfig(
             lambda_dd=reward_lambda_dd,
@@ -482,6 +599,9 @@ class HistoricalEnvironmentFactory:
         )
         self.instrument, self.split, self.mode = instrument, split, mode
         self.start_ns, self.end_ns = start_ns, end_ns
+        if quality_purpose not in {"directional", "rl_es"}:
+            raise DataError("historical environment supports only directional or RL-ES quality use")
+        self.quality_purpose = quality_purpose
         self.coverage = CoveragePolicy(**coverage_policy)
         self.execution = ResolvedExecutionConfig.from_dict(execution)
         required_kinds = (
@@ -494,7 +614,7 @@ class HistoricalEnvironmentFactory:
             coverage_policy=self.coverage,
             **({"required": required_kinds} if required_kinds is not None else {}),
         )
-        self.store.require_usable(self.quality, "rl_es")
+        self.store.require_usable(self.quality, self.quality_purpose)
         hard_values: dict[str, Any] = {
             k: v if type(v) is bool else Decimal(v) for k, v in hard_risk.items()
         }
@@ -648,6 +768,8 @@ class HistoricalEnvironmentFactory:
             "capital": starting_balance,
             "budget": risk_budget_notional,
         }
+        if self.quality_purpose != "rl_es":
+            config_identity["quality_purpose"] = self.quality_purpose
         # Preserve historical default run identities; bind every experimental
         # non-default optimizer reward scale to its new artifacts.
         if self.reward_config.reward_scale != 1.0:
@@ -986,6 +1108,10 @@ class HistoricalEnvironmentFactory:
             seen_funding: dict[str, dict] = {}
             seen_liquidations: dict[str, dict] = {}
             seen_orders: dict[str, dict] = {}
+            order_versions: dict[str, tuple[list[int], list[dict]]] = {}
+            fill_history = _AppendOnlyNativeHistory()
+            funding_history = _AppendOnlyNativeHistory()
+            snapshot_revision = 0
             order_filled: dict[str, Decimal] = {}
             cumulative_submitted = Decimal(0)
             cumulative_filled = Decimal(0)
@@ -1008,7 +1134,7 @@ class HistoricalEnvironmentFactory:
                 return tuple(delta)
 
             def record_snapshot(snapshot):
-                nonlocal cumulative_submitted, cumulative_filled, last_fill_ts_ns
+                nonlocal cumulative_submitted, cumulative_filled, last_fill_ts_ns, snapshot_revision
                 for order in snapshot.all_orders:
                     identity = str(order.get("client_order_id", ""))
                     if not identity:
@@ -1029,15 +1155,34 @@ class HistoricalEnvironmentFactory:
                         for field in ("instrument_id", "side", "quantity")
                     ):
                         raise DataError("native order identity has conflicting immutable facts")
-                    seen_orders[identity] = dict(order)
+                    if prior_order != order:
+                        # Native Order.to_dict() is repeated at every market
+                        # barrier. Reuse an unchanged detached row rather than
+                        # retaining thousands of identical full dictionaries.
+                        # Stored rows are never mutated by this factory; a
+                        # changed row gets a fresh copy, keeping each historical
+                        # M2.2 status exact.
+                        detached_order = dict(order)
+                        seen_orders[identity] = detached_order
+                        if self.share_snapshot_histories:
+                            revisions, rows = order_versions.setdefault(identity, ([], []))
+                            revisions.append(snapshot_revision)
+                            rows.append(detached_order)
                 fills = unique_delta(snapshot.fills, seen_fills)
+                fill_start = len(fill_history.rows)
                 for fill in fills:
                     fill_ts_ns = fill.get("ts_event")
                     if (type(fill_ts_ns) is not int or fill_ts_ns <= 0
                             or fill_ts_ns > snapshot.decision_ts_ns):
                         raise DataError("native fill timestamp is missing or after its decision barrier")
                     last_fill_ts_ns = max(last_fill_ts_ns or 0, fill_ts_ns)
+                    if self.share_snapshot_histories:
+                        fill_history.append(fill, timestamp_ns=fill_ts_ns)
                 funding = unique_delta(snapshot.funding, seen_funding)
+                funding_start = len(funding_history.rows)
+                if self.share_snapshot_histories:
+                    for adjustment in funding:
+                        funding_history.append(adjustment)
                 liquidations = (
                     None
                     if snapshot.liquidation_orders is None
@@ -1077,21 +1222,35 @@ class HistoricalEnvironmentFactory:
                         snapshot.account_events[-1:] if not self.compact_report_snapshots else ()
                     ),
                     fills=(
-                        tuple(seen_fills.values())
+                        fill_history.view()
+                        if self.share_snapshot_histories
+                        else tuple(seen_fills.values())
                         if not self.compact_report_snapshots or final_boundary
                         else fills
                     ),
+                    new_fills=(
+                        fill_history.view(start=fill_start)
+                        if self.share_snapshot_histories else fills
+                    ),
                     funding=(
-                        tuple(seen_funding.values())
+                        funding_history.view()
+                        if self.share_snapshot_histories
+                        else tuple(seen_funding.values())
                         if not self.compact_report_snapshots or final_boundary
                         else funding
+                    ),
+                    new_funding=(
+                        funding_history.view(start=funding_start)
+                        if self.share_snapshot_histories else funding
                     ),
                     # The native facts reader may purge closed orders after it
                     # snapshots them. Keep the latest native row for each ID
                     # in every full M2.2 barrier so same-clock callbacks do
                     # not make completed orders disappear from the final view.
                     all_orders=(
-                        tuple(seen_orders.values())
+                        _VersionedNativeOrdersView(order_versions, snapshot_revision)
+                        if self.share_snapshot_histories
+                        else tuple(seen_orders.values())
                         if not self.compact_report_snapshots or final_boundary
                         else ()
                     ),
@@ -1110,6 +1269,7 @@ class HistoricalEnvironmentFactory:
                     cumulative_filled_qty=cumulative_filled,
                 )
                 self.snapshots.append(compact)
+                snapshot_revision += 1
                 teacher_snapshot = SimpleNamespace(
                     decision_ts_ns=snapshot.decision_ts_ns,
                     positions=tuple({

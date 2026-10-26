@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
 from math import isfinite
-from rles_route_a.contracts import ExpertAdvice, ExpertTeacher, PointInTimeObservation
+from rles_route_a.contracts import ExpertAdvice, ExpertTeacher, Intent, PointInTimeObservation
 from .recovery import RecoveryTeacher
 
 
@@ -26,7 +26,7 @@ class FrozenTeacherSelector:
             # Native order state wins over a fresh signal. Keep the current
             # filled exposure target until the order/cancel acknowledgement is
             # observed and the account projection is refreshed.
-            intent = "HOLD" if abs(current) > 1e-8 else "FLAT"
+            intent: Intent = "HOLD" if abs(current) > 1e-8 else "FLAT"
             return ExpertAdvice(
                 "selector_v1", observation.decision_ts_ns, intent, current,
                 ("PENDING_ACK",),

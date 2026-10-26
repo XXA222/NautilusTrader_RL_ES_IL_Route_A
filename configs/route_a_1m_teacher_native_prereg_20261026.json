@@ -1,0 +1,83 @@
+{
+  "schema": "rles.route-a.1m-teacher-native-prereg.v1",
+  "protocol_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+  "status": "frozen_before_source_read",
+  "study_identity": "route_a_1m_multiteacher_v1",
+  "qualification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_NOT_G1_G2",
+  "market": {
+    "instrument": "ETHUSDT-PERP.SIM",
+    "data_symbol": "ETHUSDT",
+    "position_mode": "NETTING",
+    "split": "train_inner",
+    "quality_purpose": "directional"
+  },
+  "source": {
+    "market_path": "data/binance_ethusdt_20231230_20240415/market.parquet",
+    "import_manifest_path": "data/binance_ethusdt_20231230_20240415/import.json",
+    "import_manifest_sha256": "feb1a660b0a516631b9e7cbd70314568bf4288ed422bcd8a921894dfe5c6ced8",
+    "marker_path": "data/binance_ethusdt_20231230_20240415/market.parquet.COMPLETED.json",
+    "marker_sha256": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+    "schema_version": "0.4.0",
+    "snapshot_hash": "62239c22c3d069657ecb39ea109cffd1032a3dd039e3b46ee57db5fac0a77d21",
+    "market_file_sha256_from_marker": "643909874684f119931ed9ccf0f8a0e0c573525f222da1467037a828424329f3",
+    "events": 467206,
+    "physical_source_months": ["2023-12", "2024-01", "2024-02", "2024-03", "2024-04"],
+    "read_mode": "whole_snapshot_isolated_v1",
+    "physical_monthly_test_holdout_overlap_allowed": false,
+    "account_specific_fees_or_margin": false
+  },
+  "rules": {
+    "path": ".artifacts/audit-development-20261016/data/scenario-rules.json",
+    "sha256": "690292b508ce722d6ba2f5b9fb745671f56fc396d2026943fd36668e9028c93b",
+    "historical_account_rule_authority": false,
+    "economic_status": "SCENARIO_ONLY"
+  },
+  "native_execution_template": {
+    "path": "configs/ethusdt_20240101_real.json",
+    "sha256": "06eefad402a5f37c47e10ab2ed64eac68769446e9ff70091e23c482065edc948",
+    "starting_balance": "10000",
+    "risk_budget_notional": "1000",
+    "hard_risk_max_leverage": "1"
+  },
+  "feature_recipe": {
+    "path": "configs/route_a_1m_teacher_library_v1.json",
+    "sha256": "27f03e698a58dde7aa2c09cf161b83a491a20e0de167608f482d6073aa67818e",
+    "decision_minutes": 1,
+    "higher_timeframe_mode": "FEATURE_ONLY",
+    "target_exposure": 0.3,
+    "ordinary_max_holding_minutes": null,
+    "exits": ["X1", "X2"]
+  },
+  "cost_scenarios": {
+    "base": {"taker_fee_bps_per_leg": 5, "slippage_bps_per_leg": 1},
+    "stress": {"taker_fee_bps_per_leg": 10, "slippage_bps_per_leg": 5}
+  },
+  "roles": {
+    "source_read_start_ns": 1703894460000000000,
+    "source_read_end_ns_exclusive": 1713225660000000000,
+    "development_fit": ["2024-01-02T00:00:00Z", "2024-02-01T00:00:00Z"],
+    "calibration": "NOT_APPLICABLE_FIXED_RULES_NO_PROBABILITY_MODEL",
+    "smoke_window": ["2024-01-02T00:00:00Z", "2024-01-03T00:00:00Z"],
+    "smoke_warmup_bars": 61,
+    "inner_screen_blocks": [
+      ["2024-02-01T00:00:00Z", "2024-03-01T00:00:00Z"],
+      ["2024-03-01T00:00:00Z", "2024-04-01T00:00:00Z"],
+      ["2024-04-01T00:00:00Z", "2024-04-15T00:01:00Z"]
+    ],
+    "all_results_are_development_diagnostics": true,
+    "no_student_training": true
+  },
+  "resource_limits": {
+    "max_decision_bars_per_smoke": 1500,
+    "max_concurrent_episodes": 1,
+    "max_memory_mb": 4096,
+    "max_runtime_seconds": 1800
+  },
+  "stop_rules": [
+    "reject any physical raw monthly source month overlapping registered Test/Holdout",
+    "reject any access/query-intent interval overlap with registered Test/Holdout",
+    "do not synthesize missing funding or native fills",
+    "fail on any M2.2/L3/L6/account reconciliation discrepancy",
+    "never promote D1 or SCENARIO_ONLY results to G1/G2"
+  ]
+}
