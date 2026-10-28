@@ -282,7 +282,8 @@ def test_monthly_archive_import_uses_three_checksums_and_clips_inclusive_days(tm
 
         kind = {"klines": "ohlcv_1m", "markPriceKlines": "mark",
                 "indexPriceKlines": "index"}[stream]
-        rows = (timestamp("2024-01-01"), timestamp("2024-02-01", minute=0),
+        rows = (timestamp("2024-01-01"), timestamp("2024-01-31", hour=23, minute=59),
+                timestamp("2024-02-01", minute=0),
                 timestamp("2024-02-01"))
         payload = ({"open": "100", "high": "101", "low": "99", "close": "100", "volume": "2"}
                    if kind == "ohlcv_1m" else {"price": "100"})
@@ -308,6 +309,7 @@ def test_monthly_archive_import_uses_three_checksums_and_clips_inclusive_days(tm
     assert sum(event.kind == "index" for event in store.events) == 1
     assert sum(event.kind == "funding_settlement" for event in store.events) == 1
     assert result["archive_interval"] == "monthly"
+    assert result["end_ns"] == int(datetime(2024, 2, 1, tzinfo=timezone.utc).timestamp() * 1e9)
 
 
 def test_funding_api_events_preserve_settlement_facts_and_observed_interval():
@@ -452,6 +454,28 @@ def test_import_range_uses_rest_only_for_missing_current_month_funding(tmp_path,
     assert result["sources"][-1]["verification"] == "captured_response_sha256"
     store = read_curated(output / "market.parquet")
     assert sum(event.kind == "funding_settlement" for event in store.events) == 2
+
+
+def test_import_range_failure_receipt_includes_http_source_details(tmp_path, monkeypatch):
+    import json
+    from urllib.error import HTTPError
+
+    source_url = "https://data.binance.vision/daily/klines/ETHUSDT/1m/missing.zip.CHECKSUM"
+
+    def fail_fetch(_relative_url, _destination):
+        raise HTTPError(source_url, 404, "Not Found", None, None)
+
+    monkeypatch.setattr(binance_archive, "fetch_archive", fail_fetch)
+    output = tmp_path / "bundle"
+
+    with pytest.raises(HTTPError):
+        binance_archive.import_range(symbol="ETHUSDT", start_day="2024-02-01",
+                                     end_day="2024-02-01", output=output, delay_ns=1_000_000)
+
+    failure = json.loads((output / "IMPORT_FAILED.json").read_text(encoding="utf-8"))
+    assert failure["error"] == "HTTPError"
+    assert failure["source_url"] == source_url
+    assert failure["http_status"] == 404
 
 
 def test_import_range_does_not_use_rest_to_hide_missing_past_archive(tmp_path, monkeypatch):
@@ -724,3 +748,208 @@ def test_bookticker_archive_keeps_last_real_quote_per_event_second(tmp_path):
     assert events[0].payload["ask_qty"] == "0.4"
     assert events[0].ts_init_ns == events[0].ts_event_ns + 1_000_000
     assert events[0].provenance.endswith("#last-event-time-quote-per-second")
+
+
+def test_import_range_can_force_exact_past_month_funding_api_scope(tmp_path, monkeypatch):
+    import json
+    from datetime import datetime, timezone
+
+    day = date(2024, 1, 31)
+    day_ns = int(datetime(2024, 1, 31, tzinfo=timezone.utc).timestamp() * 1_000_000_000)
+    funding_rows = [
+        {"symbol": "ETHUSDT", "fundingTime": day_ns // 1_000_000,
+         "fundingRate": "0.0001", "markPrice": "2000", "rateType": "Regular"},
+        {"symbol": "ETHUSDT", "fundingTime": day_ns // 1_000_000 + 28_800_000,
+         "fundingRate": "0.0002", "markPrice": "2001", "rateType": "Regular"},
+    ]
+    content = json.dumps(funding_rows).encode("utf-8")
+    fetched = []
+    api_scope = []
+
+    def fake_fetch(relative_url, destination):
+        if relative_url.startswith("monthly/fundingRate/"):
+            pytest.fail("forced exact-scope API must not open the monthly funding archive")
+        fetched.append(relative_url)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"fixture")
+        return {"path": str(destination), "url": "fixture:" + relative_url,
+                "sha256": "a" * 64}
+
+    def fake_archive_events(path, *, stream, instrument, source_url,
+                            expected_sha256, delay_ns):
+        kind = {"klines": "ohlcv_1m", "markPriceKlines": "mark",
+                "indexPriceKlines": "index"}[stream]
+        payload = ({"open": "100", "high": "101", "low": "99", "close": "100", "volume": "2"}
+                   if kind == "ohlcv_1m" else {"price": "100"})
+        ts = day_ns + DAY_NS - MINUTE_NS
+        return tuple(
+            Event(f"{stream}-2024-01-31-{event_ts}", kind, event_ts,
+                  event_ts + delay_ns, event_ts + delay_ns,
+                  Availability.DERIVED, expected_sha256,
+                  {"instrument": instrument, **payload}, source_url)
+            for event_ts in (ts, ts + MINUTE_NS)
+        )
+
+    def fake_funding_api(symbol, month, start_day, end_day, raw):
+        api_scope.append((symbol, month, start_day, end_day))
+        return ({"path": str(raw / "fundingRate-2024-01-api.json"),
+                 "url": "https://fapi.binance.com/fapi/v1/fundingRate?fixture",
+                 "sha256": sha256(content).hexdigest(),
+                 "verification": "captured_response_sha256"}, content)
+
+    monkeypatch.setattr(binance_archive, "fetch_archive", fake_fetch)
+    monkeypatch.setattr(binance_archive, "archive_events", fake_archive_events)
+    monkeypatch.setattr(binance_archive, "fetch_funding_api", fake_funding_api)
+
+    result = binance_archive.import_range(
+        symbol="ETHUSDT", start_day="2024-01-31", end_day="2024-01-31",
+        output=tmp_path / "bundle", delay_ns=1_000_000,
+        funding_api_months=("2024-01",),
+    )
+
+    assert len(fetched) == 3 and all("/1m/" in path for path in fetched)
+    assert api_scope == [("ETHUSDT", date(2024, 1, 1), day, day)]
+    assert result["sources"][-1]["verification"] == "captured_response_sha256"
+    day_end_ns = day_ns + DAY_NS
+    assert result["end_ns"] == day_end_ns
+    store = read_curated(tmp_path / "bundle" / "market.parquet")
+    assert not any(event.kind == "ohlcv_1m" and event.ts_event_ns == day_end_ns
+                   for event in store.events)
+    assert sum(event.kind == "funding_settlement" for event in store.events) == 2
+
+
+def test_funding_api_accepts_hash_bound_binance_mcp_payload_capture(tmp_path):
+    import json
+
+    day = date(2024, 1, 31)
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    destination = raw / "fundingRate-2024-01-api.json"
+    rows = [
+        {"symbol": "ETHUSDT", "fundingTime": 1706659200000,
+         "fundingRate": "0.0001", "markPrice": "2000", "rateType": "Regular"},
+        {"symbol": "ETHUSDT", "fundingTime": 1706688000000,
+         "fundingRate": "0.0002", "markPrice": "2001", "rateType": "Regular"},
+    ]
+    content = json.dumps(rows, separators=(",", ":")).encode("utf-8")
+    digest = sha256(content).hexdigest()
+    destination.write_bytes(content)
+    destination.with_suffix(destination.suffix + ".source.json").write_text(
+        json.dumps({
+            "schema": "rles.binance-funding-api-mcp-payload.v1",
+            "url": "https://fapi.binance.com/fapi/v1/fundingRate?"
+                  "symbol=ETHUSDT&startTime=1706659200000&endTime=1706745599999&limit=1000",
+            "sha256": digest,
+            "capture_method": "binance_mcp_get_futures_usds_funding_rate_history",
+        }, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    source, captured = binance_archive.fetch_funding_api(
+        "ETHUSDT", date(2024, 1, 1), day, day, raw,
+    )
+
+    assert captured == content
+    assert source["sha256"] == digest
+    assert source["capture_method"] == "binance_mcp_get_futures_usds_funding_rate_history"
+    assert source["verification"] == "captured_mcp_payload_sha256"
+
+
+def test_project_import_rejects_previously_consumed_development_span_before_io(
+        tmp_path, monkeypatch):
+    project = tmp_path / "canonical"
+    registry = project / ".artifacts" / "research-access.sqlite"
+    registry.parent.mkdir(parents=True)
+    start = int(datetime(2024, 1, 31, tzinfo=timezone.utc).timestamp()) * 1_000_000_000
+    end = start + DAY_NS
+    with sqlite3.connect(registry) as db:
+        for table in ("access", "query_intent"):
+            db.execute(
+                f"CREATE TABLE {table} (market TEXT, family TEXT, purpose TEXT, "
+                "start_ns INTEGER, end_ns INTEGER)"
+            )
+        db.execute("INSERT INTO access VALUES(?,?,?,?,?)", (
+            "ETHUSDT", "perpetual-market-v1", "development", start, end,
+        ))
+    monkeypatch.setattr(binance_archive, "PROJECT_ROOT", project)
+    monkeypatch.setattr(
+        binance_archive, "fetch_archive",
+        lambda *_args, **_kwargs: pytest.fail("source opened before dev-scope guard"),
+    )
+    with pytest.raises(binance_archive.DataError, match="previously registered Development"):
+        binance_archive.import_range(
+            symbol="ETHUSDT", start_day="2024-01-31", end_day="2024-01-31",
+            output=project / "data" / "reused", delay_ns=1_000_000,
+            funding_api_months=("2024-01",),
+        )
+
+
+def test_project_import_accepts_only_matching_preregistered_train_span(tmp_path, monkeypatch):
+    import json
+
+    project = tmp_path / "canonical"
+    registry = project / ".artifacts" / "research-access.sqlite"
+    registry.parent.mkdir(parents=True)
+    start = int(datetime(2024, 1, 31, tzinfo=timezone.utc).timestamp()) * 1_000_000_000
+    end = start + DAY_NS
+    protocol_sha = "b" * 64
+    access_key = "train-source-1"
+    identity = json.dumps({"protocol_sha256": protocol_sha}, sort_keys=True, separators=(",", ":"))
+    with sqlite3.connect(registry) as db:
+        db.execute("CREATE TABLE access (access_key TEXT, owner TEXT, market TEXT, family TEXT, "
+                   "start_ns INTEGER, end_ns INTEGER, purpose TEXT, identity TEXT, token TEXT, "
+                   "state TEXT, report_sha TEXT)")
+        db.execute("CREATE TABLE query_intent (market TEXT, family TEXT, purpose TEXT, "
+                   "start_ns INTEGER, end_ns INTEGER)")
+        db.execute("INSERT INTO access VALUES(?,?,?,?,?,?,?,?,?,?,NULL)", (
+            access_key, "protocol-1", "ETHUSDT", "perpetual-market-v1", start, end,
+            "development", identity, "token", "recorded",
+        ))
+    monkeypatch.setattr(binance_archive, "PROJECT_ROOT", project)
+
+    binance_archive._guard_project_archive_scope(
+        symbol="ETHUSDT", first=date(2024, 1, 31), last=date(2024, 1, 31),
+        target=project / "data" / "reserved", archive_interval="daily",
+        funding_api_months=("2024-01",), development_access_key=access_key,
+        development_protocol_sha256=protocol_sha,
+    )
+
+    with pytest.raises(binance_archive.DataError, match="does not cover this physical source span"):
+        binance_archive._guard_project_archive_scope(
+            symbol="ETHUSDT", first=date(2024, 1, 30), last=date(2024, 1, 31),
+            target=project / "data" / "wider", archive_interval="daily",
+            funding_api_months=("2024-01",), development_access_key=access_key,
+            development_protocol_sha256=protocol_sha,
+        )
+
+    child_key = "protocol-owned-child"
+    child_identity = json.dumps({
+        "window": {"start_ns": start, "end_ns": end},
+        "environment": {},
+        "label": "train-route-a-screen-window",
+    }, sort_keys=True, separators=(",", ":"))
+    with sqlite3.connect(registry) as db:
+        db.execute("INSERT INTO access VALUES(?,?,?,?,?,?,?,?,?,?,NULL)", (
+            child_key, "protocol-1", "ETHUSDT", "perpetual-market-v1", start, end,
+            "development", child_identity, "child-token", "recorded",
+        ))
+
+    binance_archive._guard_project_archive_scope(
+        symbol="ETHUSDT", first=date(2024, 1, 31), last=date(2024, 1, 31),
+        target=project / "data" / "reserved-with-child", archive_interval="daily",
+        funding_api_months=("2024-01",), development_access_key=access_key,
+        development_protocol_sha256=protocol_sha,
+    )
+
+    with sqlite3.connect(registry) as db:
+        db.execute("INSERT INTO access VALUES(?,?,?,?,?,?,?,?,?,?,NULL)", (
+            "foreign-protocol-child", "protocol-2", "ETHUSDT", "perpetual-market-v1",
+            start, end, "development", child_identity, "foreign-token", "recorded",
+        ))
+    with pytest.raises(binance_archive.DataError, match="another Development access"):
+        binance_archive._guard_project_archive_scope(
+            symbol="ETHUSDT", first=date(2024, 1, 31), last=date(2024, 1, 31),
+            target=project / "data" / "foreign-child", archive_interval="daily",
+            funding_api_months=("2024-01",), development_access_key=access_key,
+            development_protocol_sha256=protocol_sha,
+        )

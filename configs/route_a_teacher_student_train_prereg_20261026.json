@@ -1,0 +1,154 @@
+{
+  "baseline_sha": "bd313c5241c31f1ccff96fa4bf76a7966be48767",
+  "code_sha256": {
+    ".artifacts/audit-development-20261016/data/scenario-rules.json": "690292b508ce722d6ba2f5b9fb745671f56fc396d2026943fd36668e9028c93b",
+    "configs/route_a_1m_teacher_library_v1.json": "cc0ab757eb6af5ddba1a04a422b29cf8336b116d7c3b5c2bdec2db96f2bf2573",
+    "packages/route_a_imitation/src/rles_route_a/integration/gym_rollout.py": "24cc7cc2ebc949ff0d16f391632629f6864171c17ea718fe4a2f0ee471e8975c",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/base.py": "7b809bd967364a3dca7d851f290d1cdbc22fd0263557697aaf9a5bb5cf378c51",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/bollinger.py": "0f249769709cc2b3b4f3d18aa927432adaa404b30a08d6ca1c6702878b03bea8",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/contracts.py": "e1f45f1d0528f342e268ca03360cc23473f4445dc5477c550ffc74a197348773",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/donchian.py": "d8c3a16e839354fbc1e285602e483dc6f9c963aed1095a02abc758e1ff16edcc",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/ema.py": "1c7531e1030346fbc4297265b25e17eddbc57435a6622f52167be150fd488a9d",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/exits.py": "778057dd9e3416375fd8e57b3ae4c668acea8f72970888ce53ad566ce3e6dc09",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/macd.py": "211f297af2dbc8dbc691fc39b293c6dcf23746e7dab4e1c469f90bd7330a1717",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/momentum.py": "44184aee2c11840a152b0bf2f7c507f49b600f9e5b1e6ea691258ab3610611a5",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/pullback.py": "124e5c342be9f676346b451be1cf27ef510ad4e268e3185dc2feac27beff72b5",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/registry.py": "875a2daa8ae8a4d9c7d219cc110082eeb7e76961be1414e359d7e995224ca18e",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/rsi.py": "1ab6bab3d69fdd58aaa36ec651860070cabf1c8e88439c6ae9947e1aadc425a9",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/zscore.py": "e44853a58da117fd46c81f98d0e2f5137d54d8a0b397f33a415c3c889cc17a0c"
+  },
+  "created_date": "2026-10-26",
+  "decision_rule": "Train-inner screen only, never formal G1/G2 or live-profitability proof. Never open Test/Holdout. On any source coverage, funding response, or native-barrier reconciliation failure, retain a failure receipt and do not change frozen scope or recipe.",
+  "execution": {
+    "engine": "native Gym/Execution/M2.2/L6",
+    "entry_size": 0.3,
+    "host": "WSL2 Ubuntu-24.04",
+    "python": "3.14.7",
+    "risk_overlay": "unchanged native risk/planner/execution contracts",
+    "scenario_rules_sha256": "690292b508ce722d6ba2f5b9fb745671f56fc396d2026943fd36668e9028c93b",
+    "terminal_force_flat": "excluded from ordinary teacher-closed trade count"
+  },
+  "protocol_id": "route-a-teacher-student-train-20261023-20261130-v1",
+  "schema": "rles.route-a.teacher-student-fresh-train-prereg.v1",
+  "scope": {
+    "account_specific_economic_authority": false,
+    "end_utc_exclusive": "2026-11-30T00:00:00Z",
+    "formal_test_or_holdout_access": false,
+    "market": "ETHUSDT",
+    "product": "Binance USD-M perpetual",
+    "purpose": "Train-inner teacher screen, then separate student-screen blocks",
+    "scored_start_utc_inclusive": "2026-10-25T00:00:00Z",
+    "source_not_read_at_freeze": true,
+    "source_start_utc_inclusive": "2026-10-23T00:00:00Z"
+  },
+  "source": {
+    "account_specific_fees_or_margin_supplied": false,
+    "archive_interval": "daily",
+    "availability_delay_ns": 1000000,
+    "daily_streams": [
+      "klines",
+      "markPriceKlines",
+      "indexPriceKlines"
+    ],
+    "funding_archive_guard": "Refuse raw archive spans overlapping registered Test/Holdout or prior Development access; October REST response must contain only requested timestamps.",
+    "funding_by_month": {
+      "2026-10": {
+        "end_utc_inclusive": "2026-10-31T23:59:59.999Z",
+        "max_records": 1000,
+        "method": "USD-M /fapi/v1/fundingRate",
+        "start_utc_inclusive": "2026-10-23T00:00:00Z"
+      },
+      "2026-11": {
+        "method": "monthly fundingRate archive",
+        "physical_span_utc": [
+          "2026-11-01T00:00:00Z",
+          "2026-12-01T00:00:00Z"
+        ]
+      }
+    },
+    "instrument_rules_supplied": false,
+    "provider": "Binance Public Data and USD-M REST API"
+  },
+  "status": "frozen_before_any_source_read",
+  "student_screen": {
+    "acceptance": "Run only after teacher screen passes. Student must have positive net and strictly beat the same frozen teacher in every paired block/scenario/seed, matched native barriers, zero liquidations, max drawdown <= 0.30. No training or DAgger collection on these screen windows.",
+    "algorithms": [
+      "behavior_cloning",
+      "dagger"
+    ],
+    "economic_status": "SCENARIO_ONLY",
+    "fit_scope": "teacher labels and DAgger state collection only in teacher-screen windows",
+    "scenarios": [
+      "base",
+      "stress"
+    ],
+    "seeds": [
+      20261026,
+      20261027
+    ],
+    "windows": [
+      [
+        "2026-11-14T00:00:00Z",
+        "2026-11-18T00:00:00Z"
+      ],
+      [
+        "2026-11-18T00:00:00Z",
+        "2026-11-22T00:00:00Z"
+      ],
+      [
+        "2026-11-22T00:00:00Z",
+        "2026-11-26T00:00:00Z"
+      ],
+      [
+        "2026-11-26T00:00:00Z",
+        "2026-11-30T00:00:00Z"
+      ]
+    ]
+  },
+  "teacher_screen": {
+    "acceptance": "One frozen candidate must have positive native net and positive excess against each control in every block/scenario/seed; four nonoverlapping windows, two seeds, matched native barriers, zero liquidations, max drawdown <= 0.30. No candidate tuning after source read.",
+    "candidate_ids": [
+      "T01_EMA_9_21_EXIT_ONLY_V1",
+      "T01_EMA_9_21_REVERSE_AFTER_FLAT_V1",
+      "T02_ROC_20_60_X1",
+      "T03_DONCHIAN_20_X1",
+      "T04_ZSCORE_60_X1",
+      "T05_MACD_12_26_9_X1",
+      "T06_RSI_14_X1",
+      "T07_BOLLINGER_20_2_X1",
+      "T08_EMA_TREND_PULLBACK_X1"
+    ],
+    "controls": [
+      "FLAT",
+      "FIXED_LONG_0.3",
+      "FIXED_SHORT_0.3"
+    ],
+    "economic_status": "SCENARIO_ONLY",
+    "scenarios": [
+      "base",
+      "stress"
+    ],
+    "seeds": [
+      20261026,
+      20261027
+    ],
+    "windows": [
+      [
+        "2026-10-25T00:00:00Z",
+        "2026-10-30T00:00:00Z"
+      ],
+      [
+        "2026-10-30T00:00:00Z",
+        "2026-11-04T00:00:00Z"
+      ],
+      [
+        "2026-11-04T00:00:00Z",
+        "2026-11-09T00:00:00Z"
+      ],
+      [
+        "2026-11-09T00:00:00Z",
+        "2026-11-14T00:00:00Z"
+      ]
+    ]
+  }
+}

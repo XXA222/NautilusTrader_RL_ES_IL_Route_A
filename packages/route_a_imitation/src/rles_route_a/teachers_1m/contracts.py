@@ -1,7 +1,7 @@
 """Frozen research-side contracts for independent Route A 1m teachers."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import isfinite
 from typing import Literal
 
@@ -23,6 +23,35 @@ class TeacherSignal:
             raise ValueError("invalid raw teacher signal")
         if self.side not in (-1, 0, 1) or not self.reason_code:
             raise ValueError("invalid teacher signal side or reason")
+
+
+@dataclass(slots=True)
+class PendingReversal1m:
+    """Causal EMA reverse candidate awaiting a verified native close lifecycle."""
+
+    side: Literal[-1, 1]
+    event_close_ts_ns: int
+    episode_id: str
+    source_id: str
+    reason_code: str
+    close_request_seen: bool = False
+    close_order_ids: set[str] = field(default_factory=set)
+    close_confirmed_bar_close_ts_ns: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.side not in (-1, 1):
+            raise ValueError("pending reversal side must be directional")
+        if type(self.event_close_ts_ns) is not int or self.event_close_ts_ns <= 0:
+            raise ValueError("pending reversal event clock must be positive")
+        if not self.episode_id or not self.reason_code:
+            raise ValueError("pending reversal episode and reason are required")
+        if any(not isinstance(order_id, str) or not order_id.strip()
+               for order_id in self.close_order_ids):
+            raise ValueError("pending reversal close order ids must be nonempty")
+        if (self.close_confirmed_bar_close_ts_ns is not None
+                and (type(self.close_confirmed_bar_close_ts_ns) is not int
+                     or self.close_confirmed_bar_close_ts_ns < self.event_close_ts_ns)):
+            raise ValueError("pending reversal close confirmation clock is invalid")
 
 
 @dataclass(frozen=True, slots=True)

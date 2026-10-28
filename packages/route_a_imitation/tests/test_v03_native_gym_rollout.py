@@ -101,6 +101,172 @@ def test_native_rollout_requires_terminal_receipt_instead_of_dropping_last_decis
     assert env.closed
 
 
+def test_native_teacher_receives_action_after_m22_and_l6_verification():
+    class VerifiedNonterminalEnv(_NonterminalEnv):
+        def step(self, action):
+            observation, reward, terminated, truncated, info = super().step(action)
+            info.update({
+                "execution_decision_id": "decision-1",
+                "execution_plan_id": "plan-1",
+                "execution_idempotency_key": "idempotency-1",
+                "execution_plan_reason": "already-at-target",
+                "evidence_hash": "e" * 64,
+                "policy_equity_currency": "USDT",
+                "requested_action": action[0],
+                "risk_soft_target": action[0],
+                "risk_adjusted_target": action[0],
+                "quantity_rounded_target_exposure": action[0],
+                "policy_executed_action_pre_terminal": action[0],
+                "policy_equity_before": "1000",
+                "policy_equity_after": "1000",
+                "policy_equity_change": "0",
+                "r_econ": 0.0,
+                "execution_cancel_order_ids": (),
+            })
+            return observation, reward, terminated, truncated, info
+
+    env = VerifiedNonterminalEnv()
+    events = []
+
+    class Teacher:
+        def advise(self, observation):
+            return ExpertAdvice(
+                "trend", observation.decision_ts_ns, "OPEN_LONG", 0.2, ("native",),
+            )
+
+        def observe_native_action(self, action, trace, order_facts):
+            events.append(("teacher", action, trace, order_facts))
+
+    def verify_native(_info, _source, order_facts):
+        events.append(("m22", order_facts))
+        return True
+
+    def verify_no_cashflow(_info, _source, receipt):
+        events.append(("l6", receipt))
+        return True
+
+    def visible_context(_env):
+        context = _context()
+        context["pending_order_ids"] = ()
+        context["execution"] = {"pending_order_count": 0.0}
+        return context
+
+    provider = NativeGymTeacherProvider(
+        env_factory=lambda: env, teacher=Teacher(), fold_id="fold-1",
+        execution_recipe="exec-v1", source_identity="source-marker",
+        native_order_facts_verifier=verify_native,
+        no_external_cashflow_receipt=lambda _info: "no-flow-receipt",
+        no_external_cashflow_verifier=verify_no_cashflow,
+        episode_id=lambda _env, _info: "episode-1",
+        visible_context=visible_context,
+    )
+    grant = HostTrainGrant("fold-1", "owner", "reservation", "source-marker", "train", True)
+
+    rollout = provider.rollout(fold_id="fold-1", grant=grant, seed=7)
+    barrier = next(rollout)
+    rollout.close()
+
+    assert env.closed
+    assert [event[0] for event in events] == ["m22", "l6", "teacher"]
+    assert events[0][1] is events[2][3]
+    assert events[1][1] == "no-flow-receipt"
+    assert events[2][1].intent == "OPEN_LONG"
+    assert events[2][2] == barrier.trace
+    assert events[2][3].native_order_status_receipt
+
+
+def test_m22_rollout_feedback_follows_per_barrier_m22_and_l6_checks():
+    class StopAfterObservation(Exception):
+        pass
+
+    class VerifiedNonterminalEnv(_NonterminalEnv):
+        def step(self, action):
+            observation, reward, terminated, truncated, info = super().step(action)
+            info.update({
+                "execution_decision_id": "decision-1",
+                "execution_plan_id": "plan-1",
+                "execution_idempotency_key": "idempotency-1",
+                "execution_plan_reason": "already-at-target",
+                "evidence_hash": "e" * 64,
+                "policy_equity_currency": "USDT",
+                "requested_action": action[0],
+                "risk_soft_target": action[0],
+                "risk_adjusted_target": action[0],
+                "quantity_rounded_target_exposure": action[0],
+                "policy_executed_action_pre_terminal": action[0],
+                "policy_equity_before": "1000",
+                "policy_equity_after": "1000",
+                "policy_equity_change": "0",
+                "r_econ": 0.0,
+                "execution_cancel_order_ids": (),
+            })
+            return observation, reward, terminated, truncated, info
+
+    env = VerifiedNonterminalEnv()
+    events = []
+
+    class Teacher:
+        def advise(self, observation):
+            return ExpertAdvice(
+                "trend", observation.decision_ts_ns, "OPEN_LONG", 0.2, ("native",),
+            )
+
+        def observe_native_action(self, action, trace, order_facts):
+            events.append(("teacher", action, trace, order_facts))
+
+    def verify_native(_info, _source, order_facts):
+        events.append(("m22", order_facts))
+        return True
+
+    def verify_no_cashflow(_info, _source, receipt):
+        events.append(("l6", receipt))
+        return True
+
+    def visible_context(_env):
+        context = _context()
+        context["pending_order_ids"] = ()
+        context["execution"] = {"pending_order_count": 0.0}
+        return context
+
+    provider = NativeGymTeacherProvider(
+        env_factory=lambda: env, teacher=Teacher(), fold_id="fold-1",
+        execution_recipe="exec-v1", source_identity="source-marker",
+        native_order_facts_verifier=verify_native,
+        no_external_cashflow_receipt=lambda _info: "no-flow-receipt",
+        no_external_cashflow_verifier=verify_no_cashflow,
+        episode_id=lambda _env, _info: "episode-1",
+        visible_context=visible_context,
+    )
+    grant = HostTrainGrant("fold-1", "owner", "reservation", "source-marker", "train", True)
+
+    def host_rollout(_factory, _predict, *, seed, predictor_factory,
+                     decision_observer, **_kwargs):
+        _observation, reset_info = env.reset(seed=seed)
+        predict = predictor_factory(env, reset_info)
+        action = predict(None)
+        _next_observation, _reward, terminated, truncated, info = env.step(action)
+        decision_observer(env, None, info, terminated, truncated)
+        env.close()
+        raise StopAfterObservation
+
+    factory = SimpleNamespace(
+        transition_hash="exec-v1",
+        execution=SimpleNamespace(zero_target_policy="close"),
+        make_env=lambda: env,
+    )
+    with pytest.raises(StopAfterObservation):
+        provider.rollout_with_m22_trace(
+            factory=factory, host_rollout=host_rollout, grant=grant, seed=7,
+        )
+
+    assert env.closed
+    assert [event[0] for event in events] == ["m22", "l6", "teacher"]
+    assert events[0][1] is events[2][3]
+    assert events[1][1] == "no-flow-receipt"
+    assert events[2][1].intent == "OPEN_LONG"
+    assert events[2][2].requested_action == events[2][1].requested_exposure
+
+
 def test_prepared_factory_assembly_requires_registered_train_receipt():
     factory = SimpleNamespace(
         make_env=lambda: None, transition_hash="recipe-v1",
@@ -419,11 +585,19 @@ def test_prepared_factory_requires_explicit_close_policy_before_registry_read():
 def test_nonterminal_rollout_requires_independent_m2_and_l6_verification(
         native_order_verified, cashflow_verified, message):
     env = _NonterminalEnv()
-    teacher = SimpleNamespace(advise=lambda obs: ExpertAdvice(
-        "trend", obs.decision_ts_ns, "HOLD", 0.0, ("native",),
-    ))
+    observed_actions = []
+
+    class Teacher:
+        def advise(self, observation):
+            return ExpertAdvice(
+                "trend", observation.decision_ts_ns, "HOLD", 0.0, ("native",),
+            )
+
+        def observe_native_action(self, *args):
+            observed_actions.append(args)
+
     provider = NativeGymTeacherProvider(
-        env_factory=lambda: env, teacher=teacher, fold_id="fold-1",
+        env_factory=lambda: env, teacher=Teacher(), fold_id="fold-1",
         execution_recipe="exec-v1", source_identity="source-marker",
         native_order_facts_verifier=lambda _info, _source, _facts: native_order_verified,
         no_external_cashflow_receipt=lambda _info: "unverified-no-flow",
@@ -435,6 +609,7 @@ def test_nonterminal_rollout_requires_independent_m2_and_l6_verification(
     with pytest.raises(PermissionError, match=message):
         tuple(provider.rollout(fold_id="fold-1", grant=grant, seed=7))
     assert env.closed
+    assert observed_actions == []
 
 
 def test_terminal_rollout_requires_l6_to_verify_settlement_receipt():
@@ -501,3 +676,199 @@ def test_shared_full_native_snapshot_views_preserve_exact_barrier_facts():
     assert _snapshot_fills(
         SimpleNamespace(fills=fill_view), start_ns=20, end_ns=30,
     ) == ()
+
+
+def test_ema_reverse_lifecycle_completes_through_native_gym_provider_feedback():
+    from rles_route_a.indicators_1m import MINUTE_NS
+    from rles_route_a.teachers_1m import build_teacher_1m
+
+    contexts = []
+    for minute, fast, slow, exposure, pending in (
+        (1, 99.0, 100.0, 0.0, ()),
+        (2, 101.0, 100.0, 0.0, ()),
+        (3, 99.0, 100.0, 0.3, ()),
+        (4, 99.0, 100.0, 0.3, ("close-1",)),
+        (5, 99.0, 100.0, 0.0, ()),
+    ):
+        close_ts = minute * MINUTE_NS
+        decision_ts = close_ts + 1_000_000_000
+        context = _context(decision_ts)
+        context["source_id"] = "source-marker"
+        context["market"] = {
+            "ema_fast_1m": _feature(fast, close_ts),
+            "ema_slow_1m": _feature(slow, close_ts),
+        }
+        context["exact_market_clocks_ns"] = (
+            ("latest_1m_close_ts_ns", close_ts),
+        )
+        context["account"]["net_exposure"] = exposure
+        context["pending_order_ids"] = pending
+        context["execution"]["pending_order_count"] = float(len(pending))
+        contexts.append(context)
+
+    class ReversalEnv:
+        def __init__(self):
+            self.index = 0
+            self.statuses = {}
+            self.closed = False
+
+        def reset(self, *, seed):
+            self.seed = seed
+            self.index = 0
+            self.statuses = {}
+            return None, {}
+
+        def rles_visible_context_inputs(self):
+            return contexts[self.index]
+
+        def step(self, action):
+            index = self.index
+            expected_targets = (0.0, 0.3, 0.0, 0.3, -0.3)
+            assert action[0] == pytest.approx(expected_targets[index])
+
+            before = tuple(
+                dict(self.statuses[key]) for key in sorted(self.statuses)
+            )
+            planner_actions = ("NOOP", "SUBMIT", "SUBMIT", "WAIT", "SUBMIT")
+            planner_action = planner_actions[index]
+            client_order_id = None
+            related_order_ids = ()
+            fills = ()
+            pending_after = ()
+            next_exposure = (0.0, 0.3, 0.3, 0.0, -0.3)[index]
+            if index == 1:
+                client_order_id = "long-1"
+                self.statuses[client_order_id] = {
+                    "client_order_id": client_order_id, "status": "FILLED",
+                    "side": "BUY", "quantity": "0.3", "filled_qty": "0.3",
+                }
+                fills = ({
+                    "event_id": "fill-long-1", "client_order_id": client_order_id,
+                    "ts_event": contexts[index]["decision_ts_ns"] + 1,
+                    "last_qty": "0.3", "last_px": "100", "commission": "0 USDT",
+                },)
+            elif index == 2:
+                client_order_id = "close-1"
+                self.statuses[client_order_id] = {
+                    "client_order_id": client_order_id, "status": "NEW",
+                    "side": "SELL", "quantity": "0.3", "filled_qty": "0",
+                }
+                pending_after = ("close-1",)
+            elif index == 3:
+                related_order_ids = ("close-1",)
+                self.statuses["close-1"] = {
+                    "client_order_id": "close-1", "status": "FILLED",
+                    "side": "SELL", "quantity": "0.3", "filled_qty": "0.3",
+                }
+                fills = ({
+                    "event_id": "fill-close-1", "client_order_id": "close-1",
+                    "ts_event": contexts[index]["decision_ts_ns"] + 1,
+                    "last_qty": "0.3", "last_px": "100", "commission": "0 USDT",
+                },)
+            elif index == 4:
+                client_order_id = "short-1"
+                self.statuses[client_order_id] = {
+                    "client_order_id": client_order_id, "status": "FILLED",
+                    "side": "SELL", "quantity": "0.3", "filled_qty": "0.3",
+                }
+                fills = ({
+                    "event_id": "fill-short-1", "client_order_id": client_order_id,
+                    "ts_event": contexts[index]["decision_ts_ns"] + 1,
+                    "last_qty": "0.3", "last_px": "100", "commission": "0 USDT",
+                },)
+
+            after = tuple(
+                dict(self.statuses[key]) for key in sorted(self.statuses)
+            )
+            status_receipt = sha256(json.dumps(
+                {"before": [dict(row) for row in before],
+                 "after": [dict(row) for row in after]},
+                sort_keys=True, separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")).hexdigest()
+            decision_ts = contexts[index]["decision_ts_ns"]
+            info = {
+                "decision_ts_ns": decision_ts + MINUTE_NS,
+                "terminal_settled": False,
+                "execution_plan_action": planner_action,
+                "execution_client_order_id": client_order_id,
+                "execution_related_order_ids": related_order_ids,
+                "native_pending_order_ids_before": contexts[index]["pending_order_ids"],
+                "native_pending_order_ids_after": pending_after,
+                "native_policy_fills": fills,
+                "native_order_statuses_before": before,
+                "native_order_statuses_after": after,
+                "native_order_status_receipt": status_receipt,
+                "execution_decision_id": f"decision-{index}",
+                "execution_plan_id": f"plan-{index}",
+                "execution_idempotency_key": f"idempotency-{index}",
+                "execution_plan_reason": "synthetic-provider-lifecycle",
+                "evidence_hash": "e" * 64,
+                "policy_equity_currency": "USDT",
+                "requested_action": action[0],
+                "risk_soft_target": action[0],
+                "risk_adjusted_target": action[0],
+                "quantity_rounded_target_exposure": action[0],
+                "policy_executed_action_pre_terminal": next_exposure,
+                "policy_equity_before": "1000",
+                "policy_equity_after": "1000",
+                "policy_equity_change": "0",
+                "r_econ": 0.0,
+                "execution_cancel_order_ids": (),
+            }
+            self.index += 1
+            return None, 0.0, False, False, info
+
+        def close(self):
+            self.closed = True
+
+    env = ReversalEnv()
+    teacher = build_teacher_1m(
+        "T01_EMA_9_21", reversal_mode="REVERSE_AFTER_FLAT_V1",
+    )
+    teacher_actions = []
+    native_feedback = []
+    advise = teacher.advise
+    observe = teacher.observe_native_action
+
+    def record_advice(observation):
+        action = advise(observation)
+        teacher_actions.append(action)
+        return action
+
+    def record_feedback(action, trace, order_facts):
+        native_feedback.append((action, trace, order_facts))
+        observe(action, trace, order_facts)
+
+    teacher.advise = record_advice
+    teacher.observe_native_action = record_feedback
+    provider = NativeGymTeacherProvider(
+        env_factory=lambda: env, teacher=teacher, fold_id="fold-1",
+        execution_recipe="exec-v1", source_identity="source-marker",
+        native_order_facts_verifier=lambda _info, _source, _facts: True,
+        no_external_cashflow_receipt=lambda _info: "synthetic-no-flow-receipt",
+        no_external_cashflow_verifier=lambda _info, _source, _receipt: True,
+        episode_id=lambda _env, _info: "episode-1",
+        market_feature_map={
+            "ema_9": "ema_fast_1m", "ema_21": "ema_slow_1m",
+        },
+    )
+    grant = HostTrainGrant(
+        "fold-1", "owner", "reservation", "source-marker", "train", True,
+    )
+
+    rollout = provider.rollout(fold_id="fold-1", grant=grant, seed=7)
+    barriers = [next(rollout) for _ in contexts]
+    rollout.close()
+
+    assert env.closed
+    assert [action.intent for action in teacher_actions] == [
+        "FLAT", "OPEN_LONG", "EXIT", "HOLD", "OPEN_SHORT",
+    ]
+    assert teacher_actions[2].reason_codes[-1] == "EMA_REVERSE_CROSS"
+    assert teacher_actions[3].reason_codes == ("PENDING_ACK",)
+    assert teacher_actions[4].reason_codes == ("EMA_REVERSAL_RECHECK",)
+    assert barriers[2].trace.submitted_order_ids == ("close-1",)
+    assert barriers[3].trace.related_existing_order_ids == ("close-1",)
+    assert barriers[3].trace.filled_order_ids == ("close-1",)
+    assert len(native_feedback) == len(contexts)
+    assert all(barrier.trace.scenario_only for barrier in barriers)

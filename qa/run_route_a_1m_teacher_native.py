@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 import sys
 from time import monotonic
-from typing import Any
+from typing import Any, Literal, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "qa"))
@@ -43,13 +43,19 @@ from rles_route_a.evaluation.teacher_funnel_1m import (  # noqa: E402
     TeacherPlannerRecord,
     TeacherPreDecision,
 )
-from rles_route_a.indicators_1m import CausalBar, StreamingIndicators1m  # noqa: E402
+from rles_route_a.indicators_1m import CausalBar, IndicatorSnapshot, StreamingIndicators1m  # noqa: E402
 from rles_route_a.integration.l2_adapter import (  # noqa: E402
     CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES,
 )
-from rles_route_a.teachers_1m.registry import build_teacher_1m  # noqa: E402
+from rles_route_a.teachers_1m.registry import (  # noqa: E402
+    ROC_COST_HYSTERESIS_FADE_TEACHER_ID,
+    ROC_COST_HYSTERESIS_TEACHER_ID,
+    build_teacher_1m,
+)
 
-TEACHERS = ("T01_EMA_9_21", "T02_ROC_20_60", "T03_DONCHIAN_20", "T04_ZSCORE_60")
+TEACHERS = ("T01_EMA_9_21", "T02_ROC_20_60", ROC_COST_HYSTERESIS_TEACHER_ID,
+            ROC_COST_HYSTERESIS_FADE_TEACHER_ID, "T03_DONCHIAN_20",
+            "T04_ZSCORE_60")
 ROOT_DEFAULT_PREREG = ROOT / "configs/route_a_1m_teacher_native_prereg_20261026.json"
 DEFAULT_OUTPUT = ROOT / ".artifacts/route-a-1m-teacher-native-s06"
 SCENARIO_RULES = ROOT / ".artifacts/audit-development-20261016/data/scenario-rules.json"
@@ -57,6 +63,8 @@ EXECUTION_TEMPLATE = ROOT / "configs/ethusdt_20240101_real.json"
 FEATURE_RECIPE = ROOT / "configs/route_a_1m_teacher_library_v1.json"
 MINUTE_NS = 60_000_000_000
 WINDOW_IDS = ("smoke", "inner-screen-1", "inner-screen-2", "inner-screen-3")
+NativeExitVariant = Literal["X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8"]
+EmaReversalMode = Literal["EXIT_ONLY_V1", "REVERSE_AFTER_FLAT_V1"]
 
 
 def _sha256(path: Path) -> str:
@@ -71,7 +79,9 @@ def _ns(value: str) -> int:
     return (delta.days * 86_400 + delta.seconds) * 1_000_000_000 + delta.microseconds * 1_000
 
 
-def verify_preregistration(path: Path) -> tuple[dict[str, Any], str]:
+def verify_preregistration(
+    path: Path, *, feature_recipe_override: Path | None = None
+) -> tuple[dict[str, Any], str]:
     """Verify immutable protocol/source receipts without reading market rows."""
     digest_file = path.with_suffix(path.suffix + ".sha256")
     if not path.is_file() or not digest_file.is_file():
@@ -125,6 +135,8 @@ def verify_preregistration(path: Path) -> tuple[dict[str, Any], str]:
         ("feature_recipe", "path", doc["feature_recipe"]["sha256"]),
     ):
         candidate = ROOT / doc[section][field]
+        if section == "feature_recipe" and feature_recipe_override is not None:
+            candidate = feature_recipe_override
         if _sha256(candidate) != expected:
             raise RuntimeError(f"pre-registered {section} checksum changed")
     return doc, actual_sha
@@ -408,7 +420,7 @@ class _StreamingVisibleContext:
         ) for row in inputs)
         self._engine = StreamingIndicators1m()
         self._cursor = 0
-        self._snapshot = None
+        self._snapshot: IndicatorSnapshot | None = None
 
     def __call__(self, env: Any) -> dict[str, Any]:
         context = env.rles_visible_context_inputs()
@@ -466,7 +478,7 @@ class _TeacherResearchHook1m:
         self._pre_accounts[observation.decision_ts_ns] = dict(observation.account)
         required = tuple(getattr(teacher, "required_fields", ()))
         ready = all(name in observation.market for name in required)
-        status = "READY" if ready else "WARMUP"
+        status: Literal["READY", "WARMUP"] = ("READY" if ready else "WARMUP")
         order_veto = (
             "PENDING_NATIVE_ORDER"
             if signal.raw_signal in ("LONG_ENTRY", "SHORT_ENTRY")
@@ -556,7 +568,7 @@ class _TeacherResearchHook1m:
         elif abs(pre_exposure) > 1e-8:
             raise ValueError("native position is open but no teacher entry case is active")
 
-        case_status = "NONE"
+        case_status: Literal["NONE", "ORDINARY_COMPLETE", "OPEN_CENSORED", "TERMINAL_CENSORED", "LIQUIDATION"] = "NONE"
         case_id: str | None = None
         exit_reason: str | None = None
         terminal = bool(gym_info.get("terminal_settled"))
@@ -778,16 +790,23 @@ class _TeacherResearchHook1m:
 
 
 def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
-                       *, teacher_id: str, exit_variant: str, scenario: str,
-                       window_id: str = "smoke", prepared: tuple[dict[str, Any], Any] | None = None
-                       ) -> dict[str, Any]:
+                       *, teacher_id: str, exit_variant: NativeExitVariant,
+                       scenario: str,
+                       window_id: str = "smoke", prepared: tuple[dict[str, Any], Any] | None = None,
+                       ema_reversal_mode: EmaReversalMode = "EXIT_ONLY_V1",
+                       bounds_override: tuple[int, int, str] | None = None,
+                       seed: int = 20261026,
+                       teacher_override: Any | None = None) -> dict[str, Any]:
     started = monotonic()
     source = doc["source"]
     market = ROOT / source["market_path"]
     marker = ROOT / source["marker_path"]
     imported = json.loads((ROOT / source["import_manifest_path"]).read_text(encoding="utf-8"))
     scope_start, scope_end = imported["start_ns"], imported["end_ns"]
-    start_ns, end_ns, block_id = _window_bounds(doc, window_id)
+    start_ns, end_ns, block_id = (
+        bounds_override if bounds_override is not None
+        else _window_bounds(doc, window_id)
+    )
     reject_protected_monthly_archive_source(market, market_key(doc["market"]["instrument"]))
 
     harness.MARKET = market
@@ -798,7 +817,10 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
     harness.OUT_BASE = output
     harness.FEATURE_PROFILE = "causal_mtf_v5"
     harness.FOLD_ID = doc["protocol_id"]
-    label = f"native-{teacher_id}-{exit_variant}-{scenario}-{block_id}"
+    reversal_suffix = (
+        f"-{ema_reversal_mode}" if teacher_id == "T01_EMA_9_21" else ""
+    )
+    label = f"native-{teacher_id}-{exit_variant}-{scenario}-{block_id}{reversal_suffix}"
     if prepared is None:
         if window_id == "smoke":
             owner = ACTIVE_OWNER.set(doc["protocol_id"])
@@ -830,7 +852,36 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
     if getattr(factory, "quality", None) is None:
         raise RuntimeError("prepared native factory omitted its Train quality receipt")
 
-    teacher = build_teacher_1m(teacher_id, exit_variant=exit_variant)
+    scenario_costs = doc["cost_scenarios"][scenario]
+    round_trip_cost_bps = 2 * (
+        scenario_costs["taker_fee_bps_per_leg"]
+        + scenario_costs["slippage_bps_per_leg"]
+    )
+    exit_round_trip_cost_bps = (
+        round_trip_cost_bps if exit_variant in ("X3", "X4", "X5", "X8") else None
+    )
+    if teacher_override is not None:
+        teacher = teacher_override
+        if getattr(teacher, "expert_id", None) != teacher_id:
+            raise ValueError("teacher override identity differs from the requested teacher id")
+    elif teacher_id in (
+        ROC_COST_HYSTERESIS_TEACHER_ID,
+        ROC_COST_HYSTERESIS_FADE_TEACHER_ID,
+    ):
+        teacher = build_teacher_1m(
+            teacher_id,
+            exit_variant=exit_variant,
+            roc_round_trip_cost_bps=round_trip_cost_bps,
+            exit_round_trip_cost_bps=exit_round_trip_cost_bps,
+        )
+    else:
+        teacher = build_teacher_1m(
+            teacher_id,
+            exit_variant=exit_variant,
+            reversal_mode=ema_reversal_mode if teacher_id == "T01_EMA_9_21"
+            else "EXIT_ONLY_V1",
+            exit_round_trip_cost_bps=exit_round_trip_cost_bps,
+        )
     context = _StreamingVisibleContext(
         factory,
         start_ns=start_ns,
@@ -842,7 +893,7 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
         factory,
         teacher,
         source["marker_sha256"],
-        f"{teacher_id}-{exit_variant}-{scenario}-{block_id}",
+        f"{teacher_id}-{exit_variant}-{scenario}-{block_id}-seed-{seed}",
         market_feature_map=CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES,
     )
     provider.visible_context = context
@@ -867,11 +918,11 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
         factory=factory,
         host_rollout=application.rollout,
         grant=grant,
-        seed=20261026,
+        seed=seed,
         decision_policy=None,
         rollout_id=label,
         episode_steps=episode_steps,
-        reset_options={"rles_episode_index": 20261026},
+        reset_options={"rles_episode_index": seed},
         teacher_funnel_hook=hook,
     )
     if len(barriers) != episode_steps:
@@ -905,6 +956,8 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
                    else "ENGINEERING_RESEARCH_BLOCK_PASS_SCENARIO_ONLY"),
         "protocol_id": doc["protocol_id"],
         "preregistration_sha256": prereg_sha,
+        "verified_feature_recipe_path": str(FEATURE_RECIPE),
+        "verified_feature_recipe_sha256": doc["feature_recipe"]["sha256"],
         "teacher": teacher_id,
         "teacher_recipe": {
             "indicator_recipe_id": teacher.recipe.indicator_recipe_id,
@@ -912,11 +965,13 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
             "entry_rule_id": teacher.recipe.entry_rule_id,
             "exit_variant": exit_variant,
             "exit_policy_id": teacher.recipe.indicator_exit_rule_id,
+            "ema_reversal_mode": getattr(teacher, "reversal_mode", None),
             "higher_timeframe_mode": teacher.recipe.htf_mode,
             "target_exposure": teacher.recipe.target_exposure,
         },
         "execution": {
             "scenario": scenario,
+            "seed": seed,
             "scenario_costs": doc["cost_scenarios"][scenario],
             "starting_balance": doc["native_execution_template"]["starting_balance"],
             "risk_budget_notional": doc["native_execution_template"]["risk_budget_notional"],
@@ -984,20 +1039,44 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--teacher", choices=TEACHERS, default="T01_EMA_9_21")
-    parser.add_argument("--exit", choices=("X1", "X2"), default="X1")
+    parser.add_argument(
+        "--exit", choices=("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8"), default="X1",
+    )
+    parser.add_argument(
+        "--ema-reversal-mode",
+        choices=("EXIT_ONLY_V1", "REVERSE_AFTER_FLAT_V1"),
+        default="EXIT_ONLY_V1",
+    )
     parser.add_argument("--scenario", choices=("base", "stress"), default="base")
     parser.add_argument("--window", choices=WINDOW_IDS, default="smoke")
     parser.add_argument("--prereg", type=Path, default=ROOT_DEFAULT_PREREG)
+    parser.add_argument(
+        "--feature-recipe-override",
+        type=Path,
+        help="alternate immutable snapshot; its bytes must match the preregistered SHA-256",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--dry-validate-source", action="store_true")
     args = parser.parse_args(argv)
     if args.output.exists():
         raise FileExistsError(f"immutable S06 output already exists: {args.output}")
-    doc, prereg_sha = verify_preregistration(args.prereg)
+    recipe_override = args.feature_recipe_override
+    if recipe_override is not None and not recipe_override.is_absolute():
+        recipe_override = ROOT / recipe_override
+    if recipe_override is not None:
+        recipe_override = recipe_override.resolve()
+    doc, prereg_sha = verify_preregistration(
+        args.prereg, feature_recipe_override=recipe_override,
+    )
+    global FEATURE_RECIPE
+    FEATURE_RECIPE = recipe_override or (ROOT / doc["feature_recipe"]["path"])
     if args.teacher not in TEACHERS:
         parser.error("unsupported teacher id")
     if args.scenario not in doc["cost_scenarios"]:
         parser.error("scenario is not frozen by the pre-registration")
+    if (args.ema_reversal_mode == "REVERSE_AFTER_FLAT_V1"
+            and (args.teacher != "T01_EMA_9_21" or args.exit != "X1")):
+        parser.error("reverse-after-flat mode only applies to EMA/X1")
     args.output.mkdir(parents=True)
     try:
         if args.dry_validate_source:
@@ -1017,8 +1096,10 @@ def main(argv: list[str] | None = None) -> int:
         else:
             report = _run_native_window(
                 doc, prereg_sha, args.output,
-                teacher_id=args.teacher, exit_variant=args.exit, scenario=args.scenario,
+                teacher_id=args.teacher, exit_variant=cast(NativeExitVariant, args.exit),
+                scenario=args.scenario,
                 window_id=args.window,
+                ema_reversal_mode=cast(EmaReversalMode, args.ema_reversal_mode),
             )
             print(json.dumps({
                 "report": str(args.output / ("native-smoke.json" if args.window == "smoke"

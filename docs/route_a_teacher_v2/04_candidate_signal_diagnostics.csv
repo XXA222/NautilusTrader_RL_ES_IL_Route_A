@@ -1,0 +1,7 @@
+block,ready_bars,baseline_entries,candidate_id,events,long,short,mean_confirmation_delay_bars,margin_vetoes
+inner-screen-1,41757,3258,ROC2_CONFIRM_REARM2_V1,1571,843,728,1.0,0
+inner-screen-1,41757,3258,ROC2_CONFIRM_ATR_MARGIN025_V1,1434,767,667,1.0,215
+inner-screen-2,44637,3466,ROC2_CONFIRM_REARM2_V1,1750,881,869,1.0,0
+inner-screen-2,44637,3466,ROC2_CONFIRM_ATR_MARGIN025_V1,1603,805,798,1.0,230
+inner-screen-3,20158,1586,ROC2_CONFIRM_REARM2_V1,751,400,351,1.0,0
+inner-screen-3,20158,1586,ROC2_CONFIRM_ATR_MARGIN025_V1,693,363,330,1.0,96

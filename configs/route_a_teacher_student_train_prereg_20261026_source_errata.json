@@ -1,0 +1,162 @@
+{
+  "acceptance_rules_unchanged": true,
+  "acquisition_failure_receipt": "data/routea_teacher_warmup_20261023_20261024/IMPORT_FAILED.json",
+  "code_sha256_overrides": {
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/base.py": "d70bb785ae38904f46e0f8eb5ce74de6fe7c83a53f73f13c6bac9a5fd53f3159",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/contracts.py": "b3ec7ee4d5b9431e8266914bff892336debad0457b8865fbc8b10ec57fa41b03",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/exits.py": "c824bfadbbdbc68cc5f28b8366d2903bd0827118efb1126403a9997ce2dfaefa",
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/registry.py": "87e497970e98b3dd0f26004b5e57aa57d3c9e42bf767821e84edea4893294317"
+  },
+  "correction_reason": "Use exact date-bounded USD-M funding requests for each staged source so no monthly archive outside the registered span is opened. The direct funding REST transport timed out after the registered daily market archives had been acquired; the same exact /fapi/v1/fundingRate query was captured through Binance's read-only USD-M funding-history connector and hash-bound as a canonical JSON payload. The first source-independent scaler attempt exposed that causal_mtf_v5's one-day return needs two completed daily aggregates, which cannot be fit wholly inside this preregistered two-day unscored warmup. Before any economic outcome was observed, the execution feature profile is therefore corrected to causal_mtf_v4; no frozen teacher requires the removed one-day-return observation. Its future-funding countdown uses the already frozen 8-hour settlement schedule and the registered funding timestamp tolerance. Freeze the acquisition transport, the two-day scaler warmup import, and one complete source import per teacher window with two causal days of market warmup. Staging permits a window to run after its final daily archive is published without scoring partial windows. The registered source range, candidate matrix, window dates, costs, and acceptance rule are unchanged; no economic outcome has been observed. Before the first scored teacher window and after the unscored warmup only, the X2 ATR exit path was corrected to advance the current teacher indicator snapshot before returning; this prevents a later entry decision from comparing against a stale pre-exit bar. The candidate matrix, signal thresholds, costs, source scope, and acceptance rules are unchanged, and no economic outcome has been observed. A source-independent integrity audit found that native-run resume and summary checks keyed rows by teacher family but did not compare the exact exit/reversal recipe, allowing a stale or misplaced X1/X7 or EMA-reversal artifact to be misattributed. The runner now verifies serialized teacher_recipe identity on resume and summary and validates the complete active slot key set. This is an execution-evidence integrity repair only; candidates, thresholds, source dates, window roles, seeds, controls, costs, and acceptance rules are unchanged. No market payload or economic outcome was read. Before any fresh teacher window was scored, a source-scope review found that the active cost-aware ROC candidate module was not bound by either the parent code manifest or the runtime code map. Its exact current bytes are now bound in the existing runtime_code_sha256 map. The same pre-score source correction clears its profit-lock rearm latch on a new episode while retaining the latch across within-episode data gaps; this prevents stale state from suppressing a valid new episode entry. Candidate thresholds, exit recipe, source dates and roles, costs, seeds, controls, and acceptance rules are unchanged. No new market payload or economic outcome was read. Before any scored teacher-window outcome, BaseTeacher1m was also corrected to reset rolling teacher and exit state whenever source_id changes, even when episode_id is unchanged. Otherwise a new source's first snapshot could be compared with the previous source and create a cross-source signal. A focused synthetic regression covers the false EMA cross and the next within-source cross. No market payload, candidate recipe, threshold, window role, cost, seed, control, or acceptance rule changed. The same lifecycle fix resets state when fold_id changes inside an unchanged episode and source, preventing rolling features and exit state from crossing Train/evaluation fold boundaries. Focused regressions cover both source and fold switches. No market payload, candidate recipe, threshold, window role, cost, seed, control, or acceptance rule changed. Before any scored teacher-window outcome, X3/X8 ATR exit re-arming after a native average-entry-price change was corrected to avoid attributing the whole completed bar high/low to the updated position basis. That bar's extreme may precede a partial fill, so the revised basis starts from the observed close; subsequent bars resume normal high/low tracking. This does not alter thresholds, costs, candidate recipes, source scope, roles, seeds, controls, or acceptance rules. Before the first fresh teacher-window score, a source-only lifecycle audit found that X2 initialized its first observed open-position ATR extreme from the completed bar high/low, which can predate the native fill and create a false early exit. X2 now initializes that first observed trail from the completed close; thresholds, candidate recipes, source dates and roles, costs, seeds, controls, and qualification rules are unchanged. Long/short synthetic regressions cover the false-exit path; no market payload or economic outcome was read. A follow-up source audit found the same pre-fill-extreme risk in X3 and X8 when a position was first observed, rather than only when the native average entry price changed. Both paths now initialize from the completed close, so X3 cannot pre-activate its cost lock and X8 cannot pre-handoff past its ATR protection based on pre-fill prices. Long/short synthetic regressions cover both policies; no market payload or economic outcome was read. A follow-up lifecycle audit found that initializing X2/X8 from close alone could defer an already-breached first-bar ATR stop. Their first observed trail now anchors to the native average open price and completed close, excludes pre-fill high/low, and checks the close against the stop immediately. The existing Base/Stress recipes and thresholds are unchanged; long/short regressions cover first-bar adverse exits. No market payload or economic outcome was read. X6 shares the same AtrTrailingExit implementation as X2 and inherits the first-bar native-basis stop behavior; its opposite-consensus rearm rule is unchanged. X3's first observed or newly changed position basis now uses only native average entry and completed close: a qualifying favorable close can activate the frozen profit lock immediately, while pre-fill bar high/low remains excluded. X4/X5 inherit the same X3 path; all thresholds and costs remain unchanged. Before opening a new position, ATR-backed exit variants now require their complete OHLC/ATR snapshot; if those inputs disappear while a position is open the teacher raises explicitly instead of silently omitting the registered exit. This is fail-closed data handling; recipes, thresholds and costs are unchanged, and no market payload or economic result was read. Before the first scored window, a focused synthetic lifecycle regression showed that a rejected EMA reversal close discarded its pending reverse candidate; since the cross is edge-triggered, the teacher then held the old side indefinitely. The candidate now survives terminal close rejection, drops only the failed order identity, and retries the close on the next legal 1m bar. Re-entry still requires the existing native full-fill, flat-account, no-pending-order proof and happens at most once. Focused lifecycle tests cover the retry and symmetric existing long/short flows. No market payload, outcome, recipe, threshold, source scope, window role, cost, control, seed, or acceptance rule changed. A source-independent X2 lifecycle audit also found that the first fresh, completed bar after a missing-minute gap returned MISSING_BAR before evaluating the retained ATR stop. A stop breach on that bar could be missed if price recovered by the following bar. The teacher now evaluates its unchanged ATR exit against that observable bar while resetting only indicator continuity; it does not synthesize missing bars or discard the previously ratcheted protective price. Missing ATR inputs still fail explicitly while a position is open. Symmetric long/short regression tests cover the gap-bar stop. No recipe, threshold, cost, source scope, window role, control, seed, or acceptance criterion changed. Dependency-following MyPy then found callback annotations narrower than the native Gym Mapping contract and an overly narrow TrendTeacher parameter. Those annotations were corrected without changing execution behavior, teacher recipes, data scope, costs, or acceptance rules.",
+  "cost_scenarios": {
+    "base": {
+      "slippage_bps_per_leg": 1,
+      "taker_fee_bps_per_leg": 5
+    },
+    "stress": {
+      "slippage_bps_per_leg": 5,
+      "taker_fee_bps_per_leg": 10
+    }
+  },
+  "feature_profile": "causal_mtf_v4",
+  "funding_by_month": {
+    "2026-10": {
+      "end_utc_inclusive": "2026-10-31T23:59:59.999Z",
+      "method": "USD-M /fapi/v1/fundingRate",
+      "start_utc_inclusive": "2026-10-23T00:00:00Z"
+    },
+    "2026-11": {
+      "end_utc_inclusive": "2026-11-29T23:59:59.999Z",
+      "method": "USD-M /fapi/v1/fundingRate",
+      "start_utc_inclusive": "2026-11-01T00:00:00Z"
+    }
+  },
+  "funding_calendar_mode": "known_schedule_times_ns_equals_frozen_8h_settlement_times_ns",
+  "funding_capture": {
+    "endpoint": "https://fapi.binance.com/fapi/v1/fundingRate",
+    "fallback_capture_method": "binance_mcp_get_futures_usds_funding_rate_history",
+    "fallback_payload_schema": "rles.binance-funding-api-mcp-payload.v1",
+    "payload_sha256_semantics": "SHA-256 of the canonical UTF-8 JSON array of returned funding rows; the connector preserves field values but not upstream HTTP whitespace.",
+    "warmup_receipt_sha256": "89ef387d1531f3bd5004af42a68a53bd3133e0895d40044f3393b10b7e910519",
+    "warmup_response_sha256": "f2491249c66b3a531902ab335eaa40ba2d3f9345f49000faedb8bbad2c4bab84"
+  },
+  "import_invocation": {
+    "archive_interval": "daily",
+    "development_access_key": "access:route-a-teacher-student-train-20261023-20261130-v1",
+    "development_protocol_sha256": "e7f795fce9f8539e58085f6bd85449f96edb53324cebcbb6380dec47c8d38aca",
+    "end_day_inclusive": "2026-11-29",
+    "funding_api_months": [
+      "2026-10",
+      "2026-11"
+    ],
+    "module": "rles_data.binance_archive",
+    "output": "data/routea_teacher_train_20261023_20261129",
+    "start_day": "2026-10-23"
+  },
+  "importer_sha256": "06ce56358ca04bb4b22209e99328b6149a234ca67302b97ee090fca072ba2259",
+  "market_data_read": true,
+  "native_execution_template": {
+    "path": "configs/ethusdt_20240101_real.json",
+    "sha256": "06eefad402a5f37c47e10ab2ed64eac68769446e9ff70091e23c482065edc948"
+  },
+  "outcomes_observed": false,
+  "physical_scope_guard": "All daily market and bounded REST funding spans must fit the exact pre-registered development interval. Any other development read or any Test/Holdout interval blocks the import before network IO.",
+  "protocol_id": "route-a-teacher-student-train-20261023-20261130-v1",
+  "runtime_code_sha256": {
+    "packages/route_a_imitation/src/rles_route_a/teachers_1m/roc_hysteresis.py": "85c17057c0ab9e0dca98f18c7dfed021ffda1bdd135c5d8bd8ed9e8dc0d94f23",
+    "qa/run_route_a_1m_teacher_native.py": "7c05ec8fd5b37693b72f3139e94db3801480e99cac6e1312469bdcf8f153e3d8",
+    "qa/run_route_a_teacher_student_train_screen_20261026.py": "07a6aa9d4eabddf71bf43f48921310e791d97c06767e2a488887193bb21527ce",
+    "qa/run_route_a_train_student_screen_20261020.py": "4c085e8cceed314eec4b8e15037e090d5564081d2dd302a62e2ee5d43b8b4b9f",
+    "qa/validate_route_a_teacher_student_prereg_20261026.py": "4d3783d935e0701a7aaa829ca34fa3c56efca2a369d25680d83116c6c10e3f53"
+  },
+  "schema": "rles.route-a.teacher-student-fresh-train-source-errata.v1",
+  "source_scope_unchanged": {
+    "end_utc_exclusive": "2026-11-30T00:00:00Z",
+    "scored_start_utc_inclusive": "2026-10-25T00:00:00Z",
+    "start_utc_inclusive": "2026-10-23T00:00:00Z"
+  },
+  "status": "source_acquisition_amended_after_transport_failure_before_economic_outcomes",
+  "student_training_started": false,
+  "supersedes_prereg_sha256": "e7f795fce9f8539e58085f6bd85449f96edb53324cebcbb6380dec47c8d38aca",
+  "supersedes_previous_errata_sha256": "6743c33edd423ded4cb130aa2fd0784d9f52386d8164fe17222b5bd77a6fe4d6",
+  "teacher_execution_scope": {
+    "additional_frozen_candidates": [
+      {
+        "exit_variant": "X1",
+        "reversal_mode": "EXIT_ONLY_V1",
+        "teacher_id": "T02_ROC_20_60_COST_HYSTERESIS_V1"
+      },
+      {
+        "exit_variant": "X7",
+        "reversal_mode": "EXIT_ONLY_V1",
+        "teacher_id": "T02_ROC_20_60_COST_HYSTERESIS_V1"
+      }
+    ],
+    "excluded_teacher_ids": [
+      "T05_MACD_12_26_9",
+      "T06_RSI_14",
+      "T07_BOLL_20_2",
+      "T08_PULLBACK_1M"
+    ],
+    "included_teacher_ids": [
+      "T01_EMA_9_21",
+      "T02_ROC_20_60",
+      "T02_ROC_20_60_COST_HYSTERESIS_V1",
+      "T03_DONCHIAN_20",
+      "T04_ZSCORE_60"
+    ],
+    "reason": "The active task limits development to EMA, ROC, Donchian, and Z-score. Include the already frozen F04 combined cost-aware/hysteresis ROC X1 candidate alongside legacy ROC for the required same-window comparison; its thresholds are unchanged and its round-trip cost is bound to each registered scenario. Also include the frozen X7 EMA-cross-age 21-60-minute entry variant for comparison against that same cost-aware X1 baseline. X7 improved net return and drawdown in all six consumed S06 Base/Stress development pairs, but every chain remained negative; this is candidate selection evidence only and not independent validation or profitability evidence. T05-T08 remain excluded. Source dates, seeds, controls, costs, and per-candidate acceptance rules are unchanged.",
+    "scored_teacher_outcomes_observed": false
+  },
+  "teacher_window_imports": [
+    {
+      "end_day_inclusive": "2026-10-29",
+      "funding_api_months": [
+        "2026-10"
+      ],
+      "output": "data/routea_teacher_train_window0_20261023_20261029",
+      "start_day": "2026-10-23",
+      "window_index": 0
+    },
+    {
+      "end_day_inclusive": "2026-11-03",
+      "funding_api_months": [
+        "2026-10",
+        "2026-11"
+      ],
+      "output": "data/routea_teacher_train_window1_20261028_20261103",
+      "start_day": "2026-10-28",
+      "window_index": 1
+    },
+    {
+      "end_day_inclusive": "2026-11-08",
+      "funding_api_months": [
+        "2026-11"
+      ],
+      "output": "data/routea_teacher_train_window2_20261102_20261108",
+      "start_day": "2026-11-02",
+      "window_index": 2
+    },
+    {
+      "end_day_inclusive": "2026-11-13",
+      "funding_api_months": [
+        "2026-11"
+      ],
+      "output": "data/routea_teacher_train_window3_20261107_20261113",
+      "start_day": "2026-11-07",
+      "window_index": 3
+    }
+  ],
+  "warmup_scaler_fit_window_utc": [
+    "2026-10-23T02:02:00Z",
+    "2026-10-25T00:00:00Z"
+  ],
+  "warmup_scaler_import": {
+    "end_day_inclusive": "2026-10-24",
+    "funding_api_months": [
+      "2026-10"
+    ],
+    "output": "data/routea_teacher_warmup_20261023_20261024",
+    "start_day": "2026-10-23"
+  }
+}

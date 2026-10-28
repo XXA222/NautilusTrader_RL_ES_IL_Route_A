@@ -1,0 +1,95 @@
+{
+  "account_replay_run": false,
+  "blocks": [
+    {
+      "baseline_entries": 3258,
+      "baseline_long": 1741,
+      "baseline_short": 1517,
+      "block": "inner-screen-1",
+      "candidates": {
+        "ROC2_CONFIRM_ATR_MARGIN025_V1": {
+          "events": 1434,
+          "long": 767,
+          "margin_vetoes": 215,
+          "mean_confirmation_delay_bars": 1.0,
+          "short": 667
+        },
+        "ROC2_CONFIRM_REARM2_V1": {
+          "events": 1571,
+          "long": 843,
+          "margin_vetoes": 0,
+          "mean_confirmation_delay_bars": 1.0,
+          "short": 728
+        }
+      },
+      "ready_bars": 41757
+    },
+    {
+      "baseline_entries": 3466,
+      "baseline_long": 1752,
+      "baseline_short": 1714,
+      "block": "inner-screen-2",
+      "candidates": {
+        "ROC2_CONFIRM_ATR_MARGIN025_V1": {
+          "events": 1603,
+          "long": 805,
+          "margin_vetoes": 230,
+          "mean_confirmation_delay_bars": 1.0,
+          "short": 798
+        },
+        "ROC2_CONFIRM_REARM2_V1": {
+          "events": 1750,
+          "long": 881,
+          "margin_vetoes": 0,
+          "mean_confirmation_delay_bars": 1.0,
+          "short": 869
+        }
+      },
+      "ready_bars": 44637
+    },
+    {
+      "baseline_entries": 1586,
+      "baseline_long": 850,
+      "baseline_short": 736,
+      "block": "inner-screen-3",
+      "candidates": {
+        "ROC2_CONFIRM_ATR_MARGIN025_V1": {
+          "events": 693,
+          "long": 363,
+          "margin_vetoes": 96,
+          "mean_confirmation_delay_bars": 1.0,
+          "short": 330
+        },
+        "ROC2_CONFIRM_REARM2_V1": {
+          "events": 751,
+          "long": 400,
+          "margin_vetoes": 0,
+          "mean_confirmation_delay_bars": 1.0,
+          "short": 351
+        }
+      },
+      "ready_bars": 20158
+    }
+  ],
+  "economic_status": "D1_DIAGNOSTIC_ONLY",
+  "market_archive_read": false,
+  "scope": "consumed D1 T02 ROC/X1/Base signal-count diagnostic only",
+  "totals": {
+    "baseline_entries": 8310,
+    "candidates": {
+      "ROC2_CONFIRM_ATR_MARGIN025_V1": {
+        "events": 3730,
+        "long": 1935,
+        "margin_vetoes": 541,
+        "short": 1795
+      },
+      "ROC2_CONFIRM_REARM2_V1": {
+        "events": 4072,
+        "long": 2124,
+        "margin_vetoes": 0,
+        "short": 1948
+      }
+    },
+    "ready_bars": 106552
+  }
+}

@@ -1,0 +1,3535 @@
+{
+  "controls": [
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10113.96337397, \"equity_start\": 10000.0, \"fees\": 0.3819272, \"fill_count\": 11, \"funding\": -3.9716888200000007, \"liquidations\": 0, \"max_drawdown\": 0.0023862944145330856, \"net_return\": 0.01139633739693835, \"slippage_cost\": 0.0775, \"turnover_ratio\": 0.07591604635466692}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.38192719999999997,
+      "funding": -3.97168882,
+      "inferred_gross": 118.39448999000025,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_LONG/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 0.0775,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10113.27511344, \"equity_start\": 10000.0, \"fees\": 0.76380773, \"fill_count\": 11, \"funding\": -3.9716888200000007, \"liquidations\": 0, \"max_drawdown\": 0.002386385588339812, \"net_return\": 0.011327511343962815, \"slippage_cost\": 0.38388, \"turnover_ratio\": 0.07591344568831435}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.76380773,
+      "funding": -3.97168882,
+      "inferred_gross": 118.3944899900005,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_LONG/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 0.38388,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10024.26721504, \"equity_start\": 10000.0, \"fees\": 0.42949030999999993, \"fill_count\": 15, \"funding\": -9.521544650000001, \"liquidations\": 0, \"max_drawdown\": 0.008584991957756527, \"net_return\": 0.0024267215040216783, \"slippage_cost\": 0.08706999999999998, \"turnover_ratio\": 0.08579630466734109}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.42949031,
+      "funding": -9.52154465,
+      "inferred_gross": 34.305319999999426,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_LONG/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 0.08707,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10023.49396816, \"equity_start\": 10000.0, \"fees\": 0.8589671799999999, \"fill_count\": 15, \"funding\": -9.521544650000001, \"liquidations\": 0, \"max_drawdown\": 0.008591187653612664, \"net_return\": 0.0023493968160244183, \"slippage_cost\": 0.43084, \"turnover_ratio\": 0.08579759909709098}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.8589671799999999,
+      "funding": -9.52154465,
+      "inferred_gross": 34.305319990000804,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_LONG/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 0.43084,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9959.01459024, \"equity_start\": 10000.0, \"fees\": 0.3653046, \"fill_count\": 9, \"funding\": -1.5412651599999998, \"liquidations\": 0, \"max_drawdown\": 0.007686299647923223, \"net_return\": -0.0040985409759805025, \"slippage_cost\": 0.07409, \"turnover_ratio\": 0.07323087187203121}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.3653046,
+      "funding": -1.54126516,
+      "inferred_gross": -39.00475000000004,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_LONG/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 0.07409,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9958.35684976, \"equity_start\": 10000.0, \"fees\": 0.73062508, \"fill_count\": 9, \"funding\": -1.5412651599999998, \"liquidations\": 0, \"max_drawdown\": 0.007692446864515423, \"net_return\": -0.004164315023992948, \"slippage_cost\": 0.36651, \"turnover_ratio\": 0.07323412301119356}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.73062508,
+      "funding": -1.54126516,
+      "inferred_gross": -39.004749999999156,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_LONG/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 0.36651,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9886.54737967, \"equity_start\": 10000.0, \"fees\": 0.35791257, \"fill_count\": 9, \"funding\": 3.93559223, \"liquidations\": 0, \"max_drawdown\": 0.013445098719193083, \"net_return\": -0.011345262033006898, \"slippage_cost\": 0.07237999999999999, \"turnover_ratio\": 0.07200321249306421}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.35791257,
+      "funding": 3.93559223,
+      "inferred_gross": -116.95791998999927,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_SHORT/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 0.07238,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9885.90220092, \"equity_start\": 10000.0, \"fees\": 0.71587132, \"fill_count\": 9, \"funding\": 3.93559223, \"liquidations\": 0, \"max_drawdown\": 0.01345704259147762, \"net_return\": -0.011409779908007955, \"slippage_cost\": 0.3595999999999999, \"turnover_ratio\": 0.07200966454499726}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.71587132,
+      "funding": 3.93559223,
+      "inferred_gross": -116.95791999000018,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_SHORT/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 0.3596,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9976.13492829, \"equity_start\": 10000.0, \"fees\": 0.4012115500000001, \"fill_count\": 12, \"funding\": 9.491469850000007, \"liquidations\": 0, \"max_drawdown\": 0.006768115009840203, \"net_return\": -0.0023865071709910923, \"slippage_cost\": 0.08131000000000001, \"turnover_ratio\": 0.0803597736498161}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.40121155000000003,
+      "funding": 9.49146985,
+      "inferred_gross": -32.87402001000085,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_SHORT/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 0.08131,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9975.3944919, \"equity_start\": 10000.0, \"fees\": 0.8024179599999999, \"fill_count\": 12, \"funding\": 9.491469850000007, \"liquidations\": 0, \"max_drawdown\": 0.006774160029772824, \"net_return\": -0.0024605508099879714, \"slippage_cost\": 0.40241, \"turnover_ratio\": 0.08036145777015044}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.80241796,
+      "funding": 9.49146985,
+      "inferred_gross": -32.892149989999496,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_SHORT/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 0.40241,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10040.24803326, \"equity_start\": 10000.0, \"fees\": 0.36839324, \"fill_count\": 9, \"funding\": 1.54315649, \"liquidations\": 0, \"max_drawdown\": 0.004430831966422022, \"net_return\": 0.0040248033259902005, \"slippage_cost\": 0.07473, \"turnover_ratio\": 0.07350859426166137}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.36839324,
+      "funding": 1.54315649,
+      "inferred_gross": 39.14800001000074,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_SHORT/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 0.07473,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10039.58476595, \"equity_start\": 10000.0, \"fees\": 0.73677054, \"fill_count\": 9, \"funding\": 1.54315649, \"liquidations\": 0, \"max_drawdown\": 0.004432898125096063, \"net_return\": 0.003958476594980054, \"slippage_cost\": 0.36962000000000006, \"turnover_ratio\": 0.07350866859610597}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.73677054,
+      "funding": 1.54315649,
+      "inferred_gross": 39.14799999999956,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FIXED_SHORT/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 0.36962,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10000.0, \"equity_start\": 10000.0, \"fees\": 0.0, \"fill_count\": 0, \"funding\": 0.0, \"liquidations\": 0, \"max_drawdown\": 0.0, \"net_return\": 0.0, \"slippage_cost\": 0.0, \"turnover_ratio\": 0.0}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.0,
+      "funding": 0.0,
+      "inferred_gross": 0.0,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FLAT/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 0.0,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10000.0, \"equity_start\": 10000.0, \"fees\": 0.0, \"fill_count\": 0, \"funding\": 0.0, \"liquidations\": 0, \"max_drawdown\": 0.0, \"net_return\": 0.0, \"slippage_cost\": 0.0, \"turnover_ratio\": 0.0}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.0,
+      "funding": 0.0,
+      "inferred_gross": 0.0,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FLAT/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 0.0,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10000.0, \"equity_start\": 10000.0, \"fees\": 0.0, \"fill_count\": 0, \"funding\": 0.0, \"liquidations\": 0, \"max_drawdown\": 0.0, \"net_return\": 0.0, \"slippage_cost\": 0.0, \"turnover_ratio\": 0.0}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.0,
+      "funding": 0.0,
+      "inferred_gross": 0.0,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FLAT/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 0.0,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10000.0, \"equity_start\": 10000.0, \"fees\": 0.0, \"fill_count\": 0, \"funding\": 0.0, \"liquidations\": 0, \"max_drawdown\": 0.0, \"net_return\": 0.0, \"slippage_cost\": 0.0, \"turnover_ratio\": 0.0}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.0,
+      "funding": 0.0,
+      "inferred_gross": 0.0,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FLAT/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 0.0,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10000.0, \"equity_start\": 10000.0, \"fees\": 0.0, \"fill_count\": 0, \"funding\": 0.0, \"liquidations\": 0, \"max_drawdown\": 0.0, \"net_return\": 0.0, \"slippage_cost\": 0.0, \"turnover_ratio\": 0.0}",
+      "block": "base",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.0,
+      "funding": 0.0,
+      "inferred_gross": 0.0,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FLAT/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 0.0,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 10000.0, \"equity_start\": 10000.0, \"fees\": 0.0, \"fill_count\": 0, \"funding\": 0.0, \"liquidations\": 0, \"max_drawdown\": 0.0, \"net_return\": 0.0, \"slippage_cost\": 0.0, \"turnover_ratio\": 0.0}",
+      "block": "stress",
+      "control": "controls",
+      "exit": "",
+      "fees": 0.0,
+      "funding": 0.0,
+      "inferred_gross": 0.0,
+      "path": ".artifacts/research_1m_4teachers_v1/native/controls/FLAT/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 0.0,
+      "teacher": ""
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9767.46944106, \"equity_start\": 10000.0, \"fees\": 243.1903754599997, \"fill_count\": 1956, \"funding\": -1.71224348, \"liquidations\": 0, \"max_drawdown\": 0.024260459679432023, \"net_return\": -0.023253055894006835, \"slippage_cost\": 49.6025500000002, \"turnover_ratio\": 49.270676656114226}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 243.19037546,
+      "funding": -1.71224348,
+      "inferred_gross": 61.974610000000474,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 49.60255,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9329.5126783, \"equity_start\": 10000.0, \"fees\": 486.3805182200002, \"fill_count\": 1959, \"funding\": -1.71224348, \"liquidations\": 0, \"max_drawdown\": 0.06720130414201142, \"net_return\": -0.0670487321700114, \"slippage_cost\": 244.15239000000258, \"turnover_ratio\": 50.40560758346455}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 486.38051822,
+      "funding": -1.71224348,
+      "inferred_gross": 61.7578299999996,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 244.15239,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9669.22459339, \"equity_start\": 10000.0, \"fees\": 272.47796289999997, \"fill_count\": 2196, \"funding\": -3.6591237099999994, \"liquidations\": 0, \"max_drawdown\": 0.03328526453532632, \"net_return\": -0.03307754066101176, \"slippage_cost\": 55.29254999999973, \"turnover_ratio\": 55.38251049665808}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 272.4779629,
+      "funding": -3.6591237100000003,
+      "inferred_gross": 0.6542299999994485,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 55.29255,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9179.1724555, \"equity_start\": 10000.0, \"fees\": 544.9562429600005, \"fill_count\": 2401, \"funding\": -3.6099815399999997, \"liquidations\": 0, \"max_drawdown\": 0.08223758717972496, \"net_return\": -0.08208275444998059, \"slippage_cost\": 273.23024999999905, \"turnover_ratio\": 56.82684371764154}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 544.95624296,
+      "funding": -3.60998154,
+      "inferred_gross": 0.9689300000001357,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 273.23025,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9798.75007085, \"equity_start\": 10000.0, \"fees\": 113.69240975999995, \"fill_count\": 916, \"funding\": -0.8199993900000001, \"liquidations\": 0, \"max_drawdown\": 0.020826685472740913, \"net_return\": -0.02012499291500769, \"slippage_cost\": 23.107870000000098, \"turnover_ratio\": 22.962890525071867}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 113.69240976,
+      "funding": -0.81999939,
+      "inferred_gross": -63.62965000000076,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 23.10787,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9594.14287501, \"equity_start\": 10000.0, \"fees\": 227.3848456000003, \"fill_count\": 916, \"funding\": -0.8199993900000001, \"liquidations\": 0, \"max_drawdown\": 0.04079831231699782, \"net_return\": -0.04058571249899723, \"slippage_cost\": 114.02263000000038, \"turnover_ratio\": 23.204557059963975}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 227.3848456,
+      "funding": -0.81999939,
+      "inferred_gross": -63.629649999999636,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 114.02263,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9621.93031563, \"equity_start\": 10000.0, \"fees\": 333.1645610700003, \"fill_count\": 2680, \"funding\": -1.9349233000000001, \"liquidations\": 0, \"max_drawdown\": 0.03802303137997087, \"net_return\": -0.03780696843699949, \"slippage_cost\": 67.94302999999938, \"turnover_ratio\": 67.89252361187745}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 333.16456107,
+      "funding": -1.9349233,
+      "inferred_gross": 24.9728299999993,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 67.94303,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9021.81329159, \"equity_start\": 10000.0, \"fees\": 666.3284178100037, \"fill_count\": 3445, \"funding\": -1.6547806, \"liquidations\": 0, \"max_drawdown\": 0.09783084677299614, \"net_return\": -0.0978186708409966, \"slippage_cost\": 334.4715099999958, \"turnover_ratio\": 70.08248710590006}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 666.32841781,
+      "funding": -1.6547806,
+      "inferred_gross": 24.26800000000056,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 334.47151,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9608.44826188, \"equity_start\": 10000.0, \"fees\": 336.23508085000003, \"fill_count\": 2710, \"funding\": -4.98363727, \"liquidations\": 0, \"max_drawdown\": 0.039468935630861623, \"net_return\": -0.03915517381198785, \"slippage_cost\": 68.22519000000003, \"turnover_ratio\": 68.53347917035585}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 336.23508085,
+      "funding": -4.98363727,
+      "inferred_gross": 17.892169999999307,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 68.22519,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9004.12712729, \"equity_start\": 10000.0, \"fees\": 672.470687459999, \"fill_count\": 3716, \"funding\": -4.66626525, \"liquidations\": 0, \"max_drawdown\": 0.09969508946331229, \"net_return\": -0.0995872872710104, \"slippage_cost\": 337.17423999999335, \"turnover_ratio\": 70.77041092864654}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 672.47068746,
+      "funding": -4.66626525,
+      "inferred_gross": 18.43831999999943,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 337.17424,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9802.26928446, \"equity_start\": 10000.0, \"fees\": 142.00779921999992, \"fill_count\": 1144, \"funding\": -0.9188163200000001, \"liquidations\": 0, \"max_drawdown\": 0.020766683833170596, \"net_return\": -0.019773071553997323, \"slippage_cost\": 28.866580000000052, \"turnover_ratio\": 28.69911122158724}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 142.00779922,
+      "funding": -0.91881632,
+      "inferred_gross": -25.937519999999427,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 28.86658,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9546.70710206, \"equity_start\": 10000.0, \"fees\": 284.0156216199999, \"fill_count\": 1144, \"funding\": -0.9188163200000001, \"liquidations\": 0, \"max_drawdown\": 0.04595528677399485, \"net_return\": -0.04532928979399431, \"slippage_cost\": 142.42094000000048, \"turnover_ratio\": 29.078314608773127}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 284.01562162,
+      "funding": -0.91881632,
+      "inferred_gross": -25.937520000000337,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T01_EMA_9_21/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 142.42094,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9101.8426574, \"equity_start\": 10000.0, \"fees\": 810.073800719997, \"fill_count\": 7435, \"funding\": -2.0231618800000004, \"liquidations\": 0, \"max_drawdown\": 0.08988188609299708, \"net_return\": -0.089815734259997, \"slippage_cost\": 165.21190000000004, \"turnover_ratio\": 169.91680268172968}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 810.07380072,
+      "funding": -2.02316188,
+      "inferred_gross": 79.15152000000046,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 165.21189999999999,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 7654.0454092, \"equity_start\": 10000.0, \"fees\": 1599.648800819994, \"fill_count\": 11273, \"funding\": -1.36786998, \"liquidations\": 0, \"max_drawdown\": 0.23459545908000023, \"net_return\": -0.23459545908000023, \"slippage_cost\": 802.9982099999858, \"turnover_ratio\": 182.39613630150373}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 1599.64880082,
+      "funding": -1.36786998,
+      "inferred_gross": 58.060289999999874,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 802.99821,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8987.36425624, \"equity_start\": 10000.0, \"fees\": 860.1564226500011, \"fill_count\": 8415, \"funding\": -5.107921110000001, \"liquidations\": 0, \"max_drawdown\": 0.1014129907869683, \"net_return\": -0.10126357437599631, \"slippage_cost\": 174.5168400000066, \"turnover_ratio\": 181.25221193039496}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 860.15642265,
+      "funding": -5.10792111,
+      "inferred_gross": 27.14544,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 174.51684,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 7485.10285142, \"equity_start\": 10000.0, \"fees\": 1688.7178388400055, \"fill_count\": 12373, \"funding\": -3.9658497399999995, \"liquidations\": 0, \"max_drawdown\": 0.2515880336676738, \"net_return\": -0.2514897148580073, \"slippage_cost\": 846.683770000021, \"turnover_ratio\": 194.2624907706944}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 1688.71783884,
+      "funding": -3.96584974,
+      "inferred_gross": 24.470309999999746,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 846.68377,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9485.60646272, \"equity_start\": 10000.0, \"fees\": 393.82815531000006, \"fill_count\": 3172, \"funding\": -0.7117619700000001, \"liquidations\": 0, \"max_drawdown\": 0.05180797476700727, \"net_return\": -0.051439353728008674, \"slippage_cost\": 80.0668999999981, \"turnover_ratio\": 80.89833818570591}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 393.82815531,
+      "funding": -0.71176197,
+      "inferred_gross": -39.7867200000006,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 80.0669,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8784.23566811, \"equity_start\": 10000.0, \"fees\": 787.6637032499988, \"fill_count\": 4156, \"funding\": -0.6939186400000001, \"liquidations\": 0, \"max_drawdown\": 0.1215764331890069, \"net_return\": -0.1215764331890069, \"slippage_cost\": 395.00376999999554, \"turnover_ratio\": 84.04062416335287}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 787.66370325,
+      "funding": -0.69391864,
+      "inferred_gross": -32.4029400000009,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 395.00377,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9610.05339294, \"equity_start\": 10000.0, \"fees\": 370.47372105000085, \"fill_count\": 2980, \"funding\": -2.34056601, \"liquidations\": 0, \"max_drawdown\": 0.03915200370935723, \"net_return\": -0.03899466070598756, \"slippage_cost\": 75.5643299999986, \"turnover_ratio\": 75.57957859685062}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 370.47372105,
+      "funding": -2.34056601,
+      "inferred_gross": 58.43201000000077,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 75.56433,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8935.85655825, \"equity_start\": 10000.0, \"fees\": 740.9396841800024, \"fill_count\": 4332, \"funding\": -1.93411757, \"liquidations\": 0, \"max_drawdown\": 0.10641434417499651, \"net_return\": -0.10641434417499651, \"slippage_cost\": 371.9473299999965, \"turnover_ratio\": 78.31401119398691}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 740.93968418,
+      "funding": -1.93411757,
+      "inferred_gross": 50.67768999999957,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 371.94733,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9556.06806879, \"equity_start\": 10000.0, \"fees\": 373.70314579000006, \"fill_count\": 3012, \"funding\": -5.371155420000002, \"liquidations\": 0, \"max_drawdown\": 0.044657657709855525, \"net_return\": -0.04439319312100476, \"slippage_cost\": 75.83435999999985, \"turnover_ratio\": 76.41636778220054}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 373.70314579,
+      "funding": -5.37115542,
+      "inferred_gross": 10.976730000000337,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 75.83436,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8883.3914933, \"equity_start\": 10000.0, \"fees\": 747.4057860000004, \"fill_count\": 4522, \"funding\": -4.943860699999998, \"liquidations\": 0, \"max_drawdown\": 0.11177471040992637, \"net_return\": -0.11166085066999742, \"slippage_cost\": 374.73425999999506, \"turnover_ratio\": 79.21215043705661}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 747.405786,
+      "funding": -4.9438607,
+      "inferred_gross": 10.475399999999679,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 374.73426,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9787.12000831, \"equity_start\": 10000.0, \"fees\": 167.5939007599998, \"fill_count\": 1350, \"funding\": -0.8945109299999999, \"liquidations\": 0, \"max_drawdown\": 0.0217839276470031, \"net_return\": -0.021287999169005256, \"slippage_cost\": 34.05516999999978, \"turnover_ratio\": 33.900652214490925}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 167.59390076,
+      "funding": -0.89451093,
+      "inferred_gross": -10.336410000000686,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 34.05517,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9485.49339939, \"equity_start\": 10000.0, \"fees\": 335.1878096800004, \"fill_count\": 1350, \"funding\": -0.8945109299999999, \"liquidations\": 0, \"max_drawdown\": 0.05167110422099719, \"net_return\": -0.0514506600609973, \"slippage_cost\": 168.08786999999955, \"turnover_ratio\": 34.431696462803835}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 335.18780968,
+      "funding": -0.89451093,
+      "inferred_gross": -10.336410000000537,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T02_ROC_20_60/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 168.08787,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9704.81300013, \"equity_start\": 10000.0, \"fees\": 324.23180336999997, \"fill_count\": 2608, \"funding\": -1.7592465, \"liquidations\": 0, \"max_drawdown\": 0.030366302991983618, \"net_return\": -0.029518699986982977, \"slippage_cost\": 66.09684999999979, \"turnover_ratio\": 65.96417861455808}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 324.23180337,
+      "funding": -1.7592465,
+      "inferred_gross": 96.90089999999967,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 66.09685,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9106.60120225, \"equity_start\": 10000.0, \"fees\": 648.4488019100004, \"fill_count\": 3397, \"funding\": -1.5860058400000001, \"liquidations\": 0, \"max_drawdown\": 0.08942062289897745, \"net_return\": -0.08933987977497782, \"slippage_cost\": 325.48067999999904, \"turnover_ratio\": 68.03497541116903}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 648.44880191,
+      "funding": -1.5860058400000001,
+      "inferred_gross": 82.11668999999996,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 325.48068,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9607.94913064, \"equity_start\": 10000.0, \"fees\": 335.2926405899997, \"fill_count\": 2702, \"funding\": -5.920878770000002, \"liquidations\": 0, \"max_drawdown\": 0.03924973879274607, \"net_return\": -0.03920508693599711, \"slippage_cost\": 68.03628000000006, \"turnover_ratio\": 68.34574197119748}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 335.29264059,
+      "funding": -5.92087877,
+      "inferred_gross": 17.198929999999592,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 68.03628,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9002.61226284, \"equity_start\": 10000.0, \"fees\": 670.5830763799988, \"fill_count\": 3625, \"funding\": -5.59810078, \"liquidations\": 0, \"max_drawdown\": 0.09974283629199332, \"net_return\": -0.09973877371599349, \"slippage_cost\": 336.22300999999294, \"turnover_ratio\": 70.57028974164716}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 670.58307638,
+      "funding": -5.59810078,
+      "inferred_gross": 15.01645000000072,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 336.22301,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9769.75517203, \"equity_start\": 10000.0, \"fees\": 149.68603932999986, \"fill_count\": 1206, \"funding\": -0.9170786400000001, \"liquidations\": 0, \"max_drawdown\": 0.02400063500199101, \"net_return\": -0.023024482796991097, \"slippage_cost\": 30.417730000000052, \"turnover_ratio\": 30.29997535720614}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 149.68603933,
+      "funding": -0.91707864,
+      "inferred_gross": -49.22398000000019,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 30.41773,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9500.34709923, \"equity_start\": 10000.0, \"fees\": 299.3720921300002, \"fill_count\": 1206, \"funding\": -0.9170786400000001, \"liquidations\": 0, \"max_drawdown\": 0.05051572161500628, \"net_return\": -0.04996529007700601, \"slippage_cost\": 150.13975000000073, \"turnover_ratio\": 30.723363619368047}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 299.37209213,
+      "funding": -0.91707864,
+      "inferred_gross": -49.22397999999919,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 150.13975,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9627.960292, \"equity_start\": 10000.0, \"fees\": 361.30465975999994, \"fill_count\": 2906, \"funding\": -2.0525482399999997, \"liquidations\": 0, \"max_drawdown\": 0.03734259682698815, \"net_return\": -0.03720397079998827, \"slippage_cost\": 73.67145999999872, \"turnover_ratio\": 73.70122470131797}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 361.30465976,
+      "funding": -2.05254824,
+      "inferred_gross": 64.98895999999974,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 73.67146,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8970.98845798, \"equity_start\": 10000.0, \"fees\": 722.6022775700019, \"fill_count\": 4149, \"funding\": -1.6654944500000002, \"liquidations\": 0, \"max_drawdown\": 0.10290115420198775, \"net_return\": -0.10290115420198775, \"slippage_cost\": 362.700149999998, \"turnover_ratio\": 76.29677004379826}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 722.60227757,
+      "funding": -1.66549445,
+      "inferred_gross": 57.95637999999998,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 362.70015,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9605.59472417, \"equity_start\": 10000.0, \"fees\": 358.8759475399998, \"fill_count\": 2892, \"funding\": -6.030918290000002, \"liquidations\": 0, \"max_drawdown\": 0.03951047423676313, \"net_return\": -0.039440527583017415, \"slippage_cost\": 72.81783000000007, \"turnover_ratio\": 73.16337917689967}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 358.87594754,
+      "funding": -6.03091829,
+      "inferred_gross": 43.31941999999964,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 72.81783,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8958.66205589, \"equity_start\": 10000.0, \"fees\": 717.7504634900001, \"fill_count\": 4205, \"funding\": -5.636730620000002, \"liquidations\": 0, \"max_drawdown\": 0.10413595508201756, \"net_return\": -0.10413379441101744, \"slippage_cost\": 359.8704899999947, \"turnover_ratio\": 75.71689457023578}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 717.75046349,
+      "funding": -5.63673062,
+      "inferred_gross": 41.9197399999995,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 359.87049,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9750.51578997, \"equity_start\": 10000.0, \"fees\": 161.09967903999996, \"fill_count\": 1298, \"funding\": -0.79201099, \"liquidations\": 0, \"max_drawdown\": 0.025183263998999394, \"net_return\": -0.02494842100300032, \"slippage_cost\": 32.73832000000001, \"turnover_ratio\": 32.635206375398575}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 161.09967904,
+      "funding": -0.79201099,
+      "inferred_gross": -54.85419999999929,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 32.73832,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9460.58477239, \"equity_start\": 10000.0, \"fees\": 322.1993966199999, \"fill_count\": 1298, \"funding\": -0.79201099, \"liquidations\": 0, \"max_drawdown\": 0.053994642289989736, \"net_return\": -0.05394152276098896, \"slippage_cost\": 161.56962000000013, \"turnover_ratio\": 33.12734996997708}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 322.19939662,
+      "funding": -0.79201099,
+      "inferred_gross": -54.854199999999416,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T03_DONCHIAN_20/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 161.56962,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9909.61348145, \"equity_start\": 10000.0, \"fees\": 102.68709008000002, \"fill_count\": 826, \"funding\": -1.37624847, \"liquidations\": 0, \"max_drawdown\": 0.010432661463484982, \"net_return\": -0.009038651854997193, \"slippage_cost\": 20.923890000000082, \"turnover_ratio\": 20.642545360511797}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 102.68709008,
+      "funding": -1.37624847,
+      "inferred_gross": 34.60071000000011,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 20.92389,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9724.77835464, \"equity_start\": 10000.0, \"fees\": 205.3741668900003, \"fill_count\": 826, \"funding\": -1.37624847, \"liquidations\": 0, \"max_drawdown\": 0.028006842284350242, \"net_return\": -0.027522164536009086, \"slippage_cost\": 103.07193999999974, \"turnover_ratio\": 20.837078337251825}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 205.37416689,
+      "funding": -1.37624847,
+      "inferred_gross": 34.60071000000054,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 103.07194,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9837.95034122, \"equity_start\": 10000.0, \"fees\": 104.20738051000002, \"fill_count\": 840, \"funding\": -2.7662182699999995, \"liquidations\": 0, \"max_drawdown\": 0.016511570700807998, \"net_return\": -0.01620496587800513, \"slippage_cost\": 21.149970000000145, \"turnover_ratio\": 20.999185605559816}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 104.20738051,
+      "funding": -2.76621827,
+      "inferred_gross": -33.92609000000076,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 21.14997,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9650.40095919, \"equity_start\": 10000.0, \"fees\": 208.4147825400001, \"fill_count\": 840, \"funding\": -2.7662182699999995, \"liquidations\": 0, \"max_drawdown\": 0.035050624942994046, \"net_return\": -0.03495990408100613, \"slippage_cost\": 104.49195000000026, \"turnover_ratio\": 21.2011851219906}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 208.41478254,
+      "funding": -2.76621827,
+      "inferred_gross": -33.92609000000058,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 104.49195,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9898.11665064, \"equity_start\": 10000.0, \"fees\": 47.41618577000006, \"fill_count\": 382, \"funding\": -0.35599358999999997, \"liquidations\": 0, \"max_drawdown\": 0.010730074065997575, \"net_return\": -0.010188334935997023, \"slippage_cost\": 9.640639999999992, \"turnover_ratio\": 9.527702920350473}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 47.41618577,
+      "funding": -0.35599359,
+      "inferred_gross": -44.47052999999956,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 9.64064,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9812.79117445, \"equity_start\": 10000.0, \"fees\": 94.83239195999995, \"fill_count\": 382, \"funding\": -0.35599358999999997, \"liquidations\": 0, \"max_drawdown\": 0.019038912810003472, \"net_return\": -0.01872088255500326, \"slippage_cost\": 47.54991000000012, \"turnover_ratio\": 9.568763267175804}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 94.83239196,
+      "funding": -0.35599359,
+      "inferred_gross": -44.47053000000027,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 47.54991,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9850.66402157, \"equity_start\": 10000.0, \"fees\": 144.20691764999992, \"fill_count\": 1160, \"funding\": -1.26177078, \"liquidations\": 0, \"max_drawdown\": 0.015988484854001173, \"net_return\": -0.014933597843002189, \"slippage_cost\": 29.38706000000046, \"turnover_ratio\": 29.091112264116397}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 144.20691765,
+      "funding": -1.26177078,
+      "inferred_gross": 25.519770000000847,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 29.387059999999998,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9591.10013594, \"equity_start\": 10000.0, \"fees\": 288.4138332799997, \"fill_count\": 1160, \"funding\": -1.26177078, \"liquidations\": 0, \"max_drawdown\": 0.041202895931014116, \"net_return\": -0.04088998640601382, \"slippage_cost\": 144.74403000000018, \"turnover_ratio\": 29.48050083541377}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 288.41383328,
+      "funding": -1.26177078,
+      "inferred_gross": 25.51976999999976,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 144.74403,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9802.33147954, \"equity_start\": 10000.0, \"fees\": 134.46567621, \"fill_count\": 1084, \"funding\": -2.4682042499999994, \"liquidations\": 0, \"max_drawdown\": 0.019939225428463492, \"net_return\": -0.019766852046010364, \"slippage_cost\": 27.280130000000213, \"turnover_ratio\": 27.18247911060606}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 134.46567621,
+      "funding": -2.46820425,
+      "inferred_gross": -33.45450999999986,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 27.28013,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9560.30728684, \"equity_start\": 10000.0, \"fees\": 268.9313589100002, \"fill_count\": 1084, \"funding\": -2.4682042499999994, \"liquidations\": 0, \"max_drawdown\": 0.04405193252057338, \"net_return\": -0.04396927131600603, \"slippage_cost\": 134.83864000000008, \"turnover_ratio\": 27.522635087523938}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 268.93135891,
+      "funding": -2.46820425,
+      "inferred_gross": -33.454510000000525,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 134.83864,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9897.204149, \"equity_start\": 10000.0, \"fees\": 62.07789899000006, \"fill_count\": 500, \"funding\": -0.38046201, \"liquidations\": 0, \"max_drawdown\": 0.011060967085788409, \"net_return\": -0.010279585100000377, \"slippage_cost\": 12.613460000000014, \"turnover_ratio\": 12.476272297241264}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 62.07789899,
+      "funding": -0.38046201,
+      "inferred_gross": -27.724030000000766,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 12.61346,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9785.47841942, \"equity_start\": 10000.0, \"fees\": 124.15580856999999, \"fill_count\": 500, \"funding\": -0.38046201, \"liquidations\": 0, \"max_drawdown\": 0.021903984789002906, \"net_return\": -0.021452158058002935, \"slippage_cost\": 62.26128000000015, \"turnover_ratio\": 12.546921738521817}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 124.15580857,
+      "funding": -0.38046201,
+      "inferred_gross": -27.72402999999986,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_LONG/T04_ZSCORE_60/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 62.26128,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9646.94469446, \"equity_start\": 10000.0, \"fees\": 243.19038902000017, \"fill_count\": 1956, \"funding\": 1.71224348, \"liquidations\": 0, \"max_drawdown\": 0.03537803131374584, \"net_return\": -0.035305530553987774, \"slippage_cost\": 49.6025500000002, \"turnover_ratio\": 49.4582228568561}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 243.19038902,
+      "funding": 1.71224348,
+      "inferred_gross": -61.97460999999961,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 49.60255,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9210.4141101, \"equity_start\": 10000.0, \"fees\": 486.3795575200002, \"fill_count\": 2000, \"funding\": 1.6842476199999998, \"liquidations\": 0, \"max_drawdown\": 0.07898346466598682, \"net_return\": -0.07895858898998687, \"slippage_cost\": 244.15185000000216, \"turnover_ratio\": 50.605624019038814}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 486.37955752,
+      "funding": 1.68424762,
+      "inferred_gross": -60.73872999999954,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 244.15185,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9675.23436519, \"equity_start\": 10000.0, \"fees\": 272.4779785199998, \"fill_count\": 2196, \"funding\": 3.6591237099999994, \"liquidations\": 0, \"max_drawdown\": 0.03252392561889028, \"net_return\": -0.03247656348099759, \"slippage_cost\": 55.29254999999973, \"turnover_ratio\": 55.43415435318613}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 272.47797852,
+      "funding": 3.6591237100000003,
+      "inferred_gross": -0.654230000000827,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 55.29255,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9184.40603391, \"equity_start\": 10000.0, \"fees\": 544.9563176300002, \"fill_count\": 2400, \"funding\": 3.6099815399999997, \"liquidations\": 0, \"max_drawdown\": 0.08157262806499521, \"net_return\": -0.0815593966089948, \"slippage_cost\": 273.2302899999992, \"turnover_ratio\": 56.88026152668519}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 544.95631763,
+      "funding": 3.60998154,
+      "inferred_gross": -1.017340000000353,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 273.23029,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9927.64938065, \"equity_start\": 10000.0, \"fees\": 113.69239873999977, \"fill_count\": 916, \"funding\": 0.8199993900000001, \"liquidations\": 0, \"max_drawdown\": 0.010615328480637842, \"net_return\": -0.007235061934996234, \"slippage_cost\": 23.107870000000098, \"turnover_ratio\": 22.82812183883166}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 113.69239874,
+      "funding": 0.81999939,
+      "inferred_gross": 63.62965000000025,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 23.10787,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9723.04224809, \"equity_start\": 10000.0, \"fees\": 227.3847713000006, \"fill_count\": 916, \"funding\": 0.8199993900000001, \"liquidations\": 0, \"max_drawdown\": 0.02820465872712008, \"net_return\": -0.0276957751909922, \"slippage_cost\": 114.02263000000038, \"turnover_ratio\": 23.066446032833216}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 227.3847713,
+      "funding": 0.81999939,
+      "inferred_gross": 63.62964999999972,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 114.02263,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9575.85449897, \"equity_start\": 10000.0, \"fees\": 333.1645643300001, \"fill_count\": 2680, \"funding\": 1.9349233000000001, \"liquidations\": 0, \"max_drawdown\": 0.04326206845605807, \"net_return\": -0.04241455010300621, \"slippage_cost\": 67.94302999999938, \"turnover_ratio\": 68.11995831579794}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 333.16456433,
+      "funding": 1.9349233,
+      "inferred_gross": -24.97282999999964,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 67.94303,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8977.22093914, \"equity_start\": 10000.0, \"fees\": 666.3277854999974, \"fill_count\": 3567, \"funding\": 1.6492646400000002, \"liquidations\": 0, \"max_drawdown\": 0.10233464054120966, \"net_return\": -0.10227790608600529, \"slippage_cost\": 334.4713699999956, \"turnover_ratio\": 70.33087083458352}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-1",
+      "fees": 666.3277855,
+      "funding": 1.64926464,
+      "inferred_gross": -23.62917000000077,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 334.47137,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9582.63119359, \"equity_start\": 10000.0, \"fees\": 336.23508367999943, \"fill_count\": 2710, \"funding\": 4.98363727, \"liquidations\": 0, \"max_drawdown\": 0.041745757008506024, \"net_return\": -0.041736880640999896, \"slippage_cost\": 68.22519000000003, \"turnover_ratio\": 68.7555561405096}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 336.23508368,
+      "funding": 4.98363727,
+      "inferred_gross": -17.892170000000615,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 68.22519,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8977.49690121, \"equity_start\": 10000.0, \"fees\": 672.4698404899995, \"fill_count\": 3718, \"funding\": 4.6857717, \"liquidations\": 0, \"max_drawdown\": 0.10225030987899875, \"net_return\": -0.10225030987899875, \"slippage_cost\": 337.17398999999295, \"turnover_ratio\": 71.00475539905699}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-2",
+      "fees": 672.46984049,
+      "funding": 4.6857717,
+      "inferred_gross": -17.54504000000085,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 337.17399,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9855.98195981, \"equity_start\": 10000.0, \"fees\": 142.0077965100001, \"fill_count\": 1144, \"funding\": 0.9188163200000001, \"liquidations\": 0, \"max_drawdown\": 0.01513712749025753, \"net_return\": -0.014401804018997932, \"slippage_cost\": 28.866580000000052, \"turnover_ratio\": 28.594706387843363}",
+      "block": "base",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 142.00779651,
+      "funding": 0.91881632,
+      "inferred_gross": 25.93752000000025,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 28.86658,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9600.41982654, \"equity_start\": 10000.0, \"fees\": 284.0155697800006, \"fill_count\": 1144, \"funding\": 0.9188163200000001, \"liquidations\": 0, \"max_drawdown\": 0.040111394521682886, \"net_return\": -0.039958017345993024, \"slippage_cost\": 142.42094000000048, \"turnover_ratio\": 28.970651375420452}",
+      "block": "stress",
+      "control": "T01_EMA_9_21",
+      "exit": "inner-screen-3",
+      "fees": 284.01556978,
+      "funding": 0.91881632,
+      "inferred_gross": 25.937519999999143,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T01_EMA_9_21/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 142.42094,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8948.14534524, \"equity_start\": 10000.0, \"fees\": 810.0735158100018, \"fill_count\": 7667, \"funding\": 1.9979910500000004, \"liquidations\": 0, \"max_drawdown\": 0.10558061110935901, \"net_return\": -0.10518546547599661, \"slippage_cost\": 165.2119200000003, \"turnover_ratio\": 171.02939129635595}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 810.07351581,
+      "funding": 1.99799105,
+      "inferred_gross": -78.5672099999999,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 165.21192,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 7548.07587018, \"equity_start\": 10000.0, \"fees\": 1594.7100317999927, \"fill_count\": 11314, \"funding\": 1.3561019799999996, \"liquidations\": 0, \"max_drawdown\": 0.24526870195319206, \"net_return\": -0.24519241298199612, \"slippage_cost\": 800.5206200000001, \"turnover_ratio\": 182.85522695222076}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 1594.7100318,
+      "funding": 1.35610198,
+      "inferred_gross": -58.04958000000038,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 800.52062,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8944.56188843, \"equity_start\": 10000.0, \"fees\": 860.1557672899979, \"fill_count\": 8545, \"funding\": 5.072725720000001, \"liquidations\": 0, \"max_drawdown\": 0.10554429007274813, \"net_return\": -0.10554381115701061, \"slippage_cost\": 174.51662000000627, \"turnover_ratio\": 181.93962757900022}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 860.15576729,
+      "funding": 5.07272572,
+      "inferred_gross": -25.83844999999986,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 174.51662,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 7447.23679401, \"equity_start\": 10000.0, \"fees\": 1686.2490224899882, \"fill_count\": 12478, \"funding\": 3.9838664999999995, \"liquidations\": 0, \"max_drawdown\": 0.25527632059900085, \"net_return\": -0.25527632059900085, \"slippage_cost\": 845.4456300000214, \"turnover_ratio\": 194.9421726344353}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 1686.24902249,
+      "funding": 3.9838665,
+      "inferred_gross": -25.052419999999668,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 845.44563,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9566.60342843, \"equity_start\": 10000.0, \"fees\": 393.8281535400004, \"fill_count\": 3172, \"funding\": 0.7117619700000001, \"liquidations\": 0, \"max_drawdown\": 0.043455175503722465, \"net_return\": -0.04333965715700738, \"slippage_cost\": 80.0668999999981, \"turnover_ratio\": 80.48776550449774}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 393.82815354,
+      "funding": 0.71176197,
+      "inferred_gross": 39.78672000000037,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 80.0669,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8851.08573938, \"equity_start\": 10000.0, \"fees\": 787.6630280100002, \"fill_count\": 4097, \"funding\": 0.6956573899999999, \"liquidations\": 0, \"max_drawdown\": 0.11497857452886606, \"net_return\": -0.1148914260619901, \"slippage_cost\": 395.0034799999954, \"turnover_ratio\": 83.61166352899038}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 787.66302801,
+      "funding": 0.69565739,
+      "inferred_gross": 33.056589999999694,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 395.00348,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9497.87049983, \"equity_start\": 10000.0, \"fees\": 370.47372617999986, \"fill_count\": 2980, \"funding\": 2.34056601, \"liquidations\": 0, \"max_drawdown\": 0.051047661263780575, \"net_return\": -0.05021295001699411, \"slippage_cost\": 75.5643299999986, \"turnover_ratio\": 76.01811085190218}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 370.47372618,
+      "funding": 2.34056601,
+      "inferred_gross": -58.432010000000005,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 75.56433,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8840.78714871, \"equity_start\": 10000.0, \"fees\": 740.9372080700008, \"fill_count\": 4472, \"funding\": 1.8552067800000005, \"liquidations\": 0, \"max_drawdown\": 0.11599888844912964, \"net_return\": -0.1159212851289908, \"slippage_cost\": 371.9470300000021, \"turnover_ratio\": 78.78369015218561}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-1",
+      "fees": 740.93720807,
+      "funding": 1.85520678,
+      "inferred_gross": -48.18381999999991,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 371.94703,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9544.856918, \"equity_start\": 10000.0, \"fees\": 373.7031474200008, \"fill_count\": 3012, \"funding\": 5.371155420000002, \"liquidations\": 0, \"max_drawdown\": 0.04551481925714895, \"net_return\": -0.04551430820001201, \"slippage_cost\": 75.83435999999985, \"turnover_ratio\": 76.52801080462784}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 373.70314742,
+      "funding": 5.37115542,
+      "inferred_gross": -10.976730000000508,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 75.83436,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8872.67925747, \"equity_start\": 10000.0, \"fees\": 747.4054258900005, \"fill_count\": 4574, \"funding\": 4.922473359999998, \"liquidations\": 0, \"max_drawdown\": 0.11273207425300769, \"net_return\": -0.11273207425300769, \"slippage_cost\": 374.73432999999454, \"turnover_ratio\": 79.33711255468896}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-2",
+      "fees": 747.40542589,
+      "funding": 4.92247336,
+      "inferred_gross": -10.103460000000696,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 374.73433,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9809.58185164, \"equity_start\": 10000.0, \"fees\": 167.59389928999997, \"fill_count\": 1350, \"funding\": 0.8945109299999999, \"liquidations\": 0, \"max_drawdown\": 0.019390279834305302, \"net_return\": -0.019041814835998205, \"slippage_cost\": 34.05516999999978, \"turnover_ratio\": 33.82166228279636}",
+      "block": "base",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 167.59389929,
+      "funding": 0.89451093,
+      "inferred_gross": 10.336409999999507,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 34.05517,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9507.95526051, \"equity_start\": 10000.0, \"fees\": 335.18779042, \"fill_count\": 1350, \"funding\": 0.8945109299999999, \"liquidations\": 0, \"max_drawdown\": 0.049384945426711124, \"net_return\": -0.04920447394900418, \"slippage_cost\": 168.08786999999955, \"turnover_ratio\": 34.35044885958007}",
+      "block": "stress",
+      "control": "T02_ROC_20_60",
+      "exit": "inner-screen-3",
+      "fees": 335.18779042,
+      "funding": 0.89451093,
+      "inferred_gross": 10.336409999999798,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T02_ROC_20_60/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 168.08787,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9514.52968233, \"equity_start\": 10000.0, \"fees\": 324.2318141700011, \"fill_count\": 2608, \"funding\": 1.7592465, \"liquidations\": 0, \"max_drawdown\": 0.04899836111525546, \"net_return\": -0.0485470317669876, \"slippage_cost\": 66.09684999999979, \"turnover_ratio\": 66.32905556720594}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 324.23181417,
+      "funding": 1.7592465,
+      "inferred_gross": -96.90090000000043,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 66.09685,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8943.32333307, \"equity_start\": 10000.0, \"fees\": 648.4510714499999, \"fill_count\": 3453, \"funding\": 1.5783945200000002, \"liquidations\": 0, \"max_drawdown\": 0.10585712565649619, \"net_return\": -0.10566766669299554, \"slippage_cost\": 325.48189999999676, \"turnover_ratio\": 68.41699653458109}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 648.45107145,
+      "funding": 1.57839452,
+      "inferred_gross": -84.32208999999959,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 325.4819,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9585.39303604, \"equity_start\": 10000.0, \"fees\": 335.2926327300006, \"fill_count\": 2702, \"funding\": 5.920878770000002, \"liquidations\": 0, \"max_drawdown\": 0.04168205630584676, \"net_return\": -0.041460696396000696, \"slippage_cost\": 68.03628000000006, \"turnover_ratio\": 68.55046227751511}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 335.29263273,
+      "funding": 5.92087877,
+      "inferred_gross": -17.198929999999137,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 68.03628,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8983.77116211, \"equity_start\": 10000.0, \"fees\": 670.5830795600001, \"fill_count\": 3625, \"funding\": 5.568341670000001, \"liquidations\": 0, \"max_drawdown\": 0.1016435419280477, \"net_return\": -0.10162288378900597, \"slippage_cost\": 336.2230299999934, \"turnover_ratio\": 70.7863666336283}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 670.58307956,
+      "funding": 5.56834167,
+      "inferred_gross": -14.991069999999358,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 336.22303,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9870.03729101, \"equity_start\": 10000.0, \"fees\": 149.6860376299999, \"fill_count\": 1206, \"funding\": 0.9170786400000001, \"liquidations\": 0, \"max_drawdown\": 0.014087258232265976, \"net_return\": -0.012996270899012119, \"slippage_cost\": 30.417730000000052, \"turnover_ratio\": 30.120323364620152}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 149.68603763,
+      "funding": 0.91707864,
+      "inferred_gross": 49.22397999999952,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 30.41773,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9600.62924665, \"equity_start\": 10000.0, \"fees\": 299.3720619900004, \"fill_count\": 1206, \"funding\": 0.9170786400000001, \"liquidations\": 0, \"max_drawdown\": 0.04028018452733739, \"net_return\": -0.03993707533501123, \"slippage_cost\": 150.13975000000073, \"turnover_ratio\": 30.537956495001076}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 299.37206199,
+      "funding": 0.91707864,
+      "inferred_gross": 49.223979999999926,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 150.13975,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9502.08745835, \"equity_start\": 10000.0, \"fees\": 361.30466988999996, \"fill_count\": 2906, \"funding\": 2.0525482399999997, \"liquidations\": 0, \"max_drawdown\": 0.05060381274637604, \"net_return\": -0.04979125416499841, \"slippage_cost\": 73.67145999999872, \"turnover_ratio\": 74.05923560134548}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 361.30466989,
+      "funding": 2.05254824,
+      "inferred_gross": -64.98895999999917,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 73.67146,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8858.77627786, \"equity_start\": 10000.0, \"fees\": 722.6019427000004, \"fill_count\": 4319, \"funding\": 1.6604205600000002, \"liquidations\": 0, \"max_drawdown\": 0.11432479685447894, \"net_return\": -0.11412237221398591, \"slippage_cost\": 362.70040999999895, \"turnover_ratio\": 76.68285194942058}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-1",
+      "fees": 722.6019427,
+      "funding": 1.66042056,
+      "inferred_gross": -57.58178999999918,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 362.70041,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9531.01771421, \"equity_start\": 10000.0, \"fees\": 358.8759540800001, \"fill_count\": 2892, \"funding\": 6.030918290000002, \"liquidations\": 0, \"max_drawdown\": 0.04712768128055822, \"net_return\": -0.04689822857900339, \"slippage_cost\": 72.81783000000007, \"turnover_ratio\": 73.57794955406828}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 358.87595408,
+      "funding": 6.03091829,
+      "inferred_gross": -43.319419999999894,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 72.81783,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 8884.83910997, \"equity_start\": 10000.0, \"fees\": 717.7517626800013, \"fill_count\": 4316, \"funding\": 5.603392649999999, \"liquidations\": 0, \"max_drawdown\": 0.11152554100476109, \"net_return\": -0.11151608900299126, \"slippage_cost\": 359.8717399999954, \"turnover_ratio\": 76.17226844344299}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-2",
+      "fees": 717.75176268,
+      "funding": 5.60339265,
+      "inferred_gross": -43.14077999999985,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 359.87174,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9861.80821382, \"equity_start\": 10000.0, \"fees\": 161.09967717, \"fill_count\": 1298, \"funding\": 0.79201099, \"liquidations\": 0, \"max_drawdown\": 0.015049615684881612, \"net_return\": -0.013819178618002637, \"slippage_cost\": 32.73832000000001, \"turnover_ratio\": 32.43759337309292}",
+      "block": "base",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 161.09967717,
+      "funding": 0.79201099,
+      "inferred_gross": 54.85420000000068,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 32.73832,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9571.87727561, \"equity_start\": 10000.0, \"fees\": 322.19931538000026, \"fill_count\": 1298, \"funding\": 0.79201099, \"liquidations\": 0, \"max_drawdown\": 0.04318484094625463, \"net_return\": -0.042812272438998766, \"slippage_cost\": 161.56962000000013, \"turnover_ratio\": 32.92285640928199}",
+      "block": "stress",
+      "control": "T03_DONCHIAN_20",
+      "exit": "inner-screen-3",
+      "fees": 322.19931538,
+      "funding": 0.79201099,
+      "inferred_gross": 54.85420000000061,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T03_DONCHIAN_20/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 161.56962,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9843.16455053, \"equity_start\": 10000.0, \"fees\": 102.68709794000002, \"fill_count\": 826, \"funding\": 1.37624847, \"liquidations\": 0, \"max_drawdown\": 0.016000214828107095, \"net_return\": -0.015683544946997863, \"slippage_cost\": 20.923890000000082, \"turnover_ratio\": 20.68810428452769}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 102.68709794,
+      "funding": 1.37624847,
+      "inferred_gross": -34.60070999999973,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X1/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 20.92389,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9658.3293891, \"equity_start\": 10000.0, \"fees\": 205.37420937000022, \"fill_count\": 826, \"funding\": 1.37624847, \"liquidations\": 0, \"max_drawdown\": 0.034238452089125904, \"net_return\": -0.0341670610899979, \"slippage_cost\": 103.07193999999974, \"turnover_ratio\": 20.883935072344702}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 205.37420937,
+      "funding": 1.37624847,
+      "inferred_gross": -34.600710000000625,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X1/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 103.07194,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9911.33495416, \"equity_start\": 10000.0, \"fees\": 104.20738410999986, \"fill_count\": 840, \"funding\": 2.7662182699999995, \"liquidations\": 0, \"max_drawdown\": 0.009303591098413944, \"net_return\": -0.008866504583999069, \"slippage_cost\": 21.149970000000145, \"turnover_ratio\": 20.947173834028387}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 104.20738411,
+      "funding": 2.76621827,
+      "inferred_gross": 33.92609000000005,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X1/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 21.14997,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9723.78561171, \"equity_start\": 10000.0, \"fees\": 208.41474655999988, \"fill_count\": 840, \"funding\": 2.7662182699999995, \"liquidations\": 0, \"max_drawdown\": 0.027658799863753636, \"net_return\": -0.027621438828999367, \"slippage_cost\": 104.49195000000026, \"turnover_ratio\": 21.147295495296923}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 208.41474656,
+      "funding": 2.76621827,
+      "inferred_gross": 33.92609000000001,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X1/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 104.49195,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9987.76970138, \"equity_start\": 10000.0, \"fees\": 47.41618221000006, \"fill_count\": 382, \"funding\": 0.35599358999999997, \"liquidations\": 0, \"max_drawdown\": 0.005786879940869238, \"net_return\": -0.0012230298619930746, \"slippage_cost\": 9.640639999999992, \"turnover_ratio\": 9.49303195670481}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 47.41618221,
+      "funding": 0.35599359,
+      "inferred_gross": 44.4705300000007,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X1/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 9.64064,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9902.44426977, \"equity_start\": 10000.0, \"fees\": 94.83234381999995, \"fill_count\": 382, \"funding\": 0.35599358999999997, \"liquidations\": 0, \"max_drawdown\": 0.012099643220345735, \"net_return\": -0.00975557302300134, \"slippage_cost\": 47.54991000000012, \"turnover_ratio\": 9.533767724032842}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 94.83234382,
+      "funding": 0.35599359,
+      "inferred_gross": 44.47052999999967,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X1/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 47.54991,
+      "teacher": "X1"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9802.14801485, \"equity_start\": 10000.0, \"fees\": 144.20692592999998, \"fill_count\": 1160, \"funding\": 1.26177078, \"liquidations\": 0, \"max_drawdown\": 0.020009194287252563, \"net_return\": -0.01978519851500038, \"slippage_cost\": 29.38706000000046, \"turnover_ratio\": 29.09790143011389}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 144.20692593,
+      "funding": 1.26177078,
+      "inferred_gross": -25.519770000000463,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X2/inner-screen-1/base/control-report.json",
+      "rows": 41759,
+      "scenario": "base",
+      "slippage": 29.387059999999998,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9542.5841164, \"equity_start\": 10000.0, \"fees\": 288.4138543799998, \"fill_count\": 1160, \"funding\": 1.26177078, \"liquidations\": 0, \"max_drawdown\": 0.04582357648719171, \"net_return\": -0.0457415883599982, \"slippage_cost\": 144.74403000000018, \"turnover_ratio\": 29.487847228015404}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-1",
+      "fees": 288.41385438,
+      "funding": 1.26177078,
+      "inferred_gross": -25.519770000000612,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X2/inner-screen-1/stress/control-report.json",
+      "rows": 41759,
+      "scenario": "stress",
+      "slippage": 144.74403,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9874.17691041, \"equity_start\": 10000.0, \"fees\": 134.46567383999994, \"fill_count\": 1084, \"funding\": 2.4682042499999994, \"liquidations\": 0, \"max_drawdown\": 0.012948849903026916, \"net_return\": -0.012582308959004251, \"slippage_cost\": 27.280130000000213, \"turnover_ratio\": 27.04361338541416}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 134.46567384,
+      "funding": 2.46820425,
+      "inferred_gross": 33.45451000000034,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X2/inner-screen-2/base/control-report.json",
+      "rows": 44639,
+      "scenario": "base",
+      "slippage": 27.28013,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9632.15273294, \"equity_start\": 10000.0, \"fees\": 268.93134130999977, \"fill_count\": 1084, \"funding\": 2.4682042499999994, \"liquidations\": 0, \"max_drawdown\": 0.03683648330679934, \"net_return\": -0.036784726705998305, \"slippage_cost\": 134.83864000000008, \"turnover_ratio\": 27.379111403965204}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-2",
+      "fees": 268.93134131,
+      "funding": 2.46820425,
+      "inferred_gross": 33.454509999999615,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X2/inner-screen-2/stress/control-report.json",
+      "rows": 44639,
+      "scenario": "stress",
+      "slippage": 134.83864,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9953.41313777, \"equity_start\": 10000.0, \"fees\": 62.07789423999998, \"fill_count\": 500, \"funding\": 0.38046201, \"liquidations\": 0, \"max_drawdown\": 0.005450381397650861, \"net_return\": -0.004658686222998476, \"slippage_cost\": 12.613460000000014, \"turnover_ratio\": 12.447944880188649}",
+      "block": "base",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 62.07789424,
+      "funding": 0.38046201,
+      "inferred_gross": 27.724029999999594,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X2/inner-screen-3/base/control-report.json",
+      "rows": 20160,
+      "scenario": "base",
+      "slippage": 12.61346,
+      "teacher": "X2"
+    },
+    {
+      "account": "{\"equity_currency\": \"USDT\", \"equity_end\": 9841.68743428, \"equity_start\": 10000.0, \"fees\": 124.15577772999998, \"fill_count\": 500, \"funding\": 0.38046201, \"liquidations\": 0, \"max_drawdown\": 0.01583480243260227, \"net_return\": -0.015831256572001906, \"slippage_cost\": 62.26128000000015, \"turnover_ratio\": 12.518179951314513}",
+      "block": "stress",
+      "control": "T04_ZSCORE_60",
+      "exit": "inner-screen-3",
+      "fees": 124.15577773,
+      "funding": 0.38046201,
+      "inferred_gross": 27.72403000000016,
+      "path": ".artifacts/research_1m_4teachers_v1/native/exposure-matched/EXPOSURE_MATCHED_SHORT/T04_ZSCORE_60/X2/inner-screen-3/stress/control-report.json",
+      "rows": 20160,
+      "scenario": "stress",
+      "slippage": 62.26128,
+      "teacher": "X2"
+    }
+  ],
+  "reconciliation_errors": [],
+  "teacher_runs": [
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9767.46944106,
+        "equity_start": 10000.0,
+        "fees": 243.1903754599997,
+        "funding": -1.71224348,
+        "liquidations": 0,
+        "max_drawdown": 0.024260459679432023,
+        "net_return": -0.023253055894006835,
+        "slippage_cost": 49.6025500000002,
+        "turnover_ratio": 49.270676656114226
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 978,
+      "classifications": {
+        "gross_above_costs": 184,
+        "gross_nonpositive": 637,
+        "positive_below_costs": 157
+      },
+      "exit": "X1",
+      "inferred_price_gross": 61.97461000000046,
+      "mean_hold_m": 22.94683026584867,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X1/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "1": {
+          "fees": 243.19037546000004,
+          "gross": 61.974610000000396,
+          "n": 978,
+          "slippage": 49.60255000000043
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9329.5126783,
+        "equity_start": 10000.0,
+        "fees": 486.3805182200002,
+        "funding": -1.71224348,
+        "liquidations": 0,
+        "max_drawdown": 0.06720130414201142,
+        "net_return": -0.0670487321700114,
+        "slippage_cost": 244.15239000000258,
+        "turnover_ratio": 50.40560758346455
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 978,
+      "classifications": {
+        "gross_above_costs": 100,
+        "gross_nonpositive": 637,
+        "positive_below_costs": 241
+      },
+      "exit": "X1",
+      "inferred_price_gross": 61.75782999999961,
+      "mean_hold_m": 22.94683026584867,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X1/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "1": {
+          "fees": 486.38051822000057,
+          "gross": 61.757829999999565,
+          "n": 978,
+          "slippage": 244.15239000000034
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9669.22459339,
+        "equity_start": 10000.0,
+        "fees": 272.47796289999997,
+        "funding": -3.6591237099999994,
+        "liquidations": 0,
+        "max_drawdown": 0.03328526453532632,
+        "net_return": -0.03307754066101176,
+        "slippage_cost": 55.29254999999973,
+        "turnover_ratio": 55.38251049665808
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1098,
+      "classifications": {
+        "gross_above_costs": 214,
+        "gross_nonpositive": 745,
+        "positive_below_costs": 139
+      },
+      "exit": "X1",
+      "inferred_price_gross": 0.654229999999426,
+      "mean_hold_m": 20.959927140255008,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X1/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "1": {
+          "fees": 272.47796289999974,
+          "gross": 0.6542299999994369,
+          "n": 1098,
+          "slippage": 55.29255000000031
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9179.1724555,
+        "equity_start": 10000.0,
+        "fees": 544.9562429600005,
+        "funding": -3.6099815399999997,
+        "liquidations": 0,
+        "max_drawdown": 0.08223758717972496,
+        "net_return": -0.08208275444998059,
+        "slippage_cost": 273.23024999999905,
+        "turnover_ratio": 56.82684371764154
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1098,
+      "classifications": {
+        "gross_above_costs": 132,
+        "gross_nonpositive": 744,
+        "positive_below_costs": 222
+      },
+      "exit": "X1",
+      "inferred_price_gross": 0.9689300000000703,
+      "mean_hold_m": 20.959927140255008,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X1/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "1": {
+          "fees": 544.9562429599999,
+          "gross": 0.9689300000000749,
+          "n": 1098,
+          "slippage": 273.23025
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9927.64938065,
+        "equity_start": 10000.0,
+        "fees": 113.69239873999977,
+        "funding": 0.8199993900000001,
+        "liquidations": 0,
+        "max_drawdown": 0.010615328480637842,
+        "net_return": -0.007235061934996234,
+        "slippage_cost": 23.107870000000098,
+        "turnover_ratio": 22.82812183883166
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 458,
+      "classifications": {
+        "gross_above_costs": 98,
+        "gross_nonpositive": 302,
+        "positive_below_costs": 58
+      },
+      "exit": "X1",
+      "inferred_price_gross": 63.62965000000024,
+      "mean_hold_m": 21.534934497816593,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X1/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 113.69239873999999,
+          "gross": 63.6296500000003,
+          "n": 458,
+          "slippage": 23.107870000000023
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9723.04224809,
+        "equity_start": 10000.0,
+        "fees": 227.3847713000006,
+        "funding": 0.8199993900000001,
+        "liquidations": 0,
+        "max_drawdown": 0.02820465872712008,
+        "net_return": -0.0276957751909922,
+        "slippage_cost": 114.02263000000038,
+        "turnover_ratio": 23.066446032833216
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 458,
+      "classifications": {
+        "gross_above_costs": 60,
+        "gross_nonpositive": 302,
+        "positive_below_costs": 96
+      },
+      "exit": "X1",
+      "inferred_price_gross": 63.62964999999971,
+      "mean_hold_m": 21.534934497816593,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X1/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 227.38477130000007,
+          "gross": 63.62964999999967,
+          "n": 458,
+          "slippage": 114.0226300000002
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9612.54923792,
+        "equity_start": 10000.0,
+        "fees": 333.16455884000015,
+        "funding": -0.27556324,
+        "liquidations": 0,
+        "max_drawdown": 0.04013036140588999,
+        "net_return": -0.038745076207997386,
+        "slippage_cost": 67.94302999999938,
+        "turnover_ratio": 68.01047692638689
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1340,
+      "classifications": {
+        "gross_above_costs": 274,
+        "gross_nonpositive": 835,
+        "positive_below_costs": 231
+      },
+      "exit": "X2",
+      "inferred_price_gross": 13.932390000000447,
+      "mean_hold_m": 18.52537313432836,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X2/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 170.55300358,
+          "gross": -5.520219999981661,
+          "n": 686,
+          "slippage": 34.79289000000004
+        },
+        "1": {
+          "fees": 162.61155525999993,
+          "gross": 19.45260999998213,
+          "n": 654,
+          "slippage": 33.1501400000001
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9011.70437703,
+        "equity_start": 10000.0,
+        "fees": 666.3278299300002,
+        "funding": -0.24898303999999996,
+        "liquidations": 0,
+        "max_drawdown": 0.09905521837198805,
+        "net_return": -0.09882956229698736,
+        "slippage_cost": 334.4713499999959,
+        "turnover_ratio": 70.20933283439392
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1340,
+      "classifications": {
+        "gross_above_costs": 126,
+        "gross_nonpositive": 828,
+        "positive_below_costs": 386
+      },
+      "exit": "X2",
+      "inferred_price_gross": 12.752540000000616,
+      "mean_hold_m": 18.52537313432836,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X2/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 341.10595309000024,
+          "gross": -5.45955000000034,
+          "n": 686,
+          "slippage": 171.2378999999994
+        },
+        "1": {
+          "fees": 325.22187683999994,
+          "gross": 18.21209000000094,
+          "n": 654,
+          "slippage": 163.2334499999996
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9537.51883626,
+        "equity_start": 10000.0,
+        "fees": 336.23507674999985,
+        "funding": 0.37265301,
+        "liquidations": 0,
+        "max_drawdown": 0.046383334015262845,
+        "net_return": -0.046248116374004944,
+        "slippage_cost": 68.22519000000003,
+        "turnover_ratio": 68.72772302039917
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1355,
+      "classifications": {
+        "gross_above_costs": 305,
+        "gross_nonpositive": 889,
+        "positive_below_costs": 161
+      },
+      "exit": "X2",
+      "inferred_price_gross": -58.39354999999983,
+      "mean_hold_m": 20.738745387453875,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X2/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 164.30479520000017,
+          "gross": -38.142859999990726,
+          "n": 662,
+          "slippage": 33.338189999999976
+        },
+        "1": {
+          "fees": 171.93028155000005,
+          "gross": -20.250690000009048,
+          "n": 693,
+          "slippage": 34.88699999999995
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8941.65520512,
+        "equity_start": 10000.0,
+        "fees": 672.4700262400004,
+        "funding": 0.36701136000000006,
+        "liquidations": 0,
+        "max_drawdown": 0.10594127227640504,
+        "net_return": -0.10583447948798819,
+        "slippage_cost": 337.174169999993,
+        "turnover_ratio": 70.9719153056409
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1355,
+      "classifications": {
+        "gross_above_costs": 171,
+        "gross_nonpositive": 885,
+        "positive_below_costs": 299
+      },
+      "exit": "X2",
+      "inferred_price_gross": -49.06761000000033,
+      "mean_hold_m": 20.738745387453875,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X2/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 328.60487393999995,
+          "gross": -33.40586999997745,
+          "n": 662,
+          "slippage": 164.7629100000003
+        },
+        "1": {
+          "fees": 343.8651523000004,
+          "gross": -15.661740000022855,
+          "n": 693,
+          "slippage": 172.41126000000077
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9840.38115407,
+        "equity_start": 10000.0,
+        "fees": 142.00779499000012,
+        "funding": 0.40238906,
+        "liquidations": 0,
+        "max_drawdown": 0.01658257513889827,
+        "net_return": -0.015961884592997966,
+        "slippage_cost": 28.866580000000052,
+        "turnover_ratio": 28.60452314001148
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 572,
+      "classifications": {
+        "gross_above_costs": 143,
+        "gross_nonpositive": 350,
+        "positive_below_costs": 79
+      },
+      "exit": "X2",
+      "inferred_price_gross": 10.853140000000774,
+      "mean_hold_m": 20.80944055944056,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X2/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 72.25046327999998,
+          "gross": 18.395329999987396,
+          "n": 291,
+          "slippage": 14.685519999999977
+        },
+        "1": {
+          "fees": 69.75733171000002,
+          "gross": -7.542189999986606,
+          "n": 281,
+          "slippage": 14.181059999999968
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9584.8189934,
+        "equity_start": 10000.0,
+        "fees": 284.0155956600003,
+        "funding": 0.40238906,
+        "liquidations": 0,
+        "max_drawdown": 0.0418786838965699,
+        "net_return": -0.041518100659998836,
+        "slippage_cost": 142.42094000000048,
+        "turnover_ratio": 28.981015191106465
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 572,
+      "classifications": {
+        "gross_above_costs": 86,
+        "gross_nonpositive": 350,
+        "positive_below_costs": 136
+      },
+      "exit": "X2",
+      "inferred_price_gross": 10.853140000000183,
+      "mean_hold_m": 20.80944055944056,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T01_EMA_9_21/X2/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 144.5009178899999,
+          "gross": 18.395330000007867,
+          "n": 291,
+          "slippage": 72.45926000000001
+        },
+        "1": {
+          "fees": 139.51467777000008,
+          "gross": -7.54219000000767,
+          "n": 281,
+          "slippage": 69.96168000000006
+        }
+      },
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9049.06667475,
+        "equity_start": 10000.0,
+        "fees": 810.0744193199954,
+        "funding": -0.005845929999999999,
+        "liquidations": 0,
+        "max_drawdown": 0.09540401029585166,
+        "net_return": -0.09509333252499397,
+        "slippage_cost": 165.21183000000127,
+        "turnover_ratio": 170.38928706321602
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 3258,
+      "classifications": {
+        "gross_above_costs": 338,
+        "gross_nonpositive": 1919,
+        "positive_below_costs": 1001
+      },
+      "exit": "X1",
+      "inferred_price_gross": 24.358769999999943,
+      "mean_hold_m": 8.196439533456108,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X1/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 377.1642112000001,
+          "gross": -28.013119999985157,
+          "n": 1517,
+          "slippage": 76.8961800000008
+        },
+        "1": {
+          "fees": 432.9102081200001,
+          "gross": 52.37188999998508,
+          "n": 1741,
+          "slippage": 88.31565000000062
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 7608.95320012,
+        "equity_start": 10000.0,
+        "fees": 1597.692392999988,
+        "funding": -0.015826879999999988,
+        "liquidations": 0,
+        "max_drawdown": 0.23910467998800633,
+        "net_return": -0.23910467998800633,
+        "slippage_cost": 802.0168499999855,
+        "turnover_ratio": 182.66030464201577
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 3258,
+      "classifications": {
+        "gross_above_costs": 99,
+        "gross_nonpositive": 1854,
+        "positive_below_costs": 1305
+      },
+      "exit": "X1",
+      "inferred_price_gross": 8.678269999999564,
+      "mean_hold_m": 8.196439533456108,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X1/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 744.2460829500005,
+          "gross": -24.821599999985335,
+          "n": 1517,
+          "slippage": 373.60349000000093
+        },
+        "1": {
+          "fees": 853.4463100500005,
+          "gross": 33.49986999998485,
+          "n": 1741,
+          "slippage": 428.41336000000274
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8975.43023287,
+        "equity_start": 10000.0,
+        "fees": 860.1566760899984,
+        "funding": 0.5204689599999999,
+        "liquidations": 0,
+        "max_drawdown": 0.10260620971083301,
+        "net_return": -0.10245697671301535,
+        "slippage_cost": 174.516840000007,
+        "turnover_ratio": 181.52857934328327
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 3466,
+      "classifications": {
+        "gross_above_costs": 497,
+        "gross_nonpositive": 2052,
+        "positive_below_costs": 917
+      },
+      "exit": "X1",
+      "inferred_price_gross": 9.583279999999599,
+      "mean_hold_m": 8.259665320253895,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X1/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 425.31197267999977,
+          "gross": -9.037269999998982,
+          "n": 1714,
+          "slippage": 86.27244999999958
+        },
+        "1": {
+          "fees": 434.84470341000053,
+          "gross": 18.620549999998627,
+          "n": 1752,
+          "slippage": 88.24438999999946
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 7488.79595058,
+        "equity_start": 10000.0,
+        "fees": 1689.461636699995,
+        "funding": 0.27672727999999985,
+        "liquidations": 0,
+        "max_drawdown": 0.2512187722614966,
+        "net_return": -0.25112040494199395,
+        "slippage_cost": 847.0572400000242,
+        "turnover_ratio": 194.68797856134472
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 3466,
+      "classifications": {
+        "gross_above_costs": 160,
+        "gross_nonpositive": 1965,
+        "positive_below_costs": 1341
+      },
+      "exit": "X1",
+      "inferred_price_gross": 25.038099999999957,
+      "mean_hold_m": 8.259665320253895,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X1/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 836.4085018100003,
+          "gross": 0.23145999999202502,
+          "n": 1714,
+          "slippage": 419.36311000000126
+        },
+        "1": {
+          "fees": 853.0531348899989,
+          "gross": 24.80664000000787,
+          "n": 1752,
+          "slippage": 427.6941300000007
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9586.6348532,
+        "equity_start": 10000.0,
+        "fees": 393.82814859000075,
+        "funding": 0.41306179000000004,
+        "liquidations": 0,
+        "max_drawdown": 0.041529283250530735,
+        "net_return": -0.04133651467999999,
+        "slippage_cost": 80.0668999999981,
+        "turnover_ratio": 80.54824639919953
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 1586,
+      "classifications": {
+        "gross_above_costs": 221,
+        "gross_nonpositive": 928,
+        "positive_below_costs": 437
+      },
+      "exit": "X1",
+      "inferred_price_gross": 60.11683999999927,
+      "mean_hold_m": 8.041614197141655,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X1/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 182.71854331000003,
+          "gross": 49.95177999998786,
+          "n": 736,
+          "slippage": 37.15319000000009
+        },
+        "1": {
+          "fees": 211.10960528000032,
+          "gross": 10.165060000011396,
+          "n": 850,
+          "slippage": 42.91371000000008
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8861.56434208,
+        "equity_start": 10000.0,
+        "fees": 787.6628095399994,
+        "funding": 0.41457162,
+        "liquidations": 0,
+        "max_drawdown": 0.11393081743200151,
+        "net_return": -0.11384356579200217,
+        "slippage_cost": 395.0030799999955,
+        "turnover_ratio": 83.68240627649743
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 1586,
+      "classifications": {
+        "gross_above_costs": 80,
+        "gross_nonpositive": 923,
+        "positive_below_costs": 583
+      },
+      "exit": "X1",
+      "inferred_price_gross": 43.81566000000064,
+      "mean_hold_m": 8.042244640605297,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X1/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 365.44848845999996,
+          "gross": 38.53792000001281,
+          "n": 736,
+          "slippage": 183.25924000000043
+        },
+        "1": {
+          "fees": 422.21432108,
+          "gross": 5.277739999987837,
+          "n": 850,
+          "slippage": 211.74384000000057
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9568.37207986,
+        "equity_start": 10000.0,
+        "fees": 370.47372761000037,
+        "funding": 0.19146747,
+        "liquidations": 0,
+        "max_drawdown": 0.04362274400294275,
+        "net_return": -0.043162792013997975,
+        "slippage_cost": 75.5643299999986,
+        "turnover_ratio": 75.77702645742522
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1490,
+      "classifications": {
+        "gross_above_costs": 296,
+        "gross_nonpositive": 933,
+        "positive_below_costs": 261
+      },
+      "exit": "X2",
+      "inferred_price_gross": 14.218670000000667,
+      "mean_hold_m": 18.26711409395973,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X2/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 178.25317737000003,
+          "gross": -22.106670000020358,
+          "n": 717,
+          "slippage": 36.33666000000009
+        },
+        "1": {
+          "fees": 192.22055024000028,
+          "gross": 36.325340000021036,
+          "n": 773,
+          "slippage": 39.227670000000074
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8902.98211589,
+        "equity_start": 10000.0,
+        "fees": 740.9387819400009,
+        "funding": 0.15339783,
+        "liquidations": 0,
+        "max_drawdown": 0.10970178841099287,
+        "net_return": -0.10970178841099287,
+        "slippage_cost": 371.94745999999515,
+        "turnover_ratio": 78.52453719781603
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1490,
+      "classifications": {
+        "gross_above_costs": 140,
+        "gross_nonpositive": 927,
+        "positive_below_costs": 423
+      },
+      "exit": "X2",
+      "inferred_price_gross": 15.714959999999476,
+      "mean_hold_m": 18.26711409395973,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X2/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 356.5012719699996,
+          "gross": -17.023900000010887,
+          "n": 717,
+          "slippage": 178.95498999999938
+        },
+        "1": {
+          "fees": 384.43750997000006,
+          "gross": 32.738860000010355,
+          "n": 773,
+          "slippage": 192.9924699999997
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9559.62811046,
+        "equity_start": 10000.0,
+        "fees": 373.7031442400008,
+        "funding": 0.2758247,
+        "liquidations": 0,
+        "max_drawdown": 0.04430171567778307,
+        "net_return": -0.044037188953991335,
+        "slippage_cost": 75.83435999999985,
+        "turnover_ratio": 76.50450367333751
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1506,
+      "classifications": {
+        "gross_above_costs": 358,
+        "gross_nonpositive": 972,
+        "positive_below_costs": 176
+      },
+      "exit": "X2",
+      "inferred_price_gross": 8.889790000000243,
+      "mean_hold_m": 20.46082337317397,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X2/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 181.36733617999968,
+          "gross": -1.0434699999919577,
+          "n": 731,
+          "slippage": 36.7830700000001
+        },
+        "1": {
+          "fees": 192.33580805999966,
+          "gross": 9.933259999992213,
+          "n": 775,
+          "slippage": 39.05129000000011
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8890.29159508,
+        "equity_start": 10000.0,
+        "fees": 747.4065491100009,
+        "funding": 0.3216941899999999,
+        "liquidations": 0,
+        "max_drawdown": 0.1110847886715507,
+        "net_return": -0.11097084049199879,
+        "slippage_cost": 374.7346599999947,
+        "turnover_ratio": 79.30319173979446
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1506,
+      "classifications": {
+        "gross_above_costs": 211,
+        "gross_nonpositive": 963,
+        "positive_below_costs": 332
+      },
+      "exit": "X2",
+      "inferred_price_gross": 12.111109999999753,
+      "mean_hold_m": 20.46082337317397,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X2/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 362.73319426,
+          "gross": 0.4282499999705624,
+          "n": 731,
+          "slippage": 181.87137000000047
+        },
+        "1": {
+          "fees": 384.6733548500005,
+          "gross": 11.682860000029203,
+          "n": 775,
+          "slippage": 192.8632900000005
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9856.08021294,
+        "equity_start": 10000.0,
+        "fees": 167.5938941699999,
+        "funding": 0.3977071099999999,
+        "liquidations": 0,
+        "max_drawdown": 0.016975453645847294,
+        "net_return": -0.014391978705998731,
+        "slippage_cost": 34.05516999999978,
+        "turnover_ratio": 33.821225973327046
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 675,
+      "classifications": {
+        "gross_above_costs": 173,
+        "gross_nonpositive": 418,
+        "positive_below_costs": 84
+      },
+      "exit": "X2",
+      "inferred_price_gross": 57.33156999999991,
+      "mean_hold_m": 19.62074074074074,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X2/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 82.14422407999996,
+          "gross": 33.83398999999309,
+          "n": 331,
+          "slippage": 16.687319999999968
+        },
+        "1": {
+          "fees": 85.44967008999993,
+          "gross": 23.497580000006792,
+          "n": 344,
+          "slippage": 17.367849999999976
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9554.45363743,
+        "equity_start": 10000.0,
+        "fees": 335.1877696799999,
+        "funding": 0.3977071099999999,
+        "liquidations": 0,
+        "max_drawdown": 0.044971822480950996,
+        "net_return": -0.04455463625699785,
+        "slippage_cost": 168.08786999999955,
+        "turnover_ratio": 34.34936412911996
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 675,
+      "classifications": {
+        "gross_above_costs": 97,
+        "gross_nonpositive": 418,
+        "positive_below_costs": 160
+      },
+      "exit": "X2",
+      "inferred_price_gross": 57.331570000000525,
+      "mean_hold_m": 19.62074074074074,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T02_ROC_20_60/X2/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 164.28843470999988,
+          "gross": 33.83399000001553,
+          "n": 331,
+          "slippage": 82.38572000000006
+        },
+        "1": {
+          "fees": 170.89933496999996,
+          "gross": 23.497579999984985,
+          "n": 344,
+          "slippage": 85.70215000000016
+        }
+      },
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9596.95486124,
+        "equity_start": 10000.0,
+        "fees": 324.23180135999996,
+        "funding": 0.11793259999999996,
+        "liquidations": 0,
+        "max_drawdown": 0.040715192267271494,
+        "net_return": -0.04030451387602041,
+        "slippage_cost": 66.09684999999979,
+        "turnover_ratio": 66.18820956615073
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1304,
+      "classifications": {
+        "gross_above_costs": 253,
+        "gross_nonpositive": 850,
+        "positive_below_costs": 201
+      },
+      "exit": "X1",
+      "inferred_price_gross": -12.834420000000557,
+      "mean_hold_m": 21.598159509202453,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X1/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 154.14407179999998,
+          "gross": -54.86766000001731,
+          "n": 620,
+          "slippage": 31.41915000000005
+        },
+        "1": {
+          "fees": 170.08772955999964,
+          "gross": 42.03324000001673,
+          "n": 684,
+          "slippage": 34.67770000000001
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9011.37949328,
+        "equity_start": 10000.0,
+        "fees": 648.4525560700001,
+        "funding": 0.07383934999999998,
+        "liquidations": 0,
+        "max_drawdown": 0.09903081620590748,
+        "net_return": -0.09886205067198439,
+        "slippage_cost": 325.48282999999816,
+        "turnover_ratio": 68.26932324453307
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1304,
+      "classifications": {
+        "gross_above_costs": 140,
+        "gross_nonpositive": 848,
+        "positive_below_costs": 316
+      },
+      "exit": "X1",
+      "inferred_price_gross": -14.758960000000778,
+      "mean_hold_m": 21.598159509202453,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X1/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 308.2835938800001,
+          "gross": -50.29590999999489,
+          "n": 620,
+          "slippage": 154.73866999999967
+        },
+        "1": {
+          "fees": 340.16896219000023,
+          "gross": 35.536949999994114,
+          "n": 684,
+          "slippage": 170.74415999999948
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9603.91383845,
+        "equity_start": 10000.0,
+        "fees": 335.29262985999986,
+        "funding": 0.5322983099999999,
+        "liquidations": 0,
+        "max_drawdown": 0.03965326104587796,
+        "net_return": -0.03960861615502054,
+        "slippage_cost": 68.03628000000006,
+        "turnover_ratio": 68.4331633724505
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1351,
+      "classifications": {
+        "gross_above_costs": 299,
+        "gross_nonpositive": 891,
+        "positive_below_costs": 161
+      },
+      "exit": "X1",
+      "inferred_price_gross": 6.710450000000187,
+      "mean_hold_m": 22.099925980754996,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X1/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 165.54035587999996,
+          "gross": -5.244240000015851,
+          "n": 667,
+          "slippage": 33.59203
+        },
+        "1": {
+          "fees": 169.75227397999998,
+          "gross": 11.954690000016033,
+          "n": 684,
+          "slippage": 34.44424999999997
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9000.68991323,
+        "equity_start": 10000.0,
+        "fees": 670.5828431099991,
+        "funding": 0.5028663399999999,
+        "liquidations": 0,
+        "max_drawdown": 0.09993507125300705,
+        "net_return": -0.09993100867700744,
+        "slippage_cost": 336.22290999999285,
+        "turnover_ratio": 70.66107345176128
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1351,
+      "classifications": {
+        "gross_above_costs": 187,
+        "gross_nonpositive": 885,
+        "positive_below_costs": 279
+      },
+      "exit": "X1",
+      "inferred_price_gross": 6.992800000000461,
+      "mean_hold_m": 22.099925980754996,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X1/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 331.07937323999994,
+          "gross": -3.8925600000317084,
+          "n": 667,
+          "slippage": 166.00660000000036
+        },
+        "1": {
+          "fees": 339.50346986999966,
+          "gross": 10.885360000032168,
+          "n": 684,
+          "slippage": 170.21631000000045
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9889.70236828,
+        "equity_start": 10000.0,
+        "fees": 149.6860325399999,
+        "funding": 0.3503508199999999,
+        "liquidations": 0,
+        "max_drawdown": 0.014766440736193709,
+        "net_return": -0.011029763171992335,
+        "slippage_cost": 30.417730000000052,
+        "turnover_ratio": 30.139285466098368
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 603,
+      "classifications": {
+        "gross_above_costs": 157,
+        "gross_nonpositive": 375,
+        "positive_below_costs": 71
+      },
+      "exit": "X1",
+      "inferred_price_gross": 69.45578000000089,
+      "mean_hold_m": 22.621890547263682,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X1/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 72.22187662000007,
+          "gross": 59.339880000004676,
+          "n": 291,
+          "slippage": 14.679649999999976
+        },
+        "1": {
+          "fees": 77.46415592000004,
+          "gross": 10.115899999996197,
+          "n": 312,
+          "slippage": 15.73807999999997
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9620.29433447,
+        "equity_start": 10000.0,
+        "fees": 299.37204635000023,
+        "funding": 0.3503508199999999,
+        "liquidations": 0,
+        "max_drawdown": 0.0391875648113551,
+        "net_return": -0.037970566552989804,
+        "slippage_cost": 150.13975000000073,
+        "turnover_ratio": 30.557453398626198
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 603,
+      "classifications": {
+        "gross_above_costs": 85,
+        "gross_nonpositive": 375,
+        "positive_below_costs": 143
+      },
+      "exit": "X1",
+      "inferred_price_gross": 69.45577999999973,
+      "mean_hold_m": 22.621890547263682,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X1/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 144.44373719000004,
+          "gross": 59.33988000000945,
+          "n": 291,
+          "slippage": 72.44323000000004
+        },
+        "1": {
+          "fees": 154.92830916000003,
+          "gross": 10.115899999990306,
+          "n": 312,
+          "slippage": 77.69652000000012
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9566.91741294,
+        "equity_start": 10000.0,
+        "fees": 361.3046566599996,
+        "funding": -0.12151040000000005,
+        "liquidations": 0,
+        "max_drawdown": 0.044174463379539564,
+        "net_return": -0.04330825870600041,
+        "slippage_cost": 73.67145999999872,
+        "turnover_ratio": 73.86374411607288
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1453,
+      "classifications": {
+        "gross_above_costs": 287,
+        "gross_nonpositive": 913,
+        "positive_below_costs": 253
+      },
+      "exit": "X2",
+      "inferred_price_gross": 2.01503999999985,
+      "mean_hold_m": 17.408121128699243,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X2/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 174.79559958999988,
+          "gross": -31.486959999999446,
+          "n": 703,
+          "slippage": 35.647600000000075
+        },
+        "1": {
+          "fees": 186.50905706999953,
+          "gross": 33.50199999999931,
+          "n": 750,
+          "slippage": 38.02386
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8914.66273866,
+        "equity_start": 10000.0,
+        "fees": 722.6031517800011,
+        "funding": -0.10500956000000003,
+        "liquidations": 0,
+        "max_drawdown": 0.10865745469228683,
+        "net_return": -0.1085337261339947,
+        "slippage_cost": 362.7011499999962,
+        "turnover_ratio": 76.46856974868659
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 1453,
+      "classifications": {
+        "gross_above_costs": 124,
+        "gross_nonpositive": 905,
+        "positive_below_costs": 424
+      },
+      "exit": "X2",
+      "inferred_price_gross": 0.07204999999937639,
+      "mean_hold_m": 17.408121128699243,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X2/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 349.5890952099999,
+          "gross": -29.370540000005565,
+          "n": 703,
+          "slippage": 175.47732999999948
+        },
+        "1": {
+          "fees": 373.0140565700001,
+          "gross": 29.442590000004948,
+          "n": 750,
+          "slippage": 187.22381999999945
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9555.65711779,
+        "equity_start": 10000.0,
+        "fees": 358.87594380000024,
+        "funding": 0.31109158999999975,
+        "liquidations": 0,
+        "max_drawdown": 0.04445078359956178,
+        "net_return": -0.044434288220992935,
+        "slippage_cost": 72.81783000000007,
+        "turnover_ratio": 73.42812470162488
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1446,
+      "classifications": {
+        "gross_above_costs": 328,
+        "gross_nonpositive": 945,
+        "positive_below_costs": 173
+      },
+      "exit": "X2",
+      "inferred_price_gross": -12.960199999999515,
+      "mean_hold_m": 19.69017980636238,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X2/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 178.21083833000006,
+          "gross": -28.139809999994828,
+          "n": 718,
+          "slippage": 36.158180000000065
+        },
+        "1": {
+          "fees": 180.66510547000013,
+          "gross": 15.179609999995302,
+          "n": 728,
+          "slippage": 36.65965000000006
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 8910.33243251,
+        "equity_start": 10000.0,
+        "fees": 717.7511796399991,
+        "funding": 0.2863321499999999,
+        "liquidations": 0,
+        "max_drawdown": 0.10896675674901102,
+        "net_return": -0.10896675674901102,
+        "slippage_cost": 359.8712599999956,
+        "turnover_ratio": 76.00840283854467
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 1446,
+      "classifications": {
+        "gross_above_costs": 203,
+        "gross_nonpositive": 933,
+        "positive_below_costs": 310
+      },
+      "exit": "X2",
+      "inferred_price_gross": -12.331459999999785,
+      "mean_hold_m": 19.69017980636238,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X2/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 356.4210246199997,
+          "gross": -27.468680000003264,
+          "n": 718,
+          "slippage": 178.70552000000038
+        },
+        "1": {
+          "fees": 361.33015501999967,
+          "gross": 15.137220000003492,
+          "n": 728,
+          "slippage": 181.1657400000004
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9869.76720112,
+        "equity_start": 10000.0,
+        "fees": 161.09967167000002,
+        "funding": 0.4741327899999999,
+        "liquidations": 0,
+        "max_drawdown": 0.015048053281966567,
+        "net_return": -0.013023279888006223,
+        "slippage_cost": 32.73832000000001,
+        "turnover_ratio": 32.45570643260162
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 649,
+      "classifications": {
+        "gross_above_costs": 166,
+        "gross_nonpositive": 398,
+        "positive_below_costs": 85
+      },
+      "exit": "X2",
+      "inferred_price_gross": 63.1310599999993,
+      "mean_hold_m": 18.79815100154083,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X2/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 77.69048965000003,
+          "gross": 58.992630000009456,
+          "n": 313,
+          "slippage": 15.792729999999969
+        },
+        "1": {
+          "fees": 83.40918202000002,
+          "gross": 4.138429999989813,
+          "n": 336,
+          "slippage": 16.945589999999967
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9579.83624745,
+        "equity_start": 10000.0,
+        "fees": 322.19932534000037,
+        "funding": 0.4741327899999999,
+        "liquidations": 0,
+        "max_drawdown": 0.04215934857130199,
+        "net_return": -0.04201637525500368,
+        "slippage_cost": 161.56962000000013,
+        "turnover_ratio": 32.94148180308625
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 649,
+      "classifications": {
+        "gross_above_costs": 100,
+        "gross_nonpositive": 398,
+        "positive_below_costs": 151
+      },
+      "exit": "X2",
+      "inferred_price_gross": 63.131060000000886,
+      "mean_hold_m": 18.79815100154083,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T03_DONCHIAN_20/X2/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 155.38095099000003,
+          "gross": 58.99262999999832,
+          "n": 313,
+          "slippage": 77.92068000000005
+        },
+        "1": {
+          "fees": 166.81837434999983,
+          "gross": 4.13843000000255,
+          "n": 336,
+          "slippage": 83.64894000000017
+        }
+      },
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9874.23768349,
+        "equity_start": 10000.0,
+        "fees": 102.6870946,
+        "funding": -0.08486190999999998,
+        "liquidations": 0,
+        "max_drawdown": 0.014128727991588486,
+        "net_return": -0.012576231651007519,
+        "slippage_cost": 20.923890000000082,
+        "turnover_ratio": 20.68574311886194
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 413,
+      "classifications": {
+        "gross_above_costs": 173,
+        "gross_nonpositive": 148,
+        "positive_below_costs": 92
+      },
+      "exit": "X1",
+      "inferred_price_gross": -2.0664699999994363,
+      "mean_hold_m": 37.76029055690073,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X1/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 55.69195612999998,
+          "gross": -18.333590000004,
+          "n": 224,
+          "slippage": 11.356809999999992
+        },
+        "1": {
+          "fees": 46.99513847000002,
+          "gross": 16.267120000004557,
+          "n": 189,
+          "slippage": 9.567079999999995
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9689.40253686,
+        "equity_start": 10000.0,
+        "fees": 205.37419123000018,
+        "funding": -0.08486190999999998,
+        "liquidations": 0,
+        "max_drawdown": 0.0316737597453246,
+        "net_return": -0.03105974631400088,
+        "slippage_cost": 103.07193999999974,
+        "turnover_ratio": 20.881470755660853
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 413,
+      "classifications": {
+        "gross_above_costs": 50,
+        "gross_nonpositive": 148,
+        "positive_below_costs": 215
+      },
+      "exit": "X1",
+      "inferred_price_gross": -2.0664700000003995,
+      "mean_hold_m": 37.76029055690073,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X1/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 111.38391986000005,
+          "gross": -18.33359000000274,
+          "n": 224,
+          "slippage": 55.90566999999997
+        },
+        "1": {
+          "fees": 93.99027136999999,
+          "gross": 16.267120000002333,
+          "n": 189,
+          "slippage": 47.16626999999999
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9870.77543779,
+        "equity_start": 10000.0,
+        "fees": 104.20738491999994,
+        "funding": -0.1069572899999999,
+        "liquidations": 0,
+        "max_drawdown": 0.013338940315978043,
+        "net_return": -0.01292245622099264,
+        "slippage_cost": 21.149970000000145,
+        "turnover_ratio": 20.979077729843173
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 420,
+      "classifications": {
+        "gross_above_costs": 222,
+        "gross_nonpositive": 139,
+        "positive_below_costs": 59
+      },
+      "exit": "X1",
+      "inferred_price_gross": -3.7602499999999286,
+      "mean_hold_m": 35.635714285714286,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X1/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 54.80724400999999,
+          "gross": 15.082919999999556,
+          "n": 221,
+          "slippage": 11.12109999999998
+        },
+        "1": {
+          "fees": 49.40014091000004,
+          "gross": -18.843169999999485,
+          "n": 199,
+          "slippage": 10.028869999999982
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9683.22607723,
+        "equity_start": 10000.0,
+        "fees": 208.41476547999991,
+        "funding": -0.1069572899999999,
+        "liquidations": 0,
+        "max_drawdown": 0.03179414922900059,
+        "net_return": -0.03167739227700095,
+        "slippage_cost": 104.49195000000026,
+        "turnover_ratio": 21.18033146587226
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 420,
+      "classifications": {
+        "gross_above_costs": 109,
+        "gross_nonpositive": 139,
+        "positive_below_costs": 172
+      },
+      "exit": "X1",
+      "inferred_price_gross": -3.7602500000003607,
+      "mean_hold_m": 35.635714285714286,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X1/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 109.61447505000001,
+          "gross": 15.082920000009716,
+          "n": 221,
+          "slippage": 54.951509999999985
+        },
+        "1": {
+          "fees": 98.80029043000002,
+          "gross": -18.84317000001009,
+          "n": 199,
+          "slippage": 49.54043999999999
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9897.34889749,
+        "equity_start": 10000.0,
+        "fees": 47.41618742000008,
+        "funding": -0.20562509000000004,
+        "liquidations": 0,
+        "max_drawdown": 0.010936585553992129,
+        "net_return": -0.010265110250990861,
+        "slippage_cost": 9.640639999999992,
+        "turnover_ratio": 9.528083759951466
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 191,
+      "classifications": {
+        "gross_above_costs": 90,
+        "gross_nonpositive": 69,
+        "positive_below_costs": 32
+      },
+      "exit": "X1",
+      "inferred_price_gross": -45.38865000000079,
+      "mean_hold_m": 38.95811518324607,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X1/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 24.094819479999998,
+          "gross": -0.4590599999958309,
+          "n": 97,
+          "slippage": 4.900730000000001
+        },
+        "1": {
+          "fees": 23.32136794,
+          "gross": -44.92959000000495,
+          "n": 94,
+          "slippage": 4.739910000000001
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9812.02342293,
+        "equity_start": 10000.0,
+        "fees": 94.83239197999991,
+        "funding": -0.20562509000000004,
+        "liquidations": 0,
+        "max_drawdown": 0.019097968810999566,
+        "net_return": -0.018797657706999926,
+        "slippage_cost": 47.54991000000012,
+        "turnover_ratio": 9.569162430976256
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 191,
+      "classifications": {
+        "gross_above_costs": 28,
+        "gross_nonpositive": 69,
+        "positive_below_costs": 94
+      },
+      "exit": "X1",
+      "inferred_price_gross": -45.388649999999615,
+      "mean_hold_m": 38.95811518324607,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X1/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 48.189637209999994,
+          "gross": -0.459059999999999,
+          "n": 97,
+          "slippage": 24.159769999999995
+        },
+        "1": {
+          "fees": 46.642754769999996,
+          "gross": -44.929589999999635,
+          "n": 94,
+          "slippage": 23.39014
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9794.69898937,
+        "equity_start": 10000.0,
+        "fees": 144.20692699,
+        "funding": -0.22089363999999997,
+        "liquidations": 0,
+        "max_drawdown": 0.02099492109600265,
+        "net_return": -0.020530101063003903,
+        "slippage_cost": 29.38706000000046,
+        "turnover_ratio": 29.13435461939387
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 580,
+      "classifications": {
+        "gross_above_costs": 136,
+        "gross_nonpositive": 360,
+        "positive_below_costs": 84
+      },
+      "exit": "X2",
+      "inferred_price_gross": -31.486130000000745,
+      "mean_hold_m": 21.605172413793102,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X2/inner-screen-1/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 79.5687008,
+          "gross": -28.50295000001058,
+          "n": 320,
+          "slippage": 16.22497999999998
+        },
+        "1": {
+          "fees": 64.63822618999995,
+          "gross": -2.983179999990184,
+          "n": 260,
+          "slippage": 13.162079999999984
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9535.13508794,
+        "equity_start": 10000.0,
+        "fees": 288.41385842,
+        "funding": -0.22089363999999997,
+        "liquidations": 0,
+        "max_drawdown": 0.046799400731011076,
+        "net_return": -0.04648649120601045,
+        "slippage_cost": 144.74403000000018,
+        "turnover_ratio": 29.5255541104813
+      },
+      "block": "inner-screen-20240201_20240301",
+      "case_count": 580,
+      "classifications": {
+        "gross_above_costs": 63,
+        "gross_nonpositive": 360,
+        "positive_below_costs": 157
+      },
+      "exit": "X2",
+      "inferred_price_gross": -31.486130000000284,
+      "mean_hold_m": 21.605172413793102,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X2/inner-screen-1/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 159.13740497999999,
+          "gross": -28.502949999992214,
+          "n": 320,
+          "slippage": 79.86983000000004
+        },
+        "1": {
+          "fees": 129.27645343999993,
+          "gross": -2.9831800000080677,
+          "n": 260,
+          "slippage": 64.87419999999993
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9816.88632212,
+        "equity_start": 10000.0,
+        "fees": 134.46567640999987,
+        "funding": 0.5470585299999999,
+        "liquidations": 0,
+        "max_drawdown": 0.018491920687612295,
+        "net_return": -0.018311367787992583,
+        "slippage_cost": 27.280130000000213,
+        "turnover_ratio": 27.129871503501185
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 542,
+      "classifications": {
+        "gross_above_costs": 154,
+        "gross_nonpositive": 327,
+        "positive_below_costs": 61
+      },
+      "exit": "X2",
+      "inferred_price_gross": -21.91492999999916,
+      "mean_hold_m": 22.505535055350553,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X2/inner-screen-2/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 71.41782233999999,
+          "gross": 5.769789999986855,
+          "n": 288,
+          "slippage": 14.48414999999996
+        },
+        "1": {
+          "fees": 63.04785406999994,
+          "gross": -27.684719999986026,
+          "n": 254,
+          "slippage": 12.795979999999966
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9574.86212814,
+        "equity_start": 10000.0,
+        "fees": 268.9313603899996,
+        "funding": 0.5470585299999999,
+        "liquidations": 0,
+        "max_drawdown": 0.0425646174122668,
+        "net_return": -0.04251378718599641,
+        "slippage_cost": 134.83864000000008,
+        "turnover_ratio": 27.468343237198766
+      },
+      "block": "inner-screen-20240301_20240401",
+      "case_count": 542,
+      "classifications": {
+        "gross_above_costs": 87,
+        "gross_nonpositive": 327,
+        "positive_below_costs": 128
+      },
+      "exit": "X2",
+      "inferred_price_gross": -21.91493000000082,
+      "mean_hold_m": 22.505535055350553,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X2/inner-screen-2/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 142.83564522999998,
+          "gross": 5.769790000018494,
+          "n": 288,
+          "slippage": 71.61278000000001
+        },
+        "1": {
+          "fees": 126.09571516000001,
+          "gross": -27.684720000019322,
+          "n": 254,
+          "slippage": 63.225859999999976
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9885.31915271,
+        "equity_start": 10000.0,
+        "fees": 62.07789922000003,
+        "funding": -0.03309807000000001,
+        "liquidations": 0,
+        "max_drawdown": 0.011635433166785059,
+        "net_return": -0.011468084728993966,
+        "slippage_cost": 12.613460000000014,
+        "turnover_ratio": 12.478077277691682
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 250,
+      "classifications": {
+        "gross_above_costs": 60,
+        "gross_nonpositive": 164,
+        "positive_below_costs": 26
+      },
+      "exit": "X2",
+      "inferred_price_gross": -39.956389999999296,
+      "mean_hold_m": 23.196,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X2/inner-screen-3/base/native-run.json",
+      "scenario": "base",
+      "side": {
+        "-1": {
+          "fees": 29.066826290000005,
+          "gross": -6.1161799999997495,
+          "n": 117,
+          "slippage": 5.904060000000001
+        },
+        "1": {
+          "fees": 33.01107293,
+          "gross": -33.840209999999544,
+          "n": 133,
+          "slippage": 6.709400000000002
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "account": {
+        "equity_currency": "USDT",
+        "equity_end": 9773.59341692,
+        "equity_start": 10000.0,
+        "fees": 124.15581500999998,
+        "funding": -0.03309807000000001,
+        "liquidations": 0,
+        "max_drawdown": 0.02265985280899485,
+        "net_return": -0.022640658307994443,
+        "slippage_cost": 62.26128000000015,
+        "turnover_ratio": 12.548757204064175
+      },
+      "block": "inner-screen-20240401_20240415",
+      "case_count": 250,
+      "classifications": {
+        "gross_above_costs": 30,
+        "gross_nonpositive": 164,
+        "positive_below_costs": 56
+      },
+      "exit": "X2",
+      "inferred_price_gross": -39.95638999999911,
+      "mean_hold_m": 23.196,
+      "path": ".artifacts/research_1m_4teachers_v1/native/teachers/T04_ZSCORE_60/X2/inner-screen-3/stress/native-run.json",
+      "scenario": "stress",
+      "side": {
+        "-1": {
+          "fees": 58.13365560000001,
+          "gross": -6.116179999992241,
+          "n": 117,
+          "slippage": 29.149199999999997
+        },
+        "1": {
+          "fees": 66.02215941,
+          "gross": -33.84021000000689,
+          "n": 133,
+          "slippage": 33.11208
+        }
+      },
+      "teacher": "T04_ZSCORE_60"
+    }
+  ]
+}

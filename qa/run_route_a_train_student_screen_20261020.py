@@ -16,11 +16,12 @@ import json
 import math
 import os
 from pathlib import Path
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, cast
 import torch
 
-from rles_orchestrator import application
-from rles_orchestrator.research_access import ACTIVE_OWNER, read_registered_train_window
+from rles_orchestrator import application  # type: ignore[import-untyped]
+from rles_orchestrator.research_access import ACTIVE_OWNER, read_registered_train_window  # type: ignore[import-untyped]
 from rles_route_a.config import BCConfig
 from rles_route_a.evaluation import (
     NativePair,
@@ -151,11 +152,31 @@ def make_config(
     source_mode: str = "whole_snapshot_isolated_v1",
     prepare_factory: bool = True,
     share_snapshot_histories: bool = False,
+    known_funding_calendar: bool = False,
 ) -> tuple[dict, Any]:
     if source_mode not in {"row_group_scoped_v1", "whole_snapshot_isolated_v1"}:
         raise ValueError("unsupported registered Train source mode")
+    if type(known_funding_calendar) is not bool:
+        raise ValueError("known funding calendar switch must be Boolean")
     template = json.loads(CONFIG.read_text(encoding="utf-8"))["environment"]
     environment = dict(template)
+    coverage_policy = {
+        "maximum_age_ns": template["coverage_policy"]["maximum_age_ns"],
+        "settlement_times_ns": {
+            INSTRUMENT: settlement_times(start_ns, end_ns),
+        },
+        "provenance": (
+            "8-hour schedule compared with every registered Train settlement event; "
+            "observed source timestamp offset is bounded at 15 ms; the import declares "
+            "1 ms availability delay; not evidence of historical account rules"
+        ),
+        "settlement_max_delay_ns": 1_000_000,
+        "settlement_timestamp_tolerance_ns": 15_000_000,
+    }
+    if known_funding_calendar:
+        coverage_policy["known_schedule_times_ns"] = {
+            INSTRUMENT: settlement_times(start_ns, end_ns),
+        }
     environment.update(
         {
             "market_path": str(MARKET),
@@ -166,19 +187,7 @@ def make_config(
             "mode": mode,
             "feature_profile": FEATURE_PROFILE,
             "execution": {**template["execution"], "zero_target_policy": "close"},
-            "coverage_policy": {
-                "maximum_age_ns": template["coverage_policy"]["maximum_age_ns"],
-                "settlement_times_ns": {
-                    INSTRUMENT: settlement_times(start_ns, end_ns),
-                },
-                "provenance": (
-                    "8-hour schedule compared with every registered Train settlement event; "
-                    "observed source timestamp offset is bounded at 15 ms; the import declares "
-                    "1 ms availability delay; not evidence of historical account rules"
-                ),
-                "settlement_max_delay_ns": 1_000_000,
-                "settlement_timestamp_tolerance_ns": 15_000_000,
-            },
+            "coverage_policy": coverage_policy,
         }
     )
     config = {
@@ -239,6 +248,7 @@ def audit_train_quality() -> int:
             "source_mode": "whole_snapshot_isolated_v1",
         },
     }
+    train_access = cast(dict[str, Any], config["train_data_access"])
     owner_token = ACTIVE_OWNER.set("route-a-train-screen-20261020")
     try:
         report = application.audit_market(config)
@@ -246,7 +256,7 @@ def audit_train_quality() -> int:
             config,
             {"start_ns": scope_start, "end_ns": scope_end},
             marker_sha256=marker_sha,
-            label=config["train_data_access"]["label"],
+            label=train_access["label"],
             allow_legacy_isolated_snapshot=True,
         )
     finally:
@@ -294,7 +304,7 @@ def audit_train_quality() -> int:
     return 0
 
 
-def terminal_receipt(info: dict, source_identity: str) -> TerminalL6Receipt:
+def terminal_receipt(info: Mapping[str, Any], source_identity: str) -> TerminalL6Receipt:
     settlement = info["terminal_settlement"]
     return TerminalL6Receipt(
         receipt_id="route-a-train-l6-" + info["execution_decision_id"],
@@ -314,7 +324,7 @@ def terminal_receipt(info: dict, source_identity: str) -> TerminalL6Receipt:
 
 def make_provider(factory: Any, teacher: Any, source_identity: str, episode_identity: str,
                   *, market_feature_map: dict[str, str] | None = None):
-    def no_flow_receipt(info: dict) -> str:
+    def no_flow_receipt(info: Mapping[str, Any]) -> str:
         return canonical_digest(
             {
                 "schema": "route-a-no-external-cashflow.v1",
@@ -325,7 +335,7 @@ def make_provider(factory: Any, teacher: Any, source_identity: str, episode_iden
             }
         )
 
-    def verify_terminal(info: dict, source: str, receipt: TerminalL6Receipt) -> bool:
+    def verify_terminal(info: Mapping[str, Any], source: str, receipt: TerminalL6Receipt) -> bool:
         settlement = info.get("terminal_settlement")
 
         def matches_equity(receipt_value: float, source_value: Any) -> bool:
@@ -423,7 +433,7 @@ def metric_row(barriers: tuple, report: dict, *, expected_source: str) -> dict:
 
 def run_episode(
     factory: Any,
-    teacher: TrendTeacher,
+    teacher: TrendTeacher | WaitTeacher,
     source_identity: str,
     label: str,
     seed: int,

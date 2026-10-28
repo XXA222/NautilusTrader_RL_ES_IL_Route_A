@@ -1,0 +1,73 @@
+{
+  "acceptance_rules_unchanged": true,
+  "controls_unchanged": [
+    "FLAT",
+    "FIXED_LONG_0.3",
+    "FIXED_SHORT_0.3"
+  ],
+  "corrected_candidate_matrix": [
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T01_EMA_9_21"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "REVERSE_AFTER_FLAT_V1",
+      "teacher_id": "T01_EMA_9_21"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T02_ROC_20_60"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T03_DONCHIAN_20"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T04_ZSCORE_60"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T05_MACD_12_26_9"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T06_RSI_14"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T07_BOLL_20_2"
+    },
+    {
+      "exit_variant": "X1",
+      "reversal_mode": "EXIT_ONLY_V1",
+      "teacher_id": "T08_PULLBACK_1M"
+    }
+  ],
+  "correction_reason": "The initial frozen plan used display-style teacher IDs that do not match the immutable source registry identifiers. This was detected before any market source read, outcome generation, or model fit.",
+  "market_data_read": false,
+  "outcomes_observed": false,
+  "protocol_id": "route-a-teacher-student-train-20261023-20261130-v1",
+  "registry_binding": {
+    "access_key": "access:route-a-teacher-student-train-20261023-20261130-v1",
+    "protocol_sha256": "e7f795fce9f8539e58085f6bd85449f96edb53324cebcbb6380dec47c8d38aca",
+    "scope_registered_before_source_read": true
+  },
+  "schema": "rles.route-a.teacher-student-fresh-train-prereg-errata.v1",
+  "source_scope_unchanged": {
+    "end_utc_exclusive": "2026-11-30T00:00:00Z",
+    "scored_start_utc_inclusive": "2026-10-25T00:00:00Z",
+    "start_utc_inclusive": "2026-10-23T00:00:00Z"
+  },
+  "status": "frozen_after_registry_identity_audit_before_any_source_read",
+  "student_training_started": false,
+  "supersedes_prereg_sha256": "e7f795fce9f8539e58085f6bd85449f96edb53324cebcbb6380dec47c8d38aca"
+}

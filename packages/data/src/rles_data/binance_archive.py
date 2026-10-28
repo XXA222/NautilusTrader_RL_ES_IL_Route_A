@@ -29,31 +29,61 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _guard_project_archive_scope(*, symbol: str, first: date, last: date,
-                                 target: Path, archive_interval: str) -> None:
-    """Reject physical archive spans touching reserved Test/Holdout before IO.
+                                 target: Path, archive_interval: str,
+                                 funding_api_months: tuple[str, ...] = (),
+                                 development_access_key: str | None = None,
+                                 development_protocol_sha256: str | None = None) -> None:
+    """Reject protected or previously consumed physical spans before source IO.
 
-    A monthly funding ZIP is decoded before the requested daily interval is
-    clipped. Checking only the scored dates or only project-local output paths
-    would let a temporary target bypass the physical-read reservation.
+    REST funding scopes are bounded to the requested days; archive scopes cover
+    the entire source month. A matching pre-read Train registration may authorize
+    only its own exact/smaller physical spans.
     """
     registry = PROJECT_ROOT / ".artifacts/research-access.sqlite"
     if not registry.is_file():
         raise DataError("project research registry missing before Binance archive import")
-    first_month = date(first.year, first.month, 1)
-    after_last_month = date(last.year + (last.month == 12), last.month % 12 + 1, 1)
+    if (development_access_key is None) != (development_protocol_sha256 is None):
+        raise DataError("development access key and protocol SHA must be supplied together")
+    if development_protocol_sha256 is not None and re.fullmatch(
+            r"[0-9a-f]{64}", development_protocol_sha256) is None:
+        raise DataError("development protocol SHA must be lowercase SHA-256")
     after_last_day = date.fromordinal(last.toordinal() + 1)
-    spans = [("monthly funding", first_month, after_last_month)]
+    spans: list[tuple[str, date, date]] = []
     if archive_interval == "daily":
         spans.append(("daily market", first, after_last_day))
     else:
+        first_month = date(first.year, first.month, 1)
+        after_last_month = date(last.year + (last.month == 12), last.month % 12 + 1, 1)
         spans.append(("monthly market", first_month, after_last_month))
+    month = date(first.year, first.month, 1)
+    final_month = date(last.year, last.month, 1)
+    forced_api = set(funding_api_months)
+    while month <= final_month:
+        next_month = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
+        month_key = month.strftime("%Y-%m")
+        if month_key in forced_api:
+            spans.append(("bounded REST funding", max(first, month),
+                          min(after_last_day, next_month)))
+        else:
+            spans.append(("monthly funding", month, next_month))
+        month = next_month
+    allowed_api_months: set[str] = set()
+    month_cursor = date(first.year, first.month, 1)
+    while month_cursor <= final_month:
+        allowed_api_months.add(month_cursor.strftime("%Y-%m"))
+        month_cursor = date(month_cursor.year + (month_cursor.month == 12),
+                            month_cursor.month % 12 + 1, 1)
+    if not forced_api.issubset(allowed_api_months):
+        raise DataError("bounded funding source month is outside the imported date range")
+
+    def to_ns(day: date) -> int:
+        return int(datetime.combine(day, datetime.min.time(),
+                                    tzinfo=timezone.utc).timestamp()) * 1_000_000_000
+
     try:
         with sqlite3.connect(registry.resolve().as_uri() + "?mode=ro", uri=True) as db:
             for label, start_day, end_day in spans:
-                start_ns = int(datetime.combine(start_day, datetime.min.time(),
-                                                tzinfo=timezone.utc).timestamp()) * 1_000_000_000
-                end_ns = int(datetime.combine(end_day, datetime.min.time(),
-                                              tzinfo=timezone.utc).timestamp()) * 1_000_000_000
+                start_ns, end_ns = to_ns(start_day), to_ns(end_day)
                 for table in ("access", "query_intent"):
                     conflict = db.execute(
                         f"SELECT 1 FROM {table} WHERE market=? AND family=? "
@@ -65,6 +95,60 @@ def _guard_project_archive_scope(*, symbol: str, first: date, last: date,
                             f"{label} physical archive overlaps registered Test/Holdout; "
                             "no Binance source may be opened"
                         )
+                development = db.execute(
+                    "SELECT 1 FROM access WHERE market=? AND family=? "
+                    "AND purpose='development' AND start_ns<? AND end_ns>? LIMIT 1",
+                    (symbol, "perpetual-market-v1", end_ns, start_ns),
+                ).fetchone()
+                if development is not None:
+                    if development_access_key is None:
+                        raise DataError(
+                            f"{label} physical archive overlaps previously registered Development; "
+                            "no Binance source may be opened"
+                        )
+                    registered = db.execute(
+                        "SELECT owner,market,family,start_ns,end_ns,purpose,identity,state "
+                        "FROM access WHERE access_key=?",
+                        (development_access_key,),
+                    ).fetchone()
+                    if registered is None:
+                        raise DataError("matching pre-read Train access reservation is missing")
+                    (registered_owner, market, family, scope_start, scope_end,
+                     purpose, identity, state) = registered
+                    try:
+                        identity_value = json.loads(identity)
+                    except (TypeError, json.JSONDecodeError) as exc:
+                        raise DataError("Train access reservation identity is invalid") from exc
+                    if (market != symbol or family != "perpetual-market-v1"
+                            or purpose != "development" or state != "recorded"
+                            or scope_start > start_ns or scope_end < end_ns
+                            or identity_value.get("protocol_sha256") != development_protocol_sha256):
+                        raise DataError("Train access reservation does not cover this physical source span")
+                    other_rows = db.execute(
+                        "SELECT owner,start_ns,end_ns,identity FROM access "
+                        "WHERE market=? AND family=? AND purpose='development' "
+                        "AND access_key<>? AND start_ns<? AND end_ns>?",
+                        (symbol, "perpetual-market-v1", development_access_key, end_ns, start_ns),
+                    ).fetchall()
+                    for other_owner, other_start, other_end, other_identity in other_rows:
+                        try:
+                            child = json.loads(other_identity)
+                        except (TypeError, json.JSONDecodeError):
+                            child = None
+                        child_window = child.get("window") if isinstance(child, dict) else None
+                        same_registered_protocol = (
+                            other_owner == registered_owner
+                            and scope_start <= other_start < other_end <= scope_end
+                            and isinstance(child, dict)
+                            and isinstance(child.get("environment"), dict)
+                            and isinstance(child.get("label"), str)
+                            and child.get("label", "").startswith("train-")
+                            and child_window == {"start_ns": other_start, "end_ns": other_end}
+                        )
+                        if not same_registered_protocol:
+                            raise DataError(
+                                "physical source span overlaps another Development access"
+                            )
     except sqlite3.Error as exc:
         raise DataError("project research registry physical-scope check failed") from exc
 
@@ -439,7 +523,7 @@ def funding_api_events(content: bytes, *, symbol: str, instrument: str, source_u
 
 def fetch_funding_api(symbol: str, month: date, start_day: date, end_day: date,
                       raw: Path) -> tuple[dict, bytes]:
-    """Fetch a date-bounded current-month REST supplement with an explicit receipt."""
+    """Fetch a date-bounded REST funding segment with an explicit receipt."""
     if (month != date(month.year, month.month, 1)
             or start_day < month
             or start_day.year != month.year or start_day.month != month.month
@@ -465,10 +549,26 @@ def fetch_funding_api(symbol: str, month: date, start_day: date, end_day: date,
             raise DataError("cached funding API source receipt is unreadable") from exc
         content = destination.read_bytes()
         digest = sha256(content).hexdigest()
-        if receipt != {"schema": "rles.binance-funding-api-source.v1", "url": url, "sha256": digest}:
+        direct_receipt = {
+            "schema": "rles.binance-funding-api-source.v1",
+            "url": url,
+            "sha256": digest,
+        }
+        mcp_receipt = {
+            "schema": "rles.binance-funding-api-mcp-payload.v1",
+            "url": url,
+            "sha256": digest,
+            "capture_method": "binance_mcp_get_futures_usds_funding_rate_history",
+        }
+        if receipt not in (direct_receipt, mcp_receipt):
             raise DataError("cached funding API response differs from its source receipt")
-        return {"path": str(destination.resolve()), "url": url, "sha256": digest,
-                "verification": "captured_response_sha256"}, content
+        source = {"path": str(destination.resolve()), "url": url, "sha256": digest}
+        if receipt == mcp_receipt:
+            source["capture_method"] = receipt["capture_method"]
+            source["verification"] = "captured_mcp_payload_sha256"
+        else:
+            source["verification"] = "captured_response_sha256"
+        return source, content
     content = _read_remote(url, limit=8 * 1024 * 1024, temp_parent=raw)
     if len(content) > 8 * 1024 * 1024:
         raise DataError("funding API response exceeds bounded download size")
@@ -482,6 +582,17 @@ def fetch_funding_api(symbol: str, month: date, start_day: date, end_day: date,
     receipt_tmp.replace(receipt_path)
     return {"path": str(destination.resolve()), "url": url, "sha256": digest,
             "verification": "captured_response_sha256"}, content
+
+
+def _import_failure_receipt(exc: Exception) -> dict[str, object]:
+    receipt: dict[str, object] = {"error": type(exc).__name__, "detail": str(exc)}
+    source_url = getattr(exc, "url", None)
+    if isinstance(source_url, str) and source_url:
+        receipt["source_url"] = source_url
+    http_status = getattr(exc, "code", None)
+    if isinstance(http_status, int):
+        receipt["http_status"] = http_status
+    return receipt
 
 
 def import_day(*, symbol: str, day: str, output: str | Path, delay_ns: int,
@@ -553,7 +664,7 @@ def import_day(*, symbol: str, day: str, output: str | Path, delay_ns: int,
         return metadata
     except Exception as exc:
         # Preserve source bytes and a clear failure record for a future retry.
-        (target / "IMPORT_FAILED.json").write_text(json.dumps({"error": type(exc).__name__, "detail": str(exc)}), encoding="utf-8")
+        (target / "IMPORT_FAILED.json").write_text(json.dumps(_import_failure_receipt(exc), sort_keys=True, separators=(",", ":")), encoding="utf-8")
         raise
 
 
@@ -561,12 +672,17 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
                  output: str | Path, delay_ns: int,
                  instrument: str | None = None, include_bookticker: bool = False,
                  include_agg_trades: bool = False,
-                 archive_interval: str = "daily") -> dict:
+                 archive_interval: str = "daily",
+                 funding_api_months: tuple[str, ...] = (),
+                 development_access_key: str | None = None,
+                 development_protocol_sha256: str | None = None) -> dict:
     """Import a closed inclusive date range from Binance's checksum archives.
 
     Daily OHLCV/mark/index files are retained individually; monthly funding
-    files are fetched once per month and clipped to the imported bars. No
-    instrument rules are inferred or inserted.
+    files are fetched once per month and clipped to the imported bars. A frozen
+    month may instead use the inclusive date-bounded funding REST endpoint to
+    avoid decoding a monthly physical span outside an authorized source scope.
+    No instrument rules are inferred or inserted.
     """
     if re.fullmatch(r"[A-Z0-9]{3,24}", symbol) is None:
         raise DataError("invalid Binance symbol")
@@ -579,6 +695,21 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
         raise DataError("include_agg_trades must be an explicit boolean")
     if type(archive_interval) is not str or archive_interval not in {"daily", "monthly"}:
         raise DataError("archive_interval must be daily or monthly")
+    if (not isinstance(funding_api_months, tuple)
+            or any(not isinstance(value, str)
+                   or re.fullmatch(r"\d{4}-\d{2}", value) is None
+                   for value in funding_api_months)
+            or len(funding_api_months) != len(set(funding_api_months))):
+        raise DataError("funding_api_months must be unique YYYY-MM strings in a tuple")
+    allowed_months = set()
+    month_cursor = date(first.year, first.month, 1)
+    final_month = date(last.year, last.month, 1)
+    while month_cursor <= final_month:
+        allowed_months.add(month_cursor.strftime("%Y-%m"))
+        month_cursor = date(month_cursor.year + (month_cursor.month == 12),
+                            month_cursor.month % 12 + 1, 1)
+    if not set(funding_api_months).issubset(allowed_months):
+        raise DataError("funding API month must intersect the imported date range")
     if (include_bookticker or include_agg_trades) and first != last:
         raise DataError("bookTicker/aggTrades import is limited to one UTC day to bound curated event memory")
     if include_agg_trades and archive_interval != "daily":
@@ -588,7 +719,9 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
     target = Path(output).resolve()
     _guard_project_archive_scope(
         symbol=symbol, first=first, last=last, target=target,
-        archive_interval=archive_interval,
+        archive_interval=archive_interval, funding_api_months=funding_api_months,
+        development_access_key=development_access_key,
+        development_protocol_sha256=development_protocol_sha256,
     )
     if target.exists() and not (
         (target / "IMPORT_FAILED.json").is_file()
@@ -654,25 +787,25 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
                 month = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
 
         month = date(first.year, first.month, 1)
-        final_month = date(last.year, last.month, 1)
         current_month = datetime.now(timezone.utc).date().replace(day=1)
         while month <= final_month:
             month_key = month.strftime("%Y-%m")
-            relative = f"monthly/fundingRate/{symbol}/{symbol}-fundingRate-{month_key}.zip"
-            try:
-                source = fetch_archive(relative, raw / f"fundingRate-{month_key}.zip")
-            except HTTPError as exc:
-                if exc.code != 404 or month != final_month or month != current_month:
-                    raise
-                api_start_day = max(first, month)
-                source, content = fetch_funding_api(symbol, month, api_start_day, last, raw)
+            next_month = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
+            api_start_day = max(first, month)
+            api_end_day = min(last, date.fromordinal(next_month.toordinal() - 1))
+            use_bounded_api = month_key in funding_api_months
+            if use_bounded_api:
+                source, content = fetch_funding_api(
+                    symbol, month, api_start_day, api_end_day, raw,
+                )
                 sources.append(source)
                 start_time_ms = int(datetime(
                     api_start_day.year, api_start_day.month, api_start_day.day,
                     tzinfo=timezone.utc,
                 ).timestamp() * 1000)
                 end_time_ms = int(datetime(
-                    last.year, last.month, last.day, tzinfo=timezone.utc,
+                    api_end_day.year, api_end_day.month, api_end_day.day,
+                    tzinfo=timezone.utc,
                 ).timestamp() * 1000) + 86_400_000 - 1
                 events.extend(funding_api_events(
                     content, symbol=symbol, instrument=instrument or f"{symbol}-PERP.SIM",
@@ -680,18 +813,41 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
                     start_time_ms=start_time_ms, end_time_ms=end_time_ms,
                 ))
             else:
-                sources.append(source)
-                events.extend(archive_events(
-                    Path(source["path"]), stream="fundingRate", instrument=instrument or f"{symbol}-PERP.SIM",
-                    source_url=source["url"], expected_sha256=source["sha256"], delay_ns=delay_ns,
-                ))
-            month = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
+                relative = f"monthly/fundingRate/{symbol}/{symbol}-fundingRate-{month_key}.zip"
+                try:
+                    source = fetch_archive(relative, raw / f"fundingRate-{month_key}.zip")
+                except HTTPError as exc:
+                    if exc.code != 404 or month != final_month or month != current_month:
+                        raise
+                    source, content = fetch_funding_api(symbol, month, api_start_day, api_end_day, raw)
+                    sources.append(source)
+                    start_time_ms = int(datetime(
+                        api_start_day.year, api_start_day.month, api_start_day.day,
+                        tzinfo=timezone.utc,
+                    ).timestamp() * 1000)
+                    end_time_ms = int(datetime(
+                        api_end_day.year, api_end_day.month, api_end_day.day,
+                        tzinfo=timezone.utc,
+                    ).timestamp() * 1000) + 86_400_000 - 1
+                    events.extend(funding_api_events(
+                        content, symbol=symbol, instrument=instrument or f"{symbol}-PERP.SIM",
+                        source_url=source["url"], expected_sha256=source["sha256"], delay_ns=delay_ns,
+                        start_time_ms=start_time_ms, end_time_ms=end_time_ms,
+                    ))
+                else:
+                    sources.append(source)
+                    events.extend(archive_events(
+                        Path(source["path"]), stream="fundingRate", instrument=instrument or f"{symbol}-PERP.SIM",
+                        source_url=source["url"], expected_sha256=source["sha256"], delay_ns=delay_ns,
+                    ))
+            month = next_month
 
         bars = [event.ts_event_ns for event in events if event.kind == "ohlcv_1m"]
         if not bars:
             raise DataError("Binance archive range contains no one-minute bars")
-        # Kline event timestamps are candle closes. Include the final close at
-        # 00:00 UTC after the inclusive end date; funding stays inside dates.
+        # Kline event timestamps are candle closes. The requested event-time
+        # range is half-open, so a close exactly at the next-day boundary is
+        # excluded; the final included candle closes one minute before it.
         requested_start_ns = int(datetime.combine(first, datetime.min.time(), tzinfo=timezone.utc).timestamp() * 1e9)
         requested_end_ns = int(datetime.combine(
             date.fromordinal(last.toordinal() + 1), datetime.min.time(), tzinfo=timezone.utc,
@@ -701,7 +857,7 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
             event for event in events
             if (requested_start_ns <= event.ts_event_ns < requested_end_ns
                 if event.kind in {"funding_update", "funding_settlement"}
-                else requested_start_ns < event.ts_event_ns < requested_end_ns + MINUTE_NS)
+                else requested_start_ns < event.ts_event_ns < requested_end_ns)
         ]
         clipped_bars = [event.ts_event_ns for event in events if event.kind == "ohlcv_1m"]
         if not clipped_bars:
@@ -728,7 +884,7 @@ def import_range(*, symbol: str, start_day: str, end_day: str,
         return metadata
     except Exception as exc:
         (target / "IMPORT_FAILED.json").write_text(
-            json.dumps({"error": type(exc).__name__, "detail": str(exc)}), encoding="utf-8",
+            json.dumps(_import_failure_receipt(exc), sort_keys=True, separators=(",", ":")), encoding="utf-8",
         )
         raise
 
@@ -745,6 +901,12 @@ def main() -> int:
     parser.add_argument("--delay-ns", type=int, required=True)
     parser.add_argument("--archive-interval", choices=("daily", "monthly"), default="daily",
                         help="use daily archives (default) or checksum-verified monthly kline archives")
+    parser.add_argument("--funding-api-month", action="append", default=[],
+                        help="force exact date-bounded USD-M funding API for this YYYY-MM source month")
+    parser.add_argument("--development-access-key",
+                        help="matching pre-read Train access key for this exact physical source scope")
+    parser.add_argument("--development-protocol-sha256",
+                        help="SHA-256 of the frozen preregistration bound to the Train access key")
     parser.add_argument("--include-bookticker", action="store_true",
                         help="import Binance best bid/ask sampled at one-second event-time cadence")
     parser.add_argument("--include-agg-trades", action="store_true",
@@ -759,7 +921,10 @@ def main() -> int:
                               output=args.output, delay_ns=args.delay_ns,
                               archive_interval=args.archive_interval,
                               include_bookticker=args.include_bookticker,
-                              include_agg_trades=args.include_agg_trades)
+                              include_agg_trades=args.include_agg_trades,
+                              funding_api_months=tuple(args.funding_api_month),
+                              development_access_key=args.development_access_key,
+                              development_protocol_sha256=args.development_protocol_sha256)
     else:
         parser.error("provide either --day or both --start-day and --end-day")
     print(json.dumps(result, indent=2))

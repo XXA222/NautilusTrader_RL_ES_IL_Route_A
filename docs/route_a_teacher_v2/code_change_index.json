@@ -1,0 +1,139 @@
+{
+  "baseline_sha": "bd313c5241c31f1ccff96fa4bf76a7966be48767",
+  "worktree_branch": "codex/route-a-teacher-v2-20261026",
+  "stages": {
+    "F00": {
+      "status": "ENGINEERING_PASS",
+      "outputs": [
+        "docs/route_a_teacher_v2/00_BASELINE_INVENTORY.md"
+      ]
+    },
+    "F01": {
+      "status": "ENGINEERING_PASS",
+      "code": [
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/base.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/contracts.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/ema.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/registry.py",
+        "packages/route_a_imitation/src/rles_route_a/integration/gym_rollout.py",
+        "packages/route_a_imitation/tests/test_teachers_1m_lifecycle.py"
+      ],
+      "outputs": [
+        "docs/route_a_teacher_v2/01_EMA_REVERSAL_FIX.md"
+      ]
+    },
+    "F02": {
+      "status": "D1_DIAGNOSTIC_ONLY",
+      "outputs": [
+        "docs/route_a_teacher_v2/02_COST_AND_CHURN_REPORT.md",
+        "docs/route_a_teacher_v2/02_cost_diagnostics.json",
+        "docs/route_a_teacher_v2/02_account_diagnostics.csv",
+        "docs/route_a_teacher_v2/02_control_account_diagnostics.csv",
+        "docs/route_a_teacher_v2/02_teacher_trade_diagnostics.csv",
+        "docs/route_a_teacher_v2/02_roc_signal_churn.json"
+      ]
+    },
+    "F03": {
+      "status": "FULL_POLICY_PAIRED_PATHS_ONLY",
+      "code": [
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/base.py",
+        "packages/route_a_imitation/tests/test_teachers_1m_lifecycle.py"
+      ],
+      "outputs": [
+        "docs/route_a_teacher_v2/03_X1_X2_EXIT_EFFECT.md",
+        "docs/route_a_teacher_v2/03_x1_x2_paired.json",
+        "docs/route_a_teacher_v2/03_shared_entry_exit_pairs.json",
+        "docs/route_a_teacher_v2/03_shared_entry_exit_pairs.csv"
+      ]
+    },
+    "F04": {
+      "status": "D1_SIGNAL_DIAGNOSTIC_ONLY_NO_WINNER",
+      "code": [
+        "qa/diagnose_route_a_consumed_roc_candidates.py"
+      ],
+      "outputs": [
+        "docs/route_a_teacher_v2/04_CANDIDATE_EXPERIMENT_SPEC.md",
+        "docs/route_a_teacher_v2/04_candidate_signal_diagnostics.json",
+        "docs/route_a_teacher_v2/04_candidate_signal_diagnostics.csv"
+      ]
+    },
+    "F05": {
+      "status": "SOURCE_SCOPE_REGISTERED_ACQUISITION_PENDING",
+      "outputs": [
+        "docs/route_a_teacher_v2/05_SOURCE_ACCESS_AUDIT.md",
+        "configs/route_a_teacher_student_train_prereg_20261026.json",
+        "configs/route_a_teacher_student_train_prereg_20261026_errata.json",
+        "configs/route_a_teacher_student_train_prereg_20261026_source_errata.json"
+      ]
+    },
+    "F06": {
+      "status": "REGISTERED_TRAIN_WARMUP_PARTIAL_FIRST_SCORED_WINDOW_PENDING",
+      "outputs": [
+        "docs/route_a_teacher_v2/06_NATIVE_RESEARCH_RESULTS.md"
+      ],
+      "code": [
+        "packages/data/src/rles_data/binance_archive.py",
+        "tests/test_binance_archive_range.py",
+        "qa/validate_route_a_teacher_student_prereg_20261026.py"
+      ]
+    },
+    "F07": {
+      "status": "UNIT_ENGINEERING_PASS_REAL_SOURCE_SMOKE_NOT_RUN",
+      "code": [
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/macd.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/rsi.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/bollinger.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/pullback.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/__init__.py",
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/registry.py",
+        "configs/route_a_1m_teacher_library_v1.json",
+        "packages/route_a_imitation/tests/test_teachers_1m_second_batch.py",
+        "qa/diagnose_route_a_consumed_roc_candidates.py"
+      ],
+      "outputs": [
+        "docs/route_a_teacher_v2/07_T05_T08_ENGINEERING.md"
+      ]
+    },
+    "F08": {
+      "status": "NOT_STARTED_BY_DESIGN"
+    },
+    "F09": {
+      "status": "NOT_STARTED_BY_DESIGN"
+    },
+    "F10": {
+      "status": "D1_NATIVE_MECHANISM_CONFIRMED_ECONOMICS_UNQUALIFIED",
+      "code": [
+        "packages/route_a_imitation/src/rles_route_a/teachers_1m/base.py",
+        "packages/route_a_imitation/tests/test_teachers_1m_lifecycle.py",
+        "qa/prepare_route_a_x2_snapshot_control.py",
+        "qa/summarize_route_a_x2_snapshot_fix.py"
+      ],
+      "outputs": [
+        "docs/route_a_teacher_v2/06_NATIVE_RESEARCH_RESULTS.md",
+        "docs/route_a_teacher_v2/09_DEVELOPMENT_CHECKPOINT_20261027.md",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-inner-screen-2.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-stress-inner-screen-1.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-stress-inner-screen-2.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-roc-x2-base-inner-screen-1.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-roc-x2-stress-inner-screen-1.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-donchian-x2-base-inner-screen-1.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-donchian-x2-stress-inner-screen-1.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-zscore-x2-base-inner-screen-1.json",
+        ".artifacts/route-a-x2-snapshot-fix-task3/comparison-zscore-x2-stress-inner-screen-1.json"
+      ]
+    },
+    "F11": {
+      "status": "SYNTHETIC_PROVIDER_CALLBACK_GUARD_ONLY",
+      "code": [
+        "packages/route_a_imitation/tests/test_v03_native_gym_rollout.py"
+      ],
+      "outputs": [
+        "docs/route_a_teacher_v2/14_GYM_TEACHER_ACTION_CALLBACK_GUARD_20261028.md"
+      ]
+    }
+  },
+  "frozen_s07_artifacts_modified": false,
+  "nautilus_upstream_modified": false,
+  "pushed": false
+}

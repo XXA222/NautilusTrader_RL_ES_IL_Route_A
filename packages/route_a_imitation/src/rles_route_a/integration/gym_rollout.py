@@ -55,6 +55,16 @@ def _callable_identity(callback: Callable[..., Any] | None) -> str | None:
     return f"{module}.{name}"
 
 
+def _notify_native_teacher_action(
+    teacher: Any, action: ExpertAdvice, barrier: AuditedTeacherBarrier,
+    order_facts: L3OrderFacts,
+) -> None:
+    primary = getattr(teacher, "primary", teacher)
+    callback = getattr(primary, "observe_native_action", None)
+    if callable(callback):
+        callback(action, barrier.trace, order_facts)
+
+
 def _visible_snapshot_id(context: Mapping[str, Any]) -> str:
     """Fingerprint the exact visible L2/L3 barrier without inventing source facts."""
     market = context.get("market")
@@ -273,6 +283,7 @@ class NativeGymTeacherProvider:
                     terminated=bool(terminated), truncated=bool(truncated),
                     trajectory_id=trajectory_id,
                 )
+                _notify_native_teacher_action(self.teacher, advice, barrier, order_facts)
                 yield barrier
                 if terminated or truncated:
                     return
@@ -549,6 +560,7 @@ class NativeGymTeacherProvider:
                 terminated=terminated, truncated=truncated,
                 trajectory_id=trajectory_id,
             )
+            _notify_native_teacher_action(self.teacher, advice, barrier, facts)
             barriers.append(barrier)
             if teacher_funnel_hook is not None:
                 if research_pre is None:

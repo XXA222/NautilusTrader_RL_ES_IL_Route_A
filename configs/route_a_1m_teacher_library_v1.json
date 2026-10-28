@@ -33,7 +33,7 @@
     "T04_ZSCORE_60": "X1_ZSCORE_MEAN_OR_OPPOSITE_V1",
     "T05_MACD_12_26_9": "X1_MACD_REVERSE_CROSS_V1",
     "T06_RSI_14": "X1_RSI_NEUTRAL_V1",
-    "T07_BOLL_20_2": "X1_BOLLINGER_MID_V1",
+    "T07_BOLL_20_2": "X1_BOLLINGER_MID_OR_RISK_V1",
     "T08_PULLBACK_1M": "X1_PULLBACK_TREND_OR_CHANNEL_V1"
   },
   "teachers": [
@@ -41,7 +41,7 @@
     {"teacher_id": "T02_ROC_20_60", "kind": "roc_consensus", "fast": 20, "slow": 60, "event": "FIRST_CONSENSUS_ONLY"},
     {"teacher_id": "T03_DONCHIAN_20", "kind": "donchian", "entry_window": 20, "exit_window": 10, "breakout_margin": 0.0},
     {"teacher_id": "T04_ZSCORE_60", "kind": "zscore_reentry", "lookback": 60, "entry_abs": 2.0, "reentry_abs": 1.8},
-    {"teacher_id": "T05_MACD_12_26_9", "kind": "macd_cross", "fast": 12, "slow": 26, "signal": 9},
+    {"teacher_id": "T05_MACD_12_26_9", "kind": "macd_cross", "fast": 12, "slow": 26, "signal": 9, "histogram_improving_required": true},
     {"teacher_id": "T06_RSI_14", "kind": "rsi_reentry", "lookback": 14, "oversold": 30, "overbought": 70, "exit_neutral": 50},
     {"teacher_id": "T07_BOLL_20_2", "kind": "bollinger_reentry", "lookback": 20, "std_multiplier": 2.0},
     {"teacher_id": "T08_PULLBACK_1M", "kind": "ema_trend_pullback", "ema_fast": 9, "ema_slow": 21, "atr": 14, "recovery_close_breakout": 3, "pullback_lookback": 5, "pullback_atr_min": 0.3, "pullback_atr_max": 2.0}

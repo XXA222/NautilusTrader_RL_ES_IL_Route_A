@@ -1,0 +1,76 @@
+{
+  "blocks": [
+    {
+      "block": "inner-screen-20240201_20240301",
+      "decision_rows": 41757,
+      "ready_rows": 41757,
+      "raw_signals": {
+        "NONE": 35241,
+        "LONG_ENTRY": 1741,
+        "EXIT_LONG": 1741,
+        "SHORT_ENTRY": 1517,
+        "EXIT_SHORT": 1517
+      },
+      "crossings": {
+        "roc_20": 4436,
+        "roc_60": 2696,
+        "consensus": 305
+      },
+      "submitted": 7470,
+      "filled": 7470,
+      "trade_cases": 3258
+    },
+    {
+      "block": "inner-screen-20240301_20240401",
+      "decision_rows": 44637,
+      "ready_rows": 44637,
+      "raw_signals": {
+        "NONE": 37705,
+        "LONG_ENTRY": 1752,
+        "EXIT_LONG": 1752,
+        "SHORT_ENTRY": 1714,
+        "EXIT_SHORT": 1714
+      },
+      "crossings": {
+        "roc_20": 4758,
+        "roc_60": 2869,
+        "consensus": 342
+      },
+      "submitted": 8350,
+      "filled": 8350,
+      "trade_cases": 3466
+    },
+    {
+      "block": "inner-screen-20240401_20240415",
+      "decision_rows": 20158,
+      "ready_rows": 20158,
+      "raw_signals": {
+        "NONE": 16987,
+        "SHORT_ENTRY": 736,
+        "EXIT_SHORT": 735,
+        "LONG_ENTRY": 850,
+        "EXIT_LONG": 850
+      },
+      "crossings": {
+        "roc_20": 2179,
+        "roc_60": 1299,
+        "consensus": 161
+      },
+      "submitted": 3171,
+      "filled": 3171,
+      "trade_cases": 1586
+    }
+  ],
+  "raw_signal_totals": {
+    "NONE": 89933,
+    "LONG_ENTRY": 4343,
+    "EXIT_LONG": 4343,
+    "SHORT_ENTRY": 3967,
+    "EXIT_SHORT": 3966
+  },
+  "crossing_totals": {
+    "roc_20": 11373,
+    "roc_60": 6864,
+    "consensus": 808
+  }
+}

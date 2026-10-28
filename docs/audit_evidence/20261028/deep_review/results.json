@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-28",
+  "root": "D:\\Program Files\\NautilusTrader_RL_ES_IL_Route_A",
+  "head": "bd313c5241c31f1ccff96fa4bf76a7966be48767",
+  "scope": "current dirty working tree",
+  "runtime": "Ubuntu-24.04 WSL Python 3.14.7 .venv-ubuntu",
+  "checks": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 .venv-ubuntu/bin/python -m pytest -q -p no:cacheprovider packages/route_a_imitation/tests tests/test_route_a_teacher_train_screen_runner.py tests/test_route_a_isolated_exit_replay.py tests/test_route_a_exit_loss_attribution.py tests/test_route_a_x1_x2_exit_economics.py tests/test_binance_archive_range.py",
+      "passed": 515,
+      "seconds": 69.84
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv-ubuntu/bin/python -m pytest -q -p no:cacheprovider tests/ -m \"contracts or unit or micro_golden or algorithm_smoke\"",
+      "passed": 626,
+      "skipped": 7,
+      "deselected": 168,
+      "warnings": 47,
+      "seconds": 570.52
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 .venv-ubuntu/bin/python -m pytest --collect-only -q -p no:cacheprovider tests/test_route_a_teacher_train_screen_runner.py tests/test_route_a_isolated_exit_replay.py tests/test_route_a_exit_loss_attribution.py tests/test_route_a_x1_x2_exit_economics.py -m \"contracts or unit or micro_golden or algorithm_smoke or real_golden or short_wfo or dependency_resolver or artifact_restore or perf\"",
+      "result": "no tests collected (30 deselected)",
+      "process_exit_code": 1
+    },
+    {
+      "command": ".venv-ubuntu/bin/ruff check --no-cache packages ci qa tests",
+      "result": "All checks passed!"
+    }
+  ],
+  "probe_output": [
+    "nonfinite_intent_result 0.46211716532707214 clock 100",
+    "changed_identity_result 0.0 retained_history 2",
+    "stale_code_and_cost_resume_accepted True",
+    "wheel_guard_root_example /project/.venv"
+  ],
+  "notes": [
+    "Test selections overlap; counts are not unique total.",
+    "No MyPy or remote CI run.",
+    "Wheel registry path and release artifact findings are static; not full install/release reproductions."
+  ]
+}
