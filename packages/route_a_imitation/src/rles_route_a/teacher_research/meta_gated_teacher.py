@@ -164,7 +164,8 @@ class MetaGatedTeacher:
     def observe_native_action(self, action: ExpertAdvice, trace: NativeActionTrace,
                               native_order_facts: Any) -> None:
         if (not self.decisions or self.decisions[-1].observation.decision_ts_ns != trace.decision_ts_ns
-                or len(self.native_receipts) >= len(self.decisions)
+                or action != self.decisions[-1].action
+                or len(self.native_receipts) != len(self.decisions) - 1
                 or (self.native_receipts
                     and self.native_receipts[-1].decision_ts_ns >= trace.decision_ts_ns)):
             raise ValueError("native receipt has no unique matching decision")

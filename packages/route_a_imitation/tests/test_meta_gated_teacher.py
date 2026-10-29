@@ -41,13 +41,18 @@ def trained_policy():
 def test_native_hold_exit_pending_and_trace(tmp_path):
     model = trained_policy()
     teacher = MetaGatedTeacher(model, recovery=Recovery())
-    assert teacher.advise(observation(10)).intent == "FLAT"
+    flat = teacher.advise(observation(10))
+    assert flat.intent == "FLAT"
+    flat_trace = NativeActionTrace(flat.decision_ts_ns, 0., 0., 0., 0., 10000., 10000., "NOOP")
+    teacher.observe_native_action(flat, flat_trace, L3OrderFacts(native_evidence_receipt="flat-receipt"))
     opened = teacher.advise(observation(11, ema_9=101.))
     assert opened.intent == "OPEN_LONG"
     trace = NativeActionTrace(opened.decision_ts_ns, .3, .3, .3, .3, 10000., 9999.,
                               "SUBMIT", submitted_order_ids=("o",), filled_order_ids=("o",))
     facts = L3OrderFacts(submitted_order_ids=("o",), filled_order_ids=("o",),
                          native_evidence_receipt="native-receipt")
+    with pytest.raises(ValueError, match="matching decision"):
+        teacher.observe_native_action(replace(opened, intent="FLAT"), trace, facts)
     teacher.observe_native_action(opened, trace, facts)
     assert teacher.native_receipts[-1].trace.filled_order_ids == ("o",)
     pending = teacher.advise(observation(12, ema_9=101., exposure=.3, pending=("x",)))
@@ -63,6 +68,16 @@ def test_native_hold_exit_pending_and_trace(tmp_path):
     rows = [json.loads(line) for line in output.read_text().splitlines()]
     assert rows[1]["candidates"][0]["disposition"] == "ACCEPTED_SELECTED"
     assert rows[-1]["native_order_facts"]["filled_order_ids"] == ["o"]
+
+
+def test_native_receipt_cannot_skip_an_earlier_decision():
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.advise(observation(10))
+    action = teacher.advise(observation(11, ema_9=101.))
+    trace = NativeActionTrace(action.decision_ts_ns, .3, .3, .3, .3, 10000., 9999., "SUBMIT")
+    with pytest.raises(ValueError, match="matching decision"):
+        teacher.observe_native_action(action, trace, L3OrderFacts(native_evidence_receipt="receipt"))
+    assert not teacher.native_receipts
 
 
 def test_pending_order_candidate_is_not_misreported_as_arbitration():
