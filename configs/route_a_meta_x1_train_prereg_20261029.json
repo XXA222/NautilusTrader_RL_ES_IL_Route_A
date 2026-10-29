@@ -1,0 +1,119 @@
+{
+  "acceptance": "Report all candidates, reject reasons, Base/Stress net economics and each window; do not lower fixed thresholds to manufacture trades. No qualified teacher or independent OOS claim without separate economic validation.",
+  "candidate_rule": "completed_1m_independent_entries_group_by_minute_and_side_preserve_teacher",
+  "controls": [
+    "FLAT",
+    "FIXED_LONG_0.3",
+    "FIXED_SHORT_0.3",
+    "ORIGINAL_8_X1"
+  ],
+  "cost_scenarios": {
+    "base": {
+      "fee_bps_per_leg": 5.0,
+      "slippage_bps_per_leg": 1.0
+    },
+    "stress": {
+      "fee_bps_per_leg": 10.0,
+      "slippage_bps_per_leg": 5.0
+    }
+  },
+  "created_utc_date": "2026-10-29",
+  "data_family": "perpetual-market-v1",
+  "execution": {
+    "engine": "native_gym_l3_m22_l6",
+    "entry": "next_open_market",
+    "exit": "original_X1_owner",
+    "risk": "existing_native_hard_risk_and_pending_order_controls",
+    "target_exposure": 0.3
+  },
+  "forbidden": [
+    "Test",
+    "Holdout",
+    "student_training",
+    "upstream_modification"
+  ],
+  "intervals": {
+    "native_screen": [
+      [
+        "2026-12-13T00:00:00Z",
+        "2026-12-16T00:00:00Z"
+      ],
+      [
+        "2026-12-16T00:00:00Z",
+        "2026-12-19T00:00:00Z"
+      ]
+    ],
+    "train_calibration": [
+      "2026-12-10T00:00:00Z",
+      "2026-12-13T00:00:00Z"
+    ],
+    "train_fit": [
+      "2026-12-03T00:00:00Z",
+      "2026-12-10T00:00:00Z"
+    ],
+    "warmup": [
+      "2026-12-01T00:00:00Z",
+      "2026-12-03T00:00:00Z"
+    ]
+  },
+  "market": "ETHUSDT",
+  "model": {
+    "features": [
+      "market.bar_close_1m",
+      "market.ema_9",
+      "market.ema_21",
+      "market.roc_20",
+      "market.roc_60",
+      "market.zscore_60",
+      "market.atr_14",
+      "market.macd_dif",
+      "market.macd_dea",
+      "market.macd_hist",
+      "market.rsi_14",
+      "market.donchian_upper_20",
+      "market.donchian_lower_20",
+      "market.bollinger_upper_20_2",
+      "market.bollinger_lower_20_2",
+      "account.net_exposure",
+      "account.drawdown",
+      "account.unrealized_pnl_fraction",
+      "consensus.count",
+      "cost.round_trip_bps",
+      "teacher.T01_EMA_9_21",
+      "teacher.T02_ROC_20_60",
+      "teacher.T03_DONCHIAN_20",
+      "teacher.T04_ZSCORE_60",
+      "teacher.T05_MACD_12_26_9",
+      "teacher.T06_RSI_14",
+      "teacher.T07_BOLL_20_2",
+      "teacher.T08_PULLBACK_1M"
+    ],
+    "kind": "logistic_platt_plus_ridge",
+    "l2": 1.0,
+    "margin_bps": 5.0,
+    "minimum_complete_calibration": 40,
+    "minimum_complete_fit": 100,
+    "support": "all_feature_fit_minmax_with_per_feature_rejection_diagnostics"
+  },
+  "protocol_id": "route-a-meta-x1-train-20261201-20261219-v1",
+  "schema": "rles.route-a.meta-x1-train-prereg.v1",
+  "source": {
+    "archive_interval": "daily",
+    "end_utc_exclusive": "2026-12-19T00:00:00Z",
+    "physical_scope": "Only exact bounded daily market files and exact funding timestamps within the registered interval; no monthly files spanning other dates.",
+    "source_available_at_freeze": false,
+    "start_utc_inclusive": "2026-12-01T00:00:00Z"
+  },
+  "source_payload_read": false,
+  "status": "frozen_before_source_availability",
+  "teachers": [
+    "T01_EMA_9_21",
+    "T02_ROC_20_60",
+    "T03_DONCHIAN_20",
+    "T04_ZSCORE_60",
+    "T05_MACD_12_26_9",
+    "T06_RSI_14",
+    "T07_BOLL_20_2",
+    "T08_PULLBACK_1M"
+  ]
+}
