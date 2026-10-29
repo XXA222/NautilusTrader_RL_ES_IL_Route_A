@@ -11,10 +11,12 @@ from rles_route_a.indicators_1m import MINUTE_NS
 from rles_route_a.teachers_1m.registry import ALL_TEACHER_RECIPE_BY_ID, build_teacher_1m
 from .conditional_outcome_labels import FrozenReplay, NoEntryReplay
 from .opportunity_labels import CounterfactualTradeReplay
+from .limit_entry import LimitEntryResult
 
 
 def make_x1_group_replay(*, observations, opens, funding, block_ends,
-                         fee_bps, slippage_bps, execution_recipe, scenario):
+                         fee_bps, slippage_bps, execution_recipe, scenario,
+                         limit_entry=None):
     """Replay a grouped event with the same deterministic X1 owner as runtime.
 
     This is a counterfactual signal-and-price-path calculation, not a second
@@ -25,6 +27,7 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
     open_times = tuple(t for t, _ in opens)
     funding_times = tuple(t for t, _, _ in funding)
     if (not observations or not opens or not execution_recipe or not scenario
+            or (limit_entry is not None and not callable(limit_entry))
             or any(isinstance(v, bool) or not isfinite(v) or v < 0
                    for v in (fee_bps, slippage_bps))):
         raise ValueError("invalid X1 replay inputs")
@@ -60,12 +63,34 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
         owner = group.teachers[0][0]
         if owner not in ALL_TEACHER_RECIPE_BY_ID:
             raise ValueError("X1 candidate has unknown originating teacher")
-        entry_index = bisect_right(open_times, obs.decision_ts_ns)
-        if entry_index >= len(opens) or open_times[entry_index] >= block_end:
-            return FrozenReplay(NoEntryReplay(group.event_id, "RIGHT_CENSORED", block_end,
-                                              "no-in-block-execution-open"),
-                                exit_policy, recipe, cost)
-        entry_ts, entry_price = opens[entry_index]
+        if limit_entry is None:
+            entry_index = bisect_right(open_times, obs.decision_ts_ns)
+            if entry_index >= len(opens) or open_times[entry_index] >= block_end:
+                return FrozenReplay(NoEntryReplay(group.event_id, "RIGHT_CENSORED", block_end,
+                                                  "no-in-block-execution-open"),
+                                    exit_policy, recipe, cost)
+            entry_ts, entry_price = opens[entry_index]
+        else:
+            result = limit_entry(group, block_end)
+            if not isinstance(result, LimitEntryResult):
+                raise TypeError("limit replay must return its explicit entry result")
+            if (type(result.observed_until_ns) is not int
+                    or not obs.decision_ts_ns < result.observed_until_ns <= block_end):
+                raise ValueError("limit entry observation outside causal block")
+            if result.status in ("CANCELLED", "RIGHT_CENSORED"):
+                if result.fill_ts_ns is not None or result.fill_price is not None:
+                    raise ValueError("non-filled limit entry cannot contain a fill")
+                return FrozenReplay(NoEntryReplay(group.event_id, result.status,
+                    result.observed_until_ns, "limit-touch-full-fill-v1"),
+                    exit_policy, recipe, cost)
+            if (result.status != "FILLED" or type(result.fill_ts_ns) is not int
+                    or result.fill_ts_ns != result.observed_until_ns
+                    or not obs.decision_ts_ns < result.fill_ts_ns < block_end
+                    or isinstance(result.fill_price, bool)
+                    or not isinstance(result.fill_price, (int, float))
+                    or not isfinite(result.fill_price) or result.fill_price <= 0):
+                raise ValueError("invalid causal limit fill")
+            entry_ts, entry_price = result.fill_ts_ns, result.fill_price
         teacher = build_teacher_1m(owner)
         decision_index = by_time[obs.decision_ts_ns]
         for past in observations[:decision_index + 1]:

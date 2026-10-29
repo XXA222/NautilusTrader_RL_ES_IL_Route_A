@@ -31,3 +31,30 @@ def test_x1_replay_rejects_gaps_and_wrong_exit_recipe():
         make_x1_group_replay(observations=rows, opens=((M,100.), (2*M,100.)),
             funding=(), block_ends={}, fee_bps=5., slippage_bps=1.,
             execution_recipe="native", scenario="base")
+
+
+
+def test_limit_touch_integrates_with_x1_exit_and_censor():
+    from rles_route_a.teacher_research.limit_entry import LimitBar, make_limit_entry_provider
+    rows = tuple(observation(i, ema_9=fast)
+                 for i, fast in enumerate((99., 101., 101., 101., 99., 99.), 1))
+    collector = OneMinuteCandidateCollector()
+    collector.collect(rows[0])
+    group, = collector.collect(rows[1]).groups
+    common = dict(observations=rows, opens=tuple((i*M, 100.+i) for i in range(1, 8)),
+                  funding=(), block_ends={group.event_id: 7*M}, fee_bps=5.,
+                  slippage_bps=1., execution_recipe="limit", scenario="base")
+    entry = make_limit_entry_provider(bars=(LimitBar(3*M, 4*M, 100., 105.),),
+                                      price_for_group=lambda group: 102.)
+    replay = make_x1_group_replay(**common, limit_entry=entry)
+    result, = label_grouped_candidates([group], replay, exit_policy_id="X1",
+        execution_recipe="limit", cost_scenario_id="base", block_end_ns=7*M,
+        gross_return_method="simple")
+    assert result.label_end_ts_ns == 6*M
+    assert result.net_return_bps == pytest.approx((106/102-1)*10000 - 6 - 6*106/102)
+    no_touch = make_limit_entry_provider(bars=(LimitBar(3*M, 4*M, 100., 105.),),
+                                         price_for_group=lambda group: 90.)
+    censored, = label_grouped_candidates([group],
+        make_x1_group_replay(**common, limit_entry=no_touch), exit_policy_id="X1",
+        execution_recipe="limit", cost_scenario_id="base", block_end_ns=7*M)
+    assert censored.outcome_status == "RIGHT_CENSORED" and censored.net_return_bps is None
