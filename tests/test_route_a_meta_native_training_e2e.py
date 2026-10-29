@@ -1,0 +1,118 @@
+"""Synthetic market: actual native candidates, X1 labels and calibrated model."""
+from dataclasses import replace
+from copy import deepcopy
+from hashlib import sha256
+from math import sin
+from pathlib import Path
+import sys
+
+from rles_data.core import CuratedStore, MINUTE_NS
+from rles_data.io import read_curated, write_curated
+from rles_orchestrator import application
+from rles_route_a.integration.l2_adapter import CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES
+from rles_route_a.teachers.recovery import RecoveryTeacher
+from rles_route_a.teachers_1m.registry import build_teacher_1m
+from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
+from rles_route_a.teacher_research.native_training_data import extract_model_price_path
+from rles_route_a.teacher_research.optional_1m_context import bind_optional_1m_context
+from rles_route_a.teacher_research.risk_matched_teacher import RiskMatchedTeacher
+from rles_route_a.teacher_research.x1_group_replay import make_x1_group_replay
+from rles_route_a.teacher_research.train_meta import train_meta_on_registered_candidates
+from rles_route_a.teacher_research.policy_io import save_frozen_entry_policy, load_frozen_entry_policy
+from test_historical_factory import recipe
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "qa"))
+import run_route_a_1m_teacher_native as native
+import run_route_a_train_student_screen_20261020 as harness
+import run_route_a_meta_study_20261029 as study
+
+
+def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
+    environment = recipe(tmp_path, bar_count=410, start_minute=150)
+    events = []
+    for event in read_curated(environment["market_path"]).events:
+        if event.kind in ("ohlcv_1m", "mark", "index"):
+            minute = event.ts_event_ns // MINUTE_NS
+            price = f"{1000 + 18*sin(minute/3) + 9*sin(minute/11):.2f}"
+            payload = dict(event.payload)
+            if event.kind == "ohlcv_1m":
+                payload.update(open=price, high=price, low=price, close=price)
+            else:
+                payload["price"] = price
+            event = replace(event, payload=payload)
+        events.append(event)
+    market = tmp_path / "synthetic-training-market.parquet"
+    write_curated(market, CuratedStore(events))
+    environment.update(end_ns=330*MINUTE_NS, market_path=str(market), feature_profile="causal_mtf_v4")
+    environment["rules_path"] = str(environment["rules_path"])
+    environment["execution"]["zero_target_policy"] = "close"
+    environment["coverage_policy"]["known_schedule_times_ns"] = {environment["instrument"]: ()}
+    marker = market.with_name(market.name + ".COMPLETED.json")
+    marker_sha = sha256(marker.read_bytes()).hexdigest()
+    config = {"output":str(tmp_path/"training-run"), "environment":environment,
+              "train_data_access":{"start_ns":MINUTE_NS, "end_ns":411*MINUTE_NS,
+              "marker_sha256":marker_sha, "label":"train-synthetic-native-training"}}
+    factory = application.prepare(config, fit_scaler=True, compact_report_snapshots=False,
+                                  require_scoped_train_access=True)
+    recorder = NativeCandidateRecorder(RiskMatchedTeacher(build_teacher_1m("T01_EMA_9_21"), RecoveryTeacher()))
+    old_fold = harness.FOLD_ID
+    harness.FOLD_ID = "synthetic-train-e2e"
+    try:
+        provider, grant = harness.make_provider(factory, recorder, marker_sha, "synthetic-native-training",
+            market_feature_map=CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES)
+        context = native._StreamingVisibleContext(factory, start_ns=environment["start_ns"],
+            end_ns=environment["end_ns"], instrument=environment["instrument"], warmup_bars=61)
+        bind_optional_1m_context(provider, context)
+        _, _, records = run_native_candidate_collection(provider=provider, recorder=recorder,
+            factory=factory, host_rollout=application.rollout, grant=grant,
+            verify_grant=lambda g: g == grant and factory.application_registered_train_read_verifier(
+                factory.application_registered_train_read), seed=7, rollout_id="synthetic-native-training",
+            episode_steps=177, reset_options={"rles_episode_index":0})
+    finally:
+        harness.FOLD_ID = old_fold
+    split = 240*MINUTE_NS
+    groups = tuple(g for row in records for g in row.collection.groups)
+    fit = tuple(g for g in groups if g.observation.decision_ts_ns < split)
+    cal = tuple(g for g in groups if g.observation.decision_ts_ns >= split)
+    opens, funding = extract_model_price_path(factory, start_ns=environment["start_ns"],
+        end_ns=environment["end_ns"], funding_after_ns=records[0].observation.decision_ts_ns)
+    replay = make_x1_group_replay(observations=tuple(row.observation for row in records),
+        opens=opens, funding=funding, block_ends={g.event_id: split if g.observation.decision_ts_ns < split
+                                                 else environment["end_ns"] for g in groups},
+        fee_bps=10., slippage_bps=1., execution_recipe=factory.route_a_execution_recipe_hash, scenario="base")
+    result = train_meta_on_registered_candidates(grant=grant, verify_grant=lambda g: g == grant,
+        fit_groups=fit, calibration_groups=cal, fit_interval=(environment["start_ns"], split),
+        calibration_interval=(split, environment["end_ns"]), replay=replay,
+        execution_recipe=factory.route_a_execution_recipe_hash, scenario="base",
+        feature_names=("market.ema_9", "teacher.T01_EMA_9_21", "consensus.count", "cost.round_trip_bps"),
+        margin_bps=1., cost_bps=22., fee_bps_per_leg=10., slippage_bps_per_leg=1.)
+    path = tmp_path/"synthetic-native-model.json"
+    save_frozen_entry_policy(result.policy, path)
+    restored = load_frozen_entry_policy(path)
+    assert restored.fit_count >= 4 and restored.calibration_count >= 4
+    assert restored.available_after_ns < 330*MINUTE_NS
+    assert any(abs(row.observation.account_value("net_exposure")) > 0 for row in records)
+    assert all(outcome.evidence_type == "MODEL_COUNTERFACTUAL" for outcome in result.fit_outcomes)
+    screen_environment = deepcopy(environment)
+    screen_environment.update(start_ns=330*MINUTE_NS, end_ns=360*MINUTE_NS)
+    screen_config = {**config, "environment": screen_environment}
+    screen_factory = application.prepare(screen_config, fit_scaler=False, scaler=factory.scaler,
+                                         compact_report_snapshots=False, require_scoped_train_access=True)
+    experiment = {"teachers":["T01_EMA_9_21"],
+        "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.}},
+        "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
+        "intervals":{"native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"]]}}
+    cell_dir = tmp_path/"synthetic-frozen-model-screen"
+    cell_dir.mkdir()
+    old_fold = harness.FOLD_ID
+    harness.FOLD_ID = "synthetic-train-e2e"
+    try:
+        cell = study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
+            config=experiment, strategy="META_X1", scenario="base",
+            window=experiment["intervals"]["native_screen"][0], model=restored, output=cell_dir)
+    finally:
+        harness.FOLD_ID = old_fold
+    assert cell["native_order_verification"]["barriers"] == 27
+    assert cell["candidate_summary"]["scores"]["candidate_count"] > 0
+    assert (cell_dir/"candidate-to-native.jsonl").is_file()
