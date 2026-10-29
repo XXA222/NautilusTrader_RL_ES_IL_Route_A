@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
+from urllib.parse import urlencode
 
 from rles_data.core import CuratedStore, MINUTE_NS
 from rles_data.io import read_curated, write_curated
@@ -31,7 +32,7 @@ import run_route_a_meta_study_20261029 as study
 
 
 def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, monkeypatch):
-    environment = recipe(tmp_path, bar_count=610, start_minute=150, funding_settlement_minutes=(480,))
+    environment = recipe(tmp_path, bar_count=1439, start_minute=150, funding_settlement_minutes=(480,))
     events = []
     for event in read_curated(environment["market_path"]).events:
         if event.kind in ("ohlcv_1m", "mark", "index"):
@@ -44,7 +45,9 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
                 payload["price"] = price
             event = replace(event, payload=payload)
         events.append(event)
-    market = tmp_path / "synthetic-training-market.parquet"
+    source_dir = tmp_path/"data"/"synthetic"
+    source_dir.mkdir(parents=True)
+    market = source_dir/"market.parquet"
     write_curated(market, CuratedStore(events))
     environment.update(end_ns=330*MINUTE_NS, market_path=str(market), feature_profile="causal_mtf_v4")
     environment["rules_path"] = str(environment["rules_path"])
@@ -53,7 +56,7 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     marker = market.with_name(market.name + ".COMPLETED.json")
     marker_sha = sha256(marker.read_bytes()).hexdigest()
     config = {"output":str(tmp_path/"training-run"), "environment":environment,
-              "train_data_access":{"start_ns":MINUTE_NS, "end_ns":611*MINUTE_NS,
+              "train_data_access":{"start_ns":MINUTE_NS, "end_ns":1440*MINUTE_NS,
               "marker_sha256":marker_sha, "label":"train-synthetic-native-training"}}
     factory = application.prepare(config, fit_scaler=True, compact_report_snapshots=False,
                                   require_scoped_train_access=True)
@@ -167,12 +170,13 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     assert all(item["status"] == "COMPLETE" for item in comparison["window_consistency"])
     assert comparison["qualification"] == "NOT_ESTABLISHED"
 
-    # Exercise the production coordinator, scaler and factory preparation on
-    # synthetic data. Only external source provenance loading is stubbed.
+    # Exercise the production source loader, scaler, factory preparation and
+    # coordinator on synthetic data and fixture-only source metadata.
     def timestamp(minute):
         return datetime.fromtimestamp(minute * 60, tz=timezone.utc).isoformat().replace("+00:00", "Z")
     prereg = json.loads((ROOT/"configs/route_a_meta_x1_train_prereg_20261029.json").read_text())
     prereg["protocol_id"] = "synthetic-native-full-study"
+    prereg["source"].update({"start_utc_inclusive":timestamp(0), "end_utc_exclusive":timestamp(1440)})
     prereg["intervals"] = {"warmup":[timestamp(1),timestamp(272)],
         "train_fit":[timestamp(272),timestamp(360)],
         "train_calibration":[timestamp(360),timestamp(450)],
@@ -186,10 +190,20 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     prereg_path.write_bytes(raw)
     prereg_path.with_suffix(".json.sha256").write_text(sha256(raw).hexdigest())
     monkeypatch.setattr(study, "PREREG", prereg_path)
-    source = {"marker_sha256":marker_sha, "market_path":str(market), "marker_path":str(marker),
-              "import_manifest_path":str(tmp_path/"synthetic-import.json"),
-              "read_scope_start_ns":MINUTE_NS, "read_scope_end_ns":611*MINUTE_NS}
-    monkeypatch.setattr(study, "_load_source", lambda *args: (source, {}))
+    sources = [{"url":f"https://data.binance.vision/data/futures/um/daily/{stream}/"
+                       f"ETHUSDT/1m/ETHUSDT-1m-1970-01-01.zip", "sha256":"a"*64}
+               for stream in ("klines", "markPriceKlines", "indexPriceKlines")]
+    query = urlencode({"symbol":"ETHUSDT", "startTime":0, "endTime":86400000-1, "limit":1000})
+    sources.append({"url":"https://fapi.binance.com/fapi/v1/fundingRate?"+query, "sha256":"b"*64})
+    marker_doc = json.loads(marker.read_text(encoding="utf-8"))
+    (source_dir/"import.json").write_text(json.dumps({
+        "schema":"rles.binance-archive-range.v1", "symbol":"ETHUSDT", "instrument":environment["instrument"],
+        "start_day":"1970-01-01", "end_day":"1970-01-01", "archive_interval":"daily",
+        "availability_delay_ns":1_000_000, "agg_trades_included":False, "bookticker_included":False,
+        "sources":sources, "start_ns":MINUTE_NS, "end_ns":1440*MINUTE_NS,
+        "event_count":marker_doc["events"]}), encoding="utf-8")
+    monkeypatch.setattr(study, "ROOT", tmp_path)
+    monkeypatch.setattr(study.legacy, "ROOT", tmp_path)
     template = tmp_path/"synthetic-execution.json"
     template.write_text(json.dumps({"environment":environment}))
     monkeypatch.setattr(study.legacy, "EXECUTION_TEMPLATE", template)
@@ -197,7 +211,7 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     old_fold = harness.FOLD_ID
     harness.FOLD_ID = "synthetic-full-study"
     try:
-        full = study.execute_study(prereg, sha256(raw).hexdigest(), source_root="synthetic",
+        full = study.execute_study(prereg, sha256(raw).hexdigest(), source_root="data/synthetic",
                                    output=tmp_path/"synthetic-full-study")
     finally:
         harness.FOLD_ID = old_fold

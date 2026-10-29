@@ -69,6 +69,37 @@ def test_missing_or_invalid_manifest_never_enters_payload_verifier(tmp_path, mon
         study._load_source(config, "hash", "data")
 
 
+def test_synthetic_complete_source_passes_real_loader(tmp_path, monkeypatch):
+    """Only synthetic bars and synthetic provenance; no remote data are read."""
+    import json
+    from rles_data.core import MINUTE_NS
+    from rles_data.io import read_curated, write_curated
+    from test_historical_factory import recipe
+    fixture = tmp_path/"fixture"
+    fixture.mkdir()
+    env = recipe(fixture, bar_count=1439, start_minute=150)
+    source_dir = tmp_path/"data"/"synthetic"
+    source_dir.mkdir(parents=True)
+    market = source_dir/"market.parquet"
+    write_curated(market, read_curated(env["market_path"]))
+    marker = market.with_name("market.parquet.COMPLETED.json")
+    marker_doc = json.loads(marker.read_text(encoding="utf-8"))
+    config = {"protocol_id":"synthetic-test", "market":"ETHUSDT",
+              "source":{"start_utc_inclusive":"1970-01-01T00:00:00Z",
+                        "end_utc_exclusive":"1970-01-02T00:00:00Z"}}
+    manifest = source_metadata(config)
+    manifest.update({"schema":"rles.binance-archive-range.v1", "start_day":"1970-01-01",
+        "end_day":"1970-01-01", "start_ns":MINUTE_NS, "end_ns":1440*MINUTE_NS,
+        "event_count":marker_doc["events"]})
+    (source_dir/"import.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(study, "ROOT", tmp_path)
+    monkeypatch.setattr(study.legacy, "ROOT", tmp_path)
+    source, loaded = study._load_source(config, "a"*64, "data/synthetic")
+    assert source["market_path"] == "data/synthetic/market.parquet"
+    assert loaded["event_count"] == marker_doc["events"]
+    assert source["read_scope_start_ns"] >= 0 and source["read_scope_end_ns"] <= 1440*MINUTE_NS
+
+
 def test_candidate_collector_rejects_different_registered_teacher_set(tmp_path, monkeypatch):
     import json
     from types import SimpleNamespace
