@@ -19,6 +19,9 @@ from rles_route_a.teacher_research.optional_1m_context import bind_optional_1m_c
 from rles_route_a.teacher_research.policy_io import save_frozen_entry_policy, load_frozen_entry_policy
 from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
 from rles_route_a.teacher_research.risk_matched_teacher import RiskMatchedTeacher
+from rles_route_a.teacher_research.native_training_data import extract_model_price_path
+from rles_route_a.teacher_research.x1_group_replay import make_x1_group_replay
+from rles_route_a.teacher_research.conditional_outcome_labels import label_grouped_candidates
 from rles_route_a.teachers_1m.registry import build_teacher_1m
 from test_historical_factory import recipe
 
@@ -160,3 +163,14 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
         (row.observation.decision_ts_ns, row.action.intent, row.action.reason_codes)
         for row in records])
     assert any(row.collection.groups for row in records)
+    groups = tuple(group for row in records for group in row.collection.groups)
+    opens, funding = extract_model_price_path(factory, start_ns=environment["start_ns"],
+        end_ns=environment["end_ns"], funding_after_ns=records[0].observation.decision_ts_ns)
+    replay = make_x1_group_replay(observations=tuple(row.observation for row in records),
+        opens=opens, funding=funding, block_ends={g.event_id: environment["end_ns"] for g in groups},
+        fee_bps=10., slippage_bps=1., execution_recipe=factory.route_a_execution_recipe_hash, scenario="base")
+    labels = label_grouped_candidates(groups, replay, exit_policy_id="X1",
+        execution_recipe=factory.route_a_execution_recipe_hash, cost_scenario_id="base",
+        block_end_ns=environment["end_ns"], gross_return_method="simple")
+    assert len(labels) == len(groups)
+    assert all(label.evidence_type == "MODEL_COUNTERFACTUAL" for label in labels)
