@@ -49,6 +49,8 @@ class NativeDecisionReceipt:
     action: ExpertAdvice
     trace: NativeActionTrace
     native_order_facts: Any
+    selected_candidate_event_id: str | None = None
+    selected_teacher_id: str | None = None
 
 
 class MetaGatedTeacher:
@@ -170,14 +172,25 @@ class MetaGatedTeacher:
 
     def observe_native_action(self, action: ExpertAdvice, trace: NativeActionTrace,
                               native_order_facts: Any) -> None:
-        if (not self.decisions or self.decisions[-1].observation.decision_ts_ns != trace.decision_ts_ns
-                or action != self.decisions[-1].action
+        decision = self.decisions[-1] if self.decisions else None
+        if (decision is None or decision.observation.decision_ts_ns != trace.decision_ts_ns
+                or action != decision.action
                 or len(self.native_receipts) != len(self.decisions) - 1
                 or (self.native_receipts
                     and self.native_receipts[-1].decision_ts_ns >= trace.decision_ts_ns)):
             raise ValueError("native receipt has no unique matching decision")
+        selected = tuple(candidate for candidate in decision.candidates if candidate.selected)
+        if len(selected) > 1:
+            raise ValueError("native decision cannot bind multiple selected candidates")
+        opening_side = 1 if action.intent == "OPEN_LONG" else -1 if action.intent == "OPEN_SHORT" else None
+        if ((opening_side is None and selected)
+                or (opening_side is not None
+                    and (len(selected) != 1 or selected[0].group.side != opening_side))):
+            raise ValueError("native entry receipt must bind its single direction-matched candidate")
+        selected_id = selected[0].group.event_id if selected else None
+        selected_teacher = selected[0].group.teachers[0][0] if selected else None
         self.native_receipts.append(NativeDecisionReceipt(trace.decision_ts_ns, action, trace,
-                                                          native_order_facts))
+            native_order_facts, selected_id, selected_teacher))
         if self._owner is not None:
             self._teachers[self._owner].observe_native_action(action, trace, native_order_facts)
 

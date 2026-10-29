@@ -55,6 +55,9 @@ def test_native_hold_exit_pending_and_trace(tmp_path):
         teacher.observe_native_action(replace(opened, intent="FLAT"), trace, facts)
     teacher.observe_native_action(opened, trace, facts)
     assert teacher.native_receipts[-1].trace.filled_order_ids == ("o",)
+    selected = next(item for item in teacher.decisions[1].candidates if item.selected)
+    assert teacher.native_receipts[-1].selected_candidate_event_id == selected.group.event_id
+    assert teacher.native_receipts[-1].selected_teacher_id == "T01_EMA_9_21"
     pending = teacher.advise(observation(12, ema_9=101., exposure=.3, pending=("x",)))
     assert pending.intent == "HOLD"
     closed = teacher.advise(observation(13, ema_9=99., exposure=.3))
@@ -69,6 +72,7 @@ def test_native_hold_exit_pending_and_trace(tmp_path):
     assert len(rows[0]["teacher_signals"]) == 8
     assert rows[1]["candidates"][0]["disposition"] == "ACCEPTED_SELECTED"
     assert rows[-1]["native_order_facts"]["filled_order_ids"] == ["o"]
+    assert rows[-1]["selected_candidate_event_id"] == selected.group.event_id
 
 
 def test_native_receipt_cannot_skip_an_earlier_decision():

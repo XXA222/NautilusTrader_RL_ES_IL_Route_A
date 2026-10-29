@@ -61,6 +61,7 @@ def test_meta_teacher_receives_verified_gym_barrier():
     assert barrier.trace.requested_action == 0.
     assert len(teacher.decisions) == len(teacher.native_receipts) == 1
     assert teacher.native_receipts[0].trace is barrier.trace
+    assert teacher.native_receipts[0].selected_candidate_event_id is None
 
 
 
@@ -134,4 +135,8 @@ def test_meta_teacher_multistep_native_order_and_fill_receipts():
     assert [r.action.intent for r in teacher.native_receipts] == ["FLAT", "OPEN_LONG", "HOLD", "EXIT"]
     assert teacher.native_receipts[1].trace.filled_order_ids == ("synthetic-order-11",)
     assert teacher.native_receipts[3].trace.filled_order_ids == ("synthetic-order-13",)
+    selected = next(item for item in teacher.decisions[1].candidates if item.selected)
+    assert teacher.native_receipts[1].selected_candidate_event_id == selected.group.event_id
+    assert teacher.native_receipts[1].selected_teacher_id == "T01_EMA_9_21"
+    assert teacher.native_receipts[3].selected_candidate_event_id is None
     assert len(barriers) == 4 and len(teacher.decisions) == 4
