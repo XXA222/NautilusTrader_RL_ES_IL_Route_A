@@ -46,6 +46,10 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["prediction_quality"]["mean_absolute_error_bps"] == pytest.approx(3.5)
     assert result["prediction_quality"]["mean_prediction_error_bps"] == pytest.approx(3.5)
     assert result["prediction_quality"]["brier_score"] == pytest.approx(.29)
+    bins = result["prediction_quality"]["probability_bins"]
+    assert sum(item["count"] for item in bins) == 2
+    assert bins[3]["mean_predicted_probability"] == pytest.approx(.7)
+    assert bins[3]["observed_positive_fraction"] == pytest.approx(.5)
     assert result["evidence_type"] == "MODEL_COUNTERFACTUAL"
     from dataclasses import replace
     from rles_route_a.teacher_research.meta_evaluation import paired_cost_candidate_quality
@@ -61,6 +65,8 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert no_pairs["prediction_quality"]["paired_complete_scored"] == 0
     assert no_pairs["prediction_quality"]["unscored_candidates"] == 1
     assert no_pairs["prediction_quality"]["brier_score"] is None
+    assert all(item["observed_positive_fraction"] is None
+               for item in no_pairs["prediction_quality"]["probability_bins"])
     with pytest.raises(ValueError, match="cannot mix"):
         summarize_candidate_quality(tuple(decisions),
             (labels[0], replace(labels[1], cost_scenario_id="stress"), labels[2]))

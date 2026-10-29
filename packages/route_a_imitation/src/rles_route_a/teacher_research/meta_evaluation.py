@@ -101,6 +101,17 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                 or not 0 <= score.probability_positive <= 1):
             raise ValueError("invalid candidate prediction")
     n = len(paired)
+    bins = []
+    for index in range(5):
+        lower, upper = index / 5, (index + 1) / 5
+        members = [(score.probability_positive, value) for score, value in paired
+                   if lower <= score.probability_positive < upper
+                   or (index == 4 and score.probability_positive == 1)]
+        count = len(members)
+        bins.append({"lower_inclusive": lower, "upper": upper, "upper_inclusive": index == 4,
+                     "count": count,
+                     "mean_predicted_probability": fsum(p for p, _ in members) / count if count else None,
+                     "observed_positive_fraction": sum(v > 0 for _, v in members) / count if count else None})
     prediction = {
         "paired_complete_scored": n,
         "unscored_candidates": sum(d.score is None for d in decisions),
@@ -109,6 +120,7 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         "mean_absolute_error_bps": fsum(abs(s.expected_net_bps - y) for s, y in paired) / n if n else None,
         "mean_prediction_error_bps": fsum(s.expected_net_bps - y for s, y in paired) / n if n else None,
         "brier_score": fsum((s.probability_positive - (y > 0)) ** 2 for s, y in paired) / n if n else None,
+        "probability_bins": bins,
         "basis": "complete scored MODEL_COUNTERFACTUAL outcomes; overlapping candidates are dependent",
     }
     return {"evidence_type": "MODEL_COUNTERFACTUAL",
