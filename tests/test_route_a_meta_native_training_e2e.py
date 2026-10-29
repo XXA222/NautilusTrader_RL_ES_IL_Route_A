@@ -8,8 +8,10 @@ import json
 from pathlib import Path
 import sys
 from urllib.parse import urlencode
+from zipfile import ZipFile
 
 from rles_data.core import CuratedStore, MINUTE_NS
+from rles_data import binance_archive
 from rles_data.io import read_curated, write_curated
 from rles_orchestrator import application
 from rles_route_a.integration.l2_adapter import CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES
@@ -170,8 +172,8 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     assert all(item["status"] == "COMPLETE" for item in comparison["window_consistency"])
     assert comparison["qualification"] == "NOT_ESTABLISHED"
 
-    # Exercise the production source loader, scaler, factory preparation and
-    # coordinator on synthetic data and fixture-only source metadata.
+    # Generate offline exchange-format inputs, then exercise the production
+    # importer, source loader, scaler, factories, training and coordinator.
     def timestamp(minute):
         return datetime.fromtimestamp(minute * 60, tz=timezone.utc).isoformat().replace("+00:00", "Z")
     prereg = json.loads((ROOT/"configs/route_a_meta_x1_train_prereg_20261029.json").read_text())
@@ -190,28 +192,43 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     prereg_path.write_bytes(raw)
     prereg_path.with_suffix(".json.sha256").write_text(sha256(raw).hexdigest())
     monkeypatch.setattr(study, "PREREG", prereg_path)
-    sources = [{"url":f"https://data.binance.vision/data/futures/um/daily/{stream}/"
-                       f"ETHUSDT/1m/ETHUSDT-1m-1970-01-01.zip", "sha256":"a"*64}
-               for stream in ("klines", "markPriceKlines", "indexPriceKlines")]
-    query = urlencode({"symbol":"ETHUSDT", "startTime":0, "endTime":86400000-1, "limit":1000})
-    sources.append({"url":"https://fapi.binance.com/fapi/v1/fundingRate?"+query, "sha256":"b"*64})
-    marker_doc = json.loads(marker.read_text(encoding="utf-8"))
-    (source_dir/"import.json").write_text(json.dumps({
-        "schema":"rles.binance-archive-range.v1", "symbol":"ETHUSDT", "instrument":environment["instrument"],
-        "start_day":"1970-01-01", "end_day":"1970-01-01", "archive_interval":"daily",
-        "availability_delay_ns":1_000_000, "agg_trades_included":False, "bookticker_included":False,
-        "sources":sources, "start_ns":MINUTE_NS, "end_ns":1440*MINUTE_NS,
-        "event_count":marker_doc["events"]}), encoding="utf-8")
+    def fake_fetch(relative_url, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        rows = []
+        for minute in range(1440):
+            opened = minute*60000
+            price = f"{1000 + 18*sin((minute+1)/3) + 9*sin((minute+1)/11):.2f}"
+            rows.append(f"{opened},{price},{price},{price},{price},1000,{opened+59999},1000000,100,500,500000,0")
+        with ZipFile(destination, "w") as archive:
+            archive.writestr("synthetic.csv", "\n".join(rows) + "\n")
+        return {"path":str(destination), "url":"https://data.binance.vision/data/futures/um/"+relative_url,
+                "sha256":sha256(destination.read_bytes()).hexdigest()}
+    def fake_funding(symbol, month, first, last, raw_dir):
+        rows = [{"symbol":symbol, "fundingTime":hour*3_600_000+1, "fundingRate":"0.001", "rateType":"Regular"}
+                for hour in (0, 8, 16)]
+        content = json.dumps(rows).encode()
+        query = urlencode({"symbol":symbol, "startTime":0, "endTime":86400000-1, "limit":1000})
+        return {"path":str(raw_dir/"synthetic-funding.json"),
+                "url":"https://fapi.binance.com/fapi/v1/fundingRate?"+query,
+                "sha256":sha256(content).hexdigest()}, content
+    monkeypatch.setattr(binance_archive, "_guard_project_archive_scope", lambda **kwargs: None)
+    monkeypatch.setattr(binance_archive, "fetch_archive", fake_fetch)
+    monkeypatch.setattr(binance_archive, "fetch_funding_api", fake_funding)
+    imported = tmp_path/"data"/"imported-synthetic"
+    binance_archive.import_range(symbol="ETHUSDT", start_day="1970-01-01", end_day="1970-01-01",
+        output=imported, delay_ns=1_000_000, funding_api_months=("1970-01",))
     monkeypatch.setattr(study, "ROOT", tmp_path)
     monkeypatch.setattr(study.legacy, "ROOT", tmp_path)
     template = tmp_path/"synthetic-execution.json"
+    environment["coverage_policy"]["maximum_age_ns"]["funding_update"] = 500*MINUTE_NS
+    environment["coverage_policy"]["maximum_age_ns"].update(mark=61_000_000_000, index=61_000_000_000)
     template.write_text(json.dumps({"environment":environment}))
     monkeypatch.setattr(study.legacy, "EXECUTION_TEMPLATE", template)
     monkeypatch.setattr(study.legacy, "SCENARIO_RULES", Path(environment["rules_path"]))
     old_fold = harness.FOLD_ID
     harness.FOLD_ID = "synthetic-full-study"
     try:
-        full = study.execute_study(prereg, sha256(raw).hexdigest(), source_root="data/synthetic",
+        full = study.execute_study(prereg, sha256(raw).hexdigest(), source_root="data/imported-synthetic",
                                    output=tmp_path/"synthetic-full-study")
     finally:
         harness.FOLD_ID = old_fold
