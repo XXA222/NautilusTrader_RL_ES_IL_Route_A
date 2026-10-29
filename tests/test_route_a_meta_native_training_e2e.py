@@ -111,8 +111,19 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
         cell = study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
             config=experiment, strategy="META_X1", scenario="base",
             window=experiment["intervals"]["native_screen"][0], model=restored, output=cell_dir)
+        runs = [cell]
+        for strategy in ("T01_EMA_9_21", "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
+            target = tmp_path / ("synthetic-screen-" + strategy)
+            target.mkdir()
+            runs.append(study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
+                config=experiment, strategy=strategy, scenario="base",
+                window=experiment["intervals"]["native_screen"][0], model=restored, output=target))
+        comparison = study.compare_preregistered_native_runs(experiment, runs)
     finally:
         harness.FOLD_ID = old_fold
     assert cell["native_order_verification"]["barriers"] == 27
     assert cell["candidate_summary"]["scores"]["candidate_count"] > 0
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
+    assert comparison["status"] == "COMPLETE" and comparison["available_cells"] == 5
+    assert len(comparison["comparisons"]) == 4
+    assert comparison["qualification"] == "NOT_ESTABLISHED"
