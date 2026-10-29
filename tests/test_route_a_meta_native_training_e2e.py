@@ -11,7 +11,6 @@ import sys
 from rles_data.core import CuratedStore, MINUTE_NS
 from rles_data.io import read_curated, write_curated
 from rles_orchestrator import application
-from rles_orchestrator.research_access import ACTIVE_OWNER
 from rles_route_a.integration.l2_adapter import CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES
 from rles_route_a.teachers.recovery import RecoveryTeacher
 from rles_route_a.teachers_1m.registry import build_teacher_1m, ALL_TEACHER_RECIPE_BY_ID
@@ -32,7 +31,7 @@ import run_route_a_meta_study_20261029 as study
 
 
 def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, monkeypatch):
-    environment = recipe(tmp_path, bar_count=610, start_minute=150)
+    environment = recipe(tmp_path, bar_count=610, start_minute=150, funding_settlement_minutes=(480,))
     events = []
     for event in read_curated(environment["market_path"]).events:
         if event.kind in ("ohlcv_1m", "mark", "index"):
@@ -168,8 +167,8 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     assert all(item["status"] == "COMPLETE" for item in comparison["window_consistency"])
     assert comparison["qualification"] == "NOT_ESTABLISHED"
 
-    # Exercise the actual production study coordinator with synthetic source
-    # and native factories; only source loading/scaler construction are stubbed.
+    # Exercise the production coordinator, scaler and factory preparation on
+    # synthetic data. Only external source provenance loading is stubbed.
     def timestamp(minute):
         return datetime.fromtimestamp(minute * 60, tz=timezone.utc).isoformat().replace("+00:00", "Z")
     prereg = json.loads((ROOT/"configs/route_a_meta_x1_train_prereg_20261029.json").read_text())
@@ -187,18 +186,14 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     prereg_path.write_bytes(raw)
     prereg_path.with_suffix(".json.sha256").write_text(sha256(raw).hexdigest())
     monkeypatch.setattr(study, "PREREG", prereg_path)
-    monkeypatch.setattr(study, "_load_source", lambda *args: ({"marker_sha256":marker_sha}, {}))
-    monkeypatch.setattr(study, "_warmup_scaler", lambda *args: factory.scaler)
-    def make_factory(source, manifest, frozen, output, scaler, *, scenario, start_ns, end_ns):
-        env = deepcopy(environment)
-        env.update(start_ns=start_ns, end_ns=end_ns, mode=scenario)
-        token = ACTIVE_OWNER.set(frozen["protocol_id"])
-        try:
-            return application.prepare({**config, "environment":env}, fit_scaler=False, scaler=scaler,
-                compact_report_snapshots=False, require_scoped_train_access=True)
-        finally:
-            ACTIVE_OWNER.reset(token)
-    monkeypatch.setattr(study, "_factory", make_factory)
+    source = {"marker_sha256":marker_sha, "market_path":str(market), "marker_path":str(marker),
+              "import_manifest_path":str(tmp_path/"synthetic-import.json"),
+              "read_scope_start_ns":MINUTE_NS, "read_scope_end_ns":611*MINUTE_NS}
+    monkeypatch.setattr(study, "_load_source", lambda *args: (source, {}))
+    template = tmp_path/"synthetic-execution.json"
+    template.write_text(json.dumps({"environment":environment}))
+    monkeypatch.setattr(study.legacy, "EXECUTION_TEMPLATE", template)
+    monkeypatch.setattr(study.legacy, "SCENARIO_RULES", Path(environment["rules_path"]))
     old_fold = harness.FOLD_ID
     harness.FOLD_ID = "synthetic-full-study"
     try:
