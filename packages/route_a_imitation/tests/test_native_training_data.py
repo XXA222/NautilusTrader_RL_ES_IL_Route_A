@@ -48,13 +48,19 @@ def test_batch_uses_verified_receipt_and_does_not_read_screen_payload(monkeypatc
         @property
         def payload(self):
             raise AssertionError("screen payload must not be read")
+    class EarlySettlement:
+        ts_event_ns = epoch(prereg["intervals"]["warmup"][0])
+        kind = "funding_settlement"
+        @property
+        def payload(self):
+            raise AssertionError("pre-decision settlement is irrelevant")
     mark = SimpleNamespace(ts_event_ns=fit, kind="mark",
                            payload={"instrument":"ETH", "price":"100"})
     rate = SimpleNamespace(ts_event_ns=fit+1, kind="funding_settlement",
                            payload={"instrument":"ETH", "rate":"0.0001"})
     factory = SimpleNamespace(application_registered_train_read=read,
         application_registered_train_read_verifier=lambda receipt: receipt is read,
-        instrument="ETH", store=SimpleNamespace(events=(mark,rate,ScreenEvent())))
+        instrument="ETH", store=SimpleNamespace(events=(EarlySettlement(),mark,rate,ScreenEvent())))
     bars = (SimpleNamespace(open_time_ns=fit, open=100.),
             SimpleNamespace(open_time_ns=fit+M, open=101.))
     monkeypatch.setattr(module, "causal_1m_indicator_inputs", lambda *args, **kwargs: bars)
