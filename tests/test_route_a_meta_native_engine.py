@@ -22,6 +22,7 @@ from rles_route_a.teacher_research.risk_matched_teacher import RiskMatchedTeache
 from rles_route_a.teacher_research.native_training_data import extract_model_price_path
 from rles_route_a.teacher_research.x1_group_replay import make_x1_group_replay
 from rles_route_a.teacher_research.conditional_outcome_labels import label_grouped_candidates
+from rles_route_a.teacher_research.train_meta import MetaTrainingError, train_meta_on_registered_candidates
 from rles_route_a.teachers_1m.registry import build_teacher_1m
 from test_historical_factory import recipe
 
@@ -174,3 +175,21 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
         block_end_ns=environment["end_ns"], gross_return_method="simple")
     assert len(labels) == len(groups)
     assert all(label.evidence_type == "MODEL_COUNTERFACTUAL" for label in labels)
+    split = records[5].observation.decision_ts_ns
+    fit_groups = tuple(g for g in groups if g.observation.decision_ts_ns < split)
+    cal_groups = tuple(g for g in groups if g.observation.decision_ts_ns >= split)
+    split_replay = make_x1_group_replay(observations=tuple(row.observation for row in records),
+        opens=opens, funding=funding,
+        block_ends={g.event_id: split if g in fit_groups else environment["end_ns"] for g in groups},
+        fee_bps=10., slippage_bps=1., execution_recipe=factory.route_a_execution_recipe_hash, scenario="base")
+    with pytest.raises(MetaTrainingError, match="insufficient complete") as rejected:
+        train_meta_on_registered_candidates(grant=collector_grant,
+            verify_grant=lambda g: g == collector_grant and factory.application_registered_train_read_verifier(
+                factory.application_registered_train_read),
+            fit_groups=fit_groups, calibration_groups=cal_groups,
+            fit_interval=(environment["start_ns"], split), calibration_interval=(split, environment["end_ns"]),
+            replay=split_replay, execution_recipe=factory.route_a_execution_recipe_hash, scenario="base",
+            feature_names=("market.ema_9", "teacher.T01_EMA_9_21", "consensus.count", "cost.round_trip_bps"),
+            margin_bps=1., cost_bps=22., fee_bps_per_leg=10., slippage_bps_per_leg=1.)
+    assert len(rejected.value.fit_outcomes) == len(fit_groups)
+    assert len(rejected.value.calibration_outcomes) == len(cal_groups)
