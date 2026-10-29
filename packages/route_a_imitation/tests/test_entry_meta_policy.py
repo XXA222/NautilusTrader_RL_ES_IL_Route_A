@@ -4,7 +4,21 @@ import pytest
 
 from rles_route_a.teacher_research.candidate_event_union import TeacherProposal, group_teacher_proposals
 from rles_route_a.teacher_research.conditional_outcome_labels import GroupOutcome
-from rles_route_a.teacher_research.entry_meta_policy import fit_entry_meta_policy
+from rles_route_a.teacher_research.entry_meta_policy import (EntryScore, fit_entry_meta_policy,
+                                                              summarize_entry_scores)
+
+
+def test_gate_diagnostics_count_overlapping_filters_without_changing_threshold():
+    scores = [EntryScore("NO_TRADE", .8, 6., False, "OUT_OF_SUPPORT"),
+              EntryScore("NO_TRADE", .4, 2., True, "NET_EDGE_TOO_SMALL"),
+              EntryScore("NO_TRADE", .8, 8., True, "PENDING_ORDER")]
+    result = summarize_entry_scores(scores, margin_bps=5.)
+    assert result["accepted_count"] == 0
+    assert result["gate_counts"]["support_pass"] == 2
+    assert result["gate_counts"]["edge_pass"] == 2
+    assert result["gate_counts"]["support_and_edge_pass"] == 1
+    assert result["gate_counts"]["account_ineligible"] == 1
+    assert summarize_entry_scores([], margin_bps=5.)["coverage"] is None
 
 
 def _samples(observed):
