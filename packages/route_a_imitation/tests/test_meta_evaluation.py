@@ -40,3 +40,28 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["rejected"]["mean_net_bps"] == -2.
     assert result["rejected"]["without_outcome"] == 1
     assert result["evidence_type"] == "MODEL_COUNTERFACTUAL"
+    from dataclasses import replace
+    with pytest.raises(ValueError, match="cannot mix"):
+        summarize_candidate_quality(tuple(decisions),
+            (labels[0], replace(labels[1], cost_scenario_id="stress"), labels[2]))
+    with pytest.raises(ValueError, match="causal candidate"):
+        summarize_candidate_quality(tuple(decisions),
+            (labels[0], replace(labels[1], source_identity="different"), labels[2]))
+
+
+
+def test_native_comparison_reports_missing_cells_without_model_substitution():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+    config = {"teachers": ["EMA"], "controls": ["FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3", "ORIGINAL_8_X1"],
+              "cost_scenarios": {"base": {}, "stress": {}},
+              "intervals": {"native_screen": [["a", "b"], ["b", "c"]]}}
+    run = {"strategy_id": "FLAT", "scenario": "base", "window": ("a", "b"),
+           "cases": (), "equity_curve": (1000., 1000.),
+           "native_order_verification": {"barriers": 10, "authority": "retained_m22_session_snapshots"}}
+    result = compare_preregistered_native_runs(config, (run,))
+    assert result["expected_cells"] == 20 and result["available_cells"] == 1
+    assert result["status"] == "INCOMPLETE" and result["qualification"] == "NOT_ESTABLISHED"
+    with pytest.raises(ValueError, match="duplicate"):
+        compare_preregistered_native_runs(config, (run, run))
+    with pytest.raises(ValueError, match="M2.2"):
+        compare_preregistered_native_runs(config, ({**run, "native_order_verification": {}},))

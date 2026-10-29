@@ -23,6 +23,10 @@ def test_x1_replay_uses_original_teacher_exit_and_next_opens():
     assert result.label_end_ts_ns == 5*M
     assert result.net_return_bps == pytest.approx((105/103-1)*10000 - 6 - 6*105/103)
     assert result.evidence_type == "MODEL_COUNTERFACTUAL"
+    again, = label_grouped_candidates([group], replay, exit_policy_id="X1",
+        execution_recipe="next-open", cost_scenario_id="base", block_end_ns=6*M,
+        gross_return_method="simple")
+    assert again == result
 
 
 def test_x1_replay_rejects_gaps_and_wrong_exit_recipe():

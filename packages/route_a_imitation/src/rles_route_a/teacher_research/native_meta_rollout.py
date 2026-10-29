@@ -15,7 +15,7 @@ def run_registered_meta_rollout(
     factory: Any, host_rollout: Callable[..., Any], grant: HostTrainGrant,
     verify_grant: Callable[[HostTrainGrant], bool], scenario: str, seed: int,
     rollout_id: str, episode_steps: int, trace_path: Path,
-    reset_options: Mapping[str, Any] | None = None,
+    reset_options: Mapping[str, Any] | None = None, teacher_funnel_hook: Any | None = None,
 ) -> tuple[tuple[Any, ...], Mapping[str, Any]]:
     """Use host M2.2 and L6 verification; never manufacture native receipts."""
     if not isinstance(provider, NativeGymTeacherProvider) or provider.teacher is not teacher:
@@ -39,7 +39,8 @@ def run_registered_meta_rollout(
         kwargs["reset_options"] = dict(reset_options)
     barriers, native = provider.rollout_with_m22_trace(
         factory=factory, host_rollout=host_rollout, grant=grant, seed=seed,
-        decision_policy=None, rollout_id=rollout_id, **kwargs)
+        decision_policy=None, rollout_id=rollout_id,
+        teacher_funnel_hook=teacher_funnel_hook, **kwargs)
     verification = native.get("route_a_native_order_verification")
     if (len(barriers) != episode_steps or not isinstance(verification, Mapping)
             or verification.get("barriers") != len(barriers)
