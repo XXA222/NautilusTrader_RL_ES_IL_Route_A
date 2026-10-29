@@ -71,6 +71,12 @@ def test_risk_override_precedes_model_and_unknown_position():
     assert action.intent == "EXIT" and action.expert_id == "recovery"
     # The override remains executable even if candidate diagnostics fail.
     assert teacher.decisions[-1].candidate_error is None
+    action = teacher.advise(observation(2, ema_9=101., exposure=.4))
+    assert action.intent == "EXIT"
+    decision = teacher.decisions[-1]
+    assert decision.candidates and decision.candidates[0].score is None
+    assert decision.candidates[0].disposition == "REJECTED_HARD_RISK_OVERRIDE"
+    assert "before calibration" in decision.candidate_error
 
 
 def test_rejection_diagnostics_identify_out_of_support_feature():

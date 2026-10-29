@@ -24,3 +24,11 @@ def test_limit_invalid_overlapping_bars():
     with pytest.raises(ValueError, match="overlapping"):
         replay_limit_entry(decision_ts_ns=1, side=1, limit_price=1.,
             bars=(LimitBar(2, 5, 2., 3.), LimitBar(4, 6, 2., 3.)), block_end_ns=10)
+
+
+
+def test_missing_bars_end_observation_without_claiming_cancellation():
+    result = replay_limit_entry(decision_ts_ns=1, side=1, limit_price=90.,
+        bars=(LimitBar(2, 3, 100., 110.), LimitBar(5, 6, 80., 110.)),
+        cancel_at_ns=8, block_end_ns=10)
+    assert result.status == "RIGHT_CENSORED" and result.observed_until_ns == 3

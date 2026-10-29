@@ -15,11 +15,16 @@ from .entry_meta_policy import EntryScore, FrozenEntryMetaPolicy
 @dataclass(frozen=True, slots=True)
 class CandidateDecision:
     group: CandidateGroup
-    score: EntryScore
+    score: EntryScore | None
     selected: bool
+    rejection_override: str | None = None
 
     @property
     def disposition(self) -> str:
+        if self.rejection_override is not None:
+            return "REJECTED_" + self.rejection_override
+        if self.score is None:
+            return "REJECTED_UNSCORED"
         if self.selected:
             return "ACCEPTED_SELECTED"
         if self.score.action in ("LONG", "SHORT"):
@@ -86,17 +91,27 @@ class MetaGatedTeacher:
         if override is not None:
             # Diagnostics must never prevent a hard-risk action. Record failures
             # explicitly instead of silently treating them as no candidates.
+            failures = []
             try:
                 collection = self.collector.collect(observation)
-                for teacher in self._teachers.values():
-                    teacher.advise(observation)
-                scored = tuple(CandidateDecision(group, self.policy.score(group), False)
-                               for group in collection.groups)
-                failure = None
             except Exception as exc:
-                scored = ()
-                failure = f"{type(exc).__name__}: {exc}"
-            self.decisions.append(MetaDecision(observation, scored, override, self._owner, failure))
+                collection = None
+                failures.append(f"collection {type(exc).__name__}: {exc}")
+            for name, teacher in self._teachers.items():
+                try:
+                    teacher.advise(observation)
+                except Exception as exc:
+                    failures.append(f"{name} {type(exc).__name__}: {exc}")
+            scored = []
+            for group in collection.groups if collection is not None else ():
+                try:
+                    score = self.policy.score(group)
+                except Exception as exc:
+                    score = None
+                    failures.append(f"score {group.event_id} {type(exc).__name__}: {exc}")
+                scored.append(CandidateDecision(group, score, False, "HARD_RISK_OVERRIDE"))
+            self.decisions.append(MetaDecision(observation, tuple(scored), override, self._owner,
+                                                "; ".join(failures) or None))
             return override
         if self._scope is not None and self._scope != scope:
             if abs(current) > 1e-8 or observation.pending_order_ids:
