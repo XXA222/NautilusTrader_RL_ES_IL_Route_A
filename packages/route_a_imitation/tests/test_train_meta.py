@@ -38,6 +38,7 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
                                             verify_grant=lambda grant: True)
     assert missing_account.value.diagnostics["fit_feature_not_ready"] == 4
     assert missing_account.value.diagnostics["calibration_feature_not_ready"] == 4
+    assert missing_account.value.diagnostics["fit_missing_feature_counts"] == {"account.missing": 4}
     result = train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True)
     assert result.diagnostics["fit_complete_used"] == 4
     assert result.diagnostics["fit_account_coverage"]["position_or_pending"] == 0

@@ -147,6 +147,7 @@ def test_missing_market_feature_rejects_candidate_without_scoring():
     assert action.intent == "FLAT"
     assert decision.candidates and decision.candidates[0].score is None
     assert decision.candidates[0].disposition == "REJECTED_FEATURE_NOT_READY"
+    assert decision.candidates[0].missing_features == ("market.zscore_60",)
 
 
 def test_missing_account_model_feature_rejects_without_fabricating_zero():
@@ -158,6 +159,7 @@ def test_missing_account_model_feature_rejects_without_fabricating_zero():
     assert action.intent == "FLAT"
     assert teacher.decisions[-1].candidates[0].disposition == "REJECTED_FEATURE_NOT_READY"
     assert teacher.decisions[-1].candidates[0].score is None
+    assert teacher.decisions[-1].candidates[0].missing_features == ("account.drawdown",)
 
 
 def test_mixed_return_bases_are_rejected():

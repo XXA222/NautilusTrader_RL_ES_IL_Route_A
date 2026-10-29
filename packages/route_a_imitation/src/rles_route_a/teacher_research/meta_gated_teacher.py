@@ -9,7 +9,7 @@ from rles_route_a.teachers.protocol import advice
 from rles_route_a.teachers_1m.registry import build_teacher_1m
 from .candidate_collector import OneMinuteCandidateCollector
 from .candidate_event_union import CandidateGroup
-from .entry_meta_policy import EntryScore, FrozenEntryMetaPolicy
+from .entry_meta_policy import EntryScore, FrozenEntryMetaPolicy, missing_candidate_features
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +18,7 @@ class CandidateDecision:
     score: EntryScore | None
     selected: bool
     rejection_override: str | None = None
+    missing_features: tuple[str, ...] = ()
 
     @property
     def disposition(self) -> str:
@@ -85,9 +86,7 @@ class MetaGatedTeacher:
         self.native_receipts.clear()
 
     def _missing_model_features(self, observation: PointInTimeObservation) -> tuple[str, ...]:
-        return tuple(name for name in self.policy.feature_names
-                     if (name.startswith("market.") and name[7:] not in observation.market)
-                     or (name.startswith("account.") and name[8:] not in observation.account))
+        return missing_candidate_features(observation, self.policy.feature_names)
 
     def advise(self, observation: PointInTimeObservation) -> ExpertAdvice:
         scope = (observation.episode_id, observation.source_id, observation.fold_id)
@@ -109,14 +108,15 @@ class MetaGatedTeacher:
                 except Exception as exc:
                     failures.append(f"{name} {type(exc).__name__}: {exc}")
             scored = []
+            missing = self._missing_model_features(observation)
             for group in collection.groups if collection is not None else ():
                 try:
-                    score = (None if self._missing_model_features(observation)
+                    score = (None if missing
                              else self.policy.score(group))
                 except Exception as exc:
                     score = None
                     failures.append(f"score {group.event_id} {type(exc).__name__}: {exc}")
-                scored.append(CandidateDecision(group, score, False, "HARD_RISK_OVERRIDE"))
+                scored.append(CandidateDecision(group, score, False, "HARD_RISK_OVERRIDE", missing))
             self.decisions.append(MetaDecision(observation, tuple(scored), override, self._owner,
                 "; ".join(failures) or None, collection.teacher_signals if collection is not None else ()))
             return override
@@ -164,7 +164,7 @@ class MetaGatedTeacher:
                               "PENDING_ORDER" if observation.pending_order_ids else
                               "POSITION_OPEN" if abs(current) > 1e-8 else
                               "OWNER_NOT_READY" if group.event_id in owner_not_ready else
-                              "FEATURE_NOT_READY" if score is None else None)
+                              "FEATURE_NOT_READY" if score is None else None, missing)
             for group, score in scored), action, self._owner, teacher_signals=collection.teacher_signals))
         return action
 

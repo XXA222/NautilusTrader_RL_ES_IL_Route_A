@@ -190,7 +190,9 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
         raise RuntimeError("Meta candidate scoring failed in native episode: " + errors[0])
     scores = tuple(item.score for item in decisions if item.score is not None)
     result = {"scores": summarize_entry_scores(scores, margin_bps=teacher.policy.margin_bps),
-              "unscored": len(decisions) - len(scores), "quality": None}
+              "unscored": len(decisions) - len(scores), "quality": None,
+              "missing_feature_counts": dict(sorted(Counter(
+                  name for item in decisions for name in item.missing_features).items()))}
     reasons = {}
     for row in teacher.decisions:
         for name, raw, reason in row.teacher_signals:
