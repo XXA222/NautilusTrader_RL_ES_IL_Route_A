@@ -192,10 +192,21 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
                 comparisons.append({"scenario": scenario, "window": window, "baseline": other,
                     "net_equity_improvement": meta["account_equity_change"] - baseline["account_equity_change"],
                     "drawdown_change": meta["max_drawdown"] - baseline["max_drawdown"]})
+    window_consistency = []
+    for scenario in scenarios:
+        for baseline in (*original, *controls):
+            pairs = [row for row in comparisons if row["scenario"] == scenario and row["baseline"] == baseline]
+            complete = len(pairs) == len(windows)
+            window_consistency.append({"scenario": scenario, "baseline": baseline,
+                "expected_windows": len(windows), "available_windows": len(pairs),
+                "positive_improvement_windows": sum(row["net_equity_improvement"] > 0 for row in pairs),
+                "all_windows_improved": (all(row["net_equity_improvement"] > 0 for row in pairs)
+                                         if complete and windows else None),
+                "status": "COMPLETE" if complete and windows else "INCOMPLETE"})
     return {
         "evidence_type": "SCENARIO_ONLY_NATIVE",
         "expected_cells": len(expected), "available_cells": len(supplied),
         "status": "COMPLETE" if len(supplied) == len(expected) else "INCOMPLETE",
-        "rows": rows, "comparisons": comparisons,
+        "rows": rows, "comparisons": comparisons, "window_consistency": window_consistency,
         "qualification": "NOT_ESTABLISHED",
     }

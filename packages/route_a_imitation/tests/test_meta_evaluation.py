@@ -73,7 +73,25 @@ def test_native_comparison_reports_missing_cells_without_model_substitution():
     result = compare_preregistered_native_runs(config, (run,))
     assert result["expected_cells"] == 20 and result["available_cells"] == 1
     assert result["status"] == "INCOMPLETE" and result["qualification"] == "NOT_ESTABLISHED"
+    assert all(item["all_windows_improved"] is None for item in result["window_consistency"])
     with pytest.raises(ValueError, match="duplicate"):
         compare_preregistered_native_runs(config, (run, run))
     with pytest.raises(ValueError, match="M2.2"):
         compare_preregistered_native_runs(config, ({**run, "native_order_verification": {}},))
+
+
+def test_window_consistency_does_not_infer_missing_or_tied_improvements():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+    config = {"teachers": ["EMA"], "controls": ["FLAT"], "cost_scenarios": {"base": {}},
+              "intervals": {"native_screen": [["a", "b"], ["b", "c"]]}}
+    def row(strategy, window, final):
+        return {"strategy_id": strategy, "scenario": "base", "window": window,
+                "cases": (), "equity_curve": (1000., final),
+                "native_order_verification": {"barriers": 2, "authority": "retained_m22_session_snapshots"}}
+    rows = (row("META_X1", ("a", "b"), 1002.), row("FLAT", ("a", "b"), 1000.),
+            row("META_X1", ("b", "c"), 1000.), row("FLAT", ("b", "c"), 1000.))
+    result = compare_preregistered_native_runs(config, rows)
+    flat = next(x for x in result["window_consistency"] if x["baseline"] == "FLAT")
+    ema = next(x for x in result["window_consistency"] if x["baseline"] == "EMA")
+    assert flat["positive_improvement_windows"] == 1 and flat["all_windows_improved"] is False
+    assert ema["status"] == "INCOMPLETE" and ema["all_windows_improved"] is None
