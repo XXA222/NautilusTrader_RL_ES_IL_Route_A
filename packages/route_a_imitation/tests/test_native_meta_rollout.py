@@ -16,7 +16,7 @@ def test_meta_runner_requires_scope_cost_and_complete_m22_trace(tmp_path):
     teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
     provider = NativeGymTeacherProvider(
         env_factory=lambda: None, teacher=teacher, fold_id="train", source_identity="synthetic",
-        execution_recipe="native", native_order_facts_verifier=lambda *_: True,
+        execution_recipe="episode-transition", native_order_facts_verifier=lambda *_: True,
         no_external_cashflow_receipt=lambda *_: "receipt",
         no_external_cashflow_verifier=lambda *_: True, episode_id=lambda *_: "e")
     grant = HostTrainGrant("train", "owner", "reservation", "synthetic", "train", True)
@@ -27,13 +27,25 @@ def test_meta_runner_requires_scope_cost_and_complete_m22_trace(tmp_path):
     provider.rollout_with_m22_trace = lambda **kwargs: ((SimpleNamespace(trace=trace),),
         {"route_a_native_order_verification": {"barriers": 1,
                                                "authority": "retained_m22_session_snapshots"}})
-    kwargs = dict(provider=provider, teacher=teacher, factory=object(), host_rollout=lambda: None,
+    fill = SimpleNamespace(data_granularity="bar", slippage_bps="1", fee_multiplier="1")
+    execution = SimpleNamespace(order_type="MARKET", fill=lambda mode: fill)
+    factory = SimpleNamespace(transition_hash="episode-transition",
+        route_a_execution_recipe_hash="native", mode="base", execution=execution,
+        rule=SimpleNamespace(payload={"taker_fee": "0.0005"}))
+    kwargs = dict(provider=provider, teacher=teacher, factory=factory, host_rollout=lambda: None,
                   grant=grant, verify_grant=lambda _: True, scenario="base", seed=7,
                   rollout_id="synthetic", episode_steps=1, trace_path=tmp_path / "trace.jsonl")
     with pytest.raises(ValueError, match="cost scenario"):
         run_registered_meta_rollout(**{**kwargs, "scenario": "stress"})
     with pytest.raises(PermissionError, match="grant"):
         run_registered_meta_rollout(**{**kwargs, "verify_grant": lambda _: False})
+    with pytest.raises(ValueError, match="episode transition"):
+        run_registered_meta_rollout(**{**kwargs, "factory": SimpleNamespace(transition_hash="other")})
+    wrong_profile = SimpleNamespace(data_granularity="bar", slippage_bps="2", fee_multiplier="1")
+    wrong_factory = SimpleNamespace(**{**vars(factory), "execution":
+        SimpleNamespace(order_type="MARKET", fill=lambda mode: wrong_profile)})
+    with pytest.raises(ValueError, match="per-leg fee or slippage"):
+        run_registered_meta_rollout(**{**kwargs, "factory": wrong_factory})
     barriers, native = run_registered_meta_rollout(**kwargs)
     assert len(barriers) == 1 and (tmp_path / "trace.jsonl").exists()
     assert native["route_a_native_order_verification"]["barriers"] == 1

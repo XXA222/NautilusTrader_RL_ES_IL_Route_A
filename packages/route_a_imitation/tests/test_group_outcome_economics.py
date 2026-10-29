@@ -48,3 +48,32 @@ def test_retained_actual_native_trade_cashflow():
     assert reconciled["net_bps"] == pytest.approx(-16.995716952807637)
     with pytest.raises(ValueError, match="does not reconcile"):
         reconcile_native_trade({**row, "realized_pnl": row["realized_pnl"] - row["slippage_cost"]})
+
+
+
+def test_same_native_case_and_research_label_discrepancy_are_accounted():
+    from hashlib import sha256
+    from rles_route_a.teacher_research.native_reconciliation import reconcile_counterfactual_to_native
+    case = dict(status="ORDINARY_COMPLETE",
+        trade_case_id="native-case-047b9e12-31d2-4dfc-931f-e32b441a5c14",
+        entry_decision_ts_ns=1706745780001000000, side=1,
+        entry_fill_ts_ns=1706745840001000000, exit_fill_ts_ns=1706747160001000000,
+        entry_fill_price=2285.97, exit_fill_price=2284.37, entry_notional=249.17073,
+        fees=.24908352, funding=0., gross_cash_pnl_before_fees_and_funding=-.1744,
+        realized_pnl=-.42348352, economic_status="SCENARIO_ONLY")
+    entry, exit_price = 2285.73, 2284.60
+    ratio = exit_price / entry
+    replay = CounterfactualTradeReplay(sha256(b"real-native-case").hexdigest(),
+        case["entry_fill_ts_ns"]-1_000_000, entry,
+        case["exit_fill_ts_ns"]-1_000_000, exit_price,
+        5., 5.*ratio, 1., 1.*ratio, 0., None, "historical-candidate-replay")
+    result = reconcile_counterfactual_to_native(replay=replay, native_case=case,
+        decision_ts_ns=case["entry_decision_ts_ns"], side=1)
+    assert result["native_net_cash"] == pytest.approx(case["realized_pnl"])
+    assert result["native_minus_modeled_cash"] == pytest.approx(
+        result["native_fill_vs_reference_gross_cash"] + result["modeled_fee_minus_native_fee_cash"]
+        + result["native_minus_modeled_funding_cash"] + result["modeled_slippage_cash"])
+    assert result["native_minus_modeled_cash"] != 0
+    with pytest.raises(ValueError, match="same trade"):
+        reconcile_counterfactual_to_native(replay=replay, native_case=case,
+            decision_ts_ns=case["entry_decision_ts_ns"]+1, side=1)

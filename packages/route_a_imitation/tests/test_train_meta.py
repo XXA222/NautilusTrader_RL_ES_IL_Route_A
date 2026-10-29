@@ -28,9 +28,11 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
                                  "cost.round_trip_bps"), margin_bps=1., cost_bps=4.)
     with pytest.raises(PermissionError):
         train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: False)
-    with pytest.raises(ValueError, match="insufficient complete"):
+    with pytest.raises(ValueError, match="insufficient complete") as rejected:
         train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True,
                                             minimum_complete_fit=5)
+    assert rejected.value.diagnostics["fit_complete_used"] == 4
+    assert len(rejected.value.fit_outcomes) == 4
     result = train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True)
     assert result.diagnostics["fit_complete_used"] == 4
     assert result.diagnostics["calibration_complete_used"] == 4
@@ -49,7 +51,7 @@ def test_frozen_meta_training_rejects_foreign_or_screen_inputs(observed):
                            "reservation", "fixture-source", "train", True)
     kwargs = dict(prereg_path=config, grant=grant, verify_grant=lambda _: True,
                   fit_groups=(), calibration_groups=(), observations=(observed(),),
-                  opens=(), funding=(), scenario="base")
+                  opens=(), funding=(), scenario="base", native_factory=object())
     with pytest.raises(ValueError, match="cannot include native-screen"):
         train_meta_from_preregistered_x1(**kwargs)
     with pytest.raises(ValueError, match="unregistered cost"):

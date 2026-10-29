@@ -62,3 +62,20 @@ def test_limit_touch_integrates_with_x1_exit_and_censor():
         make_x1_group_replay(**common, limit_entry=no_touch), exit_policy_id="X1",
         execution_recipe="limit", cost_scenario_id="base", block_end_ns=7*M)
     assert censored.outcome_status == "RIGHT_CENSORED" and censored.net_return_bps is None
+
+
+
+def test_incomplete_tail_is_censored_at_observed_coverage():
+    rows = tuple(observation(i, ema_9=fast)
+                 for i, fast in enumerate((99., 101., 101.), 1))
+    collector = OneMinuteCandidateCollector()
+    collector.collect(rows[0])
+    group, = collector.collect(rows[1]).groups
+    replay = make_x1_group_replay(observations=rows,
+        opens=tuple((i*M, 100.+i) for i in range(1, 7)), funding=(),
+        block_ends={group.event_id: 6*M}, fee_bps=5., slippage_bps=1.,
+        execution_recipe="next-open", scenario="base")
+    outcome, = label_grouped_candidates([group], replay, exit_policy_id="X1",
+        execution_recipe="next-open", cost_scenario_id="base", block_end_ns=6*M)
+    assert outcome.outcome_status == "RIGHT_CENSORED"
+    assert outcome.censor_ts_ns == 4*M and outcome.net_return_bps is None
