@@ -41,8 +41,18 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["rejected"]["without_outcome"] == 1
     assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["complete"] == 1
     assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["without_outcome"] == 1
+    assert result["prediction_quality"]["paired_complete_scored"] == 2
+    assert result["prediction_quality"]["scored_without_complete_outcome"] == 1
+    assert result["prediction_quality"]["mean_absolute_error_bps"] == pytest.approx(3.5)
+    assert result["prediction_quality"]["mean_prediction_error_bps"] == pytest.approx(3.5)
+    assert result["prediction_quality"]["brier_score"] == pytest.approx(.29)
     assert result["evidence_type"] == "MODEL_COUNTERFACTUAL"
     from dataclasses import replace
+    no_pairs = summarize_candidate_quality(
+        (replace(decisions[0], score=None, selected=False), decisions[2]), (labels[0], labels[2]))
+    assert no_pairs["prediction_quality"]["paired_complete_scored"] == 0
+    assert no_pairs["prediction_quality"]["unscored_candidates"] == 1
+    assert no_pairs["prediction_quality"]["brier_score"] is None
     with pytest.raises(ValueError, match="cannot mix"):
         summarize_candidate_quality(tuple(decisions),
             (labels[0], replace(labels[1], cost_scenario_id="stress"), labels[2]))

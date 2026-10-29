@@ -94,8 +94,26 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                 "without_outcome": len(labels) - len(values),
                 "mean_net_bps": fsum(values) / len(values) if values else None,
                 "win_rate": sum(v > 0 for v in values) / len(values) if values else None}
+    paired = [(d.score, by_id[d.group.event_id].net_return_bps) for d in decisions
+              if d.score is not None and by_id[d.group.event_id].outcome_status == "COMPLETE"]
+    for score, actual in paired:
+        if (not isfinite(score.expected_net_bps) or not isfinite(score.probability_positive)
+                or not 0 <= score.probability_positive <= 1):
+            raise ValueError("invalid candidate prediction")
+    n = len(paired)
+    prediction = {
+        "paired_complete_scored": n,
+        "unscored_candidates": sum(d.score is None for d in decisions),
+        "scored_without_complete_outcome": sum(
+            d.score is not None and by_id[d.group.event_id].outcome_status != "COMPLETE" for d in decisions),
+        "mean_absolute_error_bps": fsum(abs(s.expected_net_bps - y) for s, y in paired) / n if n else None,
+        "mean_prediction_error_bps": fsum(s.expected_net_bps - y for s, y in paired) / n if n else None,
+        "brier_score": fsum((s.probability_positive - (y > 0)) ** 2 for s, y in paired) / n if n else None,
+        "basis": "complete scored MODEL_COUNTERFACTUAL outcomes; overlapping candidates are dependent",
+    }
     return {"evidence_type": "MODEL_COUNTERFACTUAL",
             "label_recipe": next(iter(recipes)) if recipes else None,
+            "prediction_quality": prediction,
             "accepted": segment(d for d in decisions if d.selected),
             "rejected": segment(d for d in decisions if not d.selected),
             "dispositions": dict(sorted(Counter(d.disposition for d in decisions).items())),
