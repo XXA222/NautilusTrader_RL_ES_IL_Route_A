@@ -54,6 +54,8 @@ def test_native_hold_exit_pending_and_trace(tmp_path):
     assert pending.intent == "HOLD"
     closed = teacher.advise(observation(13, ema_9=99., exposure=.3))
     assert closed.intent == "EXIT" and "EMA_REVERSE_CROSS" in closed.reason_codes
+    assert any(item.disposition == "REJECTED_POSITION_OPEN"
+               for item in teacher.decisions[-1].candidates)
     assert teacher.decisions[1].candidates[0].selected
     import json
     output = tmp_path / "trace.jsonl"
@@ -61,6 +63,16 @@ def test_native_hold_exit_pending_and_trace(tmp_path):
     rows = [json.loads(line) for line in output.read_text().splitlines()]
     assert rows[1]["candidates"][0]["disposition"] == "ACCEPTED_SELECTED"
     assert rows[-1]["native_order_facts"]["filled_order_ids"] == ["o"]
+
+
+def test_pending_order_candidate_is_not_misreported_as_arbitration():
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.advise(observation(10, ema_9=99.))
+    action = teacher.advise(observation(11, ema_9=101., pending=("order",)))
+    assert action.intent == "FLAT"
+    assert teacher.decisions[-1].candidates
+    assert all(item.disposition == "REJECTED_PENDING_ORDER"
+               for item in teacher.decisions[-1].candidates)
 
 
 def test_risk_override_precedes_model_and_unknown_position():
