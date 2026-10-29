@@ -7,6 +7,7 @@ from dataclasses import fields as dataclass_fields
 import json
 from math import fsum, isfinite
 from pathlib import Path
+import re
 from typing import Literal
 
 from rles_route_a.evaluation.teacher_funnel_1m import (
@@ -55,6 +56,8 @@ class NativeTradeCase1m:
     holding_minutes: float
     exit_reason: str | None
     economic_status: str
+    candidate_event_id: str | None = None
+    candidate_teacher_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if any(not value for value in (
@@ -82,6 +85,15 @@ class NativeTradeCase1m:
             raise ValueError("trade prices/notional/equity must be positive and costs non-negative")
         if self.fee_currency != self.equity_currency:
             raise ValueError("trade fees and account equity must use the same currency")
+        if (self.candidate_event_id is None) != (not self.candidate_teacher_ids):
+            raise ValueError("candidate provenance requires both event and teacher identities")
+        if (self.candidate_event_id is not None
+                and (not isinstance(self.candidate_teacher_ids, tuple)
+                     or not re.fullmatch(r"[0-9a-f]{64}", self.candidate_event_id)
+                     or len(self.candidate_teacher_ids) != len(set(self.candidate_teacher_ids))
+                     or any(not isinstance(name, str) or not name.strip()
+                            for name in self.candidate_teacher_ids))):
+            raise ValueError("native candidate provenance is invalid")
         if self.status == "ORDINARY_COMPLETE":
             if (self.exit_signal_price is None or self.exit_fill_ts_ns is None
                     or self.exit_fill_price is None or not self.exit_reason
