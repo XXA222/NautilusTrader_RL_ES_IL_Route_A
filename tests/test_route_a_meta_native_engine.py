@@ -123,6 +123,8 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
     assert any(case.status == "ORDINARY_COMPLETE" for case in hook.cases)
     assert all(barrier.trace.scenario_only for barrier in barriers)
     assert cell["native_order_verification"]["barriers"] == 11
+    assert cell["equity_curve"][0] == float(factory.capital)
+    assert cell["equity_curve"][1:]  # Native samples follow the initial capital.
     assert (cell_dir/"native-result.json").is_file()
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
     assert matrix["status"] == "COMPLETE" and matrix["available_cells"] == 5

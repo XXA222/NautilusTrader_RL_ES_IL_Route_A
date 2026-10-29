@@ -260,7 +260,9 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
         raise RuntimeError("native episode lacks settled account evidence")
     record = {"strategy_id": strategy, "scenario": scenario, "window": tuple(window),
               "cases": tuple(hook.cases),
-              "equity_curve": tuple(row["equity"] for row in account["account_rows"]),
+              # Start at the configured native account capital even if the
+              # first sampled barrier already contains an entry and its costs.
+              "equity_curve": (float(factory.capital), *(row["equity"] for row in account["account_rows"])),
               "native_order_verification": verify, "account_metrics": account["metrics"],
               "candidate_summary": ({key: value for key, value in diagnostics.items() if key != "outcomes"}
                                     if diagnostics is not None else None)}
