@@ -90,6 +90,19 @@ def test_pending_order_candidate_is_not_misreported_as_arbitration():
                for item in teacher.decisions[-1].candidates)
 
 
+def test_owner_lifecycle_can_block_signal_without_aborting_rollout():
+    class NotReady:
+        def advise(self, obs):
+            return ExpertAdvice("T01_EMA_9_21", obs.decision_ts_ns, "FLAT", 0., ("LIFECYCLE_NOT_READY",))
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher._teachers["T01_EMA_9_21"] = NotReady()
+    teacher.advise(observation(10, ema_9=99.))
+    action = teacher.advise(observation(11, ema_9=101.))
+    assert action.intent == "FLAT"
+    assert any(item.disposition == "REJECTED_OWNER_NOT_READY" for item in teacher.decisions[-1].candidates)
+    assert not any(item.selected for item in teacher.decisions[-1].candidates)
+
+
 def test_risk_override_precedes_model_and_unknown_position():
     recovery = Recovery()
     recovery.active = True
