@@ -203,10 +203,28 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
                 "all_windows_improved": (all(row["net_equity_improvement"] > 0 for row in pairs)
                                          if complete and windows else None),
                 "status": "COMPLETE" if complete and windows else "INCOMPLETE"})
+    cost_resilience = []
+    if {"base", "stress"}.issubset(scenarios):
+        for window in windows:
+            base = supplied.get(("META_X1", "base", window))
+            stress = supplied.get(("META_X1", "stress", window))
+            complete = base is not None and stress is not None
+            traded = complete and all(x["ordinary_completed_trades"] > 0 for x in (base, stress))
+            cost_resilience.append({"window": window,
+                "status": "INCOMPLETE" if not complete else "AVAILABLE" if traded else "NO_COMPLETED_TRADE",
+                "base_net_equity_change": base["account_equity_change"] if base else None,
+                "stress_net_equity_change": stress["account_equity_change"] if stress else None,
+                "base_completed_trades": base["ordinary_completed_trades"] if base else None,
+                "stress_completed_trades": stress["ordinary_completed_trades"] if stress else None,
+                "both_positive_after_costs": (base["account_equity_change"] > 0
+                                              and stress["account_equity_change"] > 0)
+                                             if traded else None,
+                "interpretation": "scenario accounts can select different candidates; not a paired-trade test"})
     return {
         "evidence_type": "SCENARIO_ONLY_NATIVE",
         "expected_cells": len(expected), "available_cells": len(supplied),
         "status": "COMPLETE" if len(supplied) == len(expected) else "INCOMPLETE",
         "rows": rows, "comparisons": comparisons, "window_consistency": window_consistency,
+        "cost_resilience": cost_resilience,
         "qualification": "NOT_ESTABLISHED",
     }

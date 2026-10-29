@@ -95,3 +95,18 @@ def test_window_consistency_does_not_infer_missing_or_tied_improvements():
     ema = next(x for x in result["window_consistency"] if x["baseline"] == "EMA")
     assert flat["positive_improvement_windows"] == 1 and flat["all_windows_improved"] is False
     assert ema["status"] == "INCOMPLETE" and ema["all_windows_improved"] is None
+
+
+def test_cost_resilience_does_not_treat_flat_or_missing_as_profit():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+    config = {"teachers": [], "controls": ["FLAT"], "cost_scenarios": {"base": {}, "stress": {}},
+              "intervals": {"native_screen": [["a", "b"]]}}
+    base = {"strategy_id": "META_X1", "scenario": "base", "window": ("a", "b"),
+            "cases": (), "equity_curve": (1000., 1000.),
+            "native_order_verification": {"barriers": 2, "authority": "retained_m22_session_snapshots"}}
+    result = compare_preregistered_native_runs(config, (base,))
+    assert result["cost_resilience"][0]["status"] == "INCOMPLETE"
+    stress = {**base, "scenario": "stress"}
+    report = compare_preregistered_native_runs(config, (base, stress))["cost_resilience"][0]
+    assert report["status"] == "NO_COMPLETED_TRADE"
+    assert report["both_positive_after_costs"] is None
