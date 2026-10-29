@@ -155,6 +155,8 @@ class MetaGatedTeacher:
                 action = advice(observation, self.expert_id, "FLAT", 0., "NO_ACCEPTED_CANDIDATE")
         self.decisions.append(MetaDecision(observation, tuple(
             CandidateDecision(group, score, selected is not None and group.event_id == selected.event_id,
+                              "PENDING_ORDER" if observation.pending_order_ids else
+                              "POSITION_OPEN" if abs(current) > 1e-8 else
                               "FEATURE_NOT_READY" if score is None else None)
             for group, score in scored), action, self._owner))
         return action

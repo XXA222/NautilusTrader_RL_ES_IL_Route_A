@@ -39,6 +39,8 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["accepted"]["mean_net_bps"] == 5.
     assert result["rejected"]["mean_net_bps"] == -2.
     assert result["rejected"]["without_outcome"] == 1
+    assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["complete"] == 1
+    assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["without_outcome"] == 1
     assert result["evidence_type"] == "MODEL_COUNTERFACTUAL"
     from dataclasses import replace
     with pytest.raises(ValueError, match="cannot mix"):

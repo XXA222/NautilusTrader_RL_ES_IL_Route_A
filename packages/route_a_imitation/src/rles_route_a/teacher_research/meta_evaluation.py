@@ -86,8 +86,8 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                 raise ValueError("complete outcome is missing valid economic facts")
         elif outcome.net_return_bps is not None:
             raise ValueError("incomplete outcome cannot supply a net return")
-    def segment(selected):
-        labels = [by_id[d.group.event_id] for d in decisions if d.selected == selected]
+    def segment(items):
+        labels = [by_id[d.group.event_id] for d in items]
         values = [o.net_return_bps for o in labels if o.outcome_status == "COMPLETE"
                   and o.net_return_bps is not None]
         return {"candidates": len(labels), "complete": len(values),
@@ -96,8 +96,11 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                 "win_rate": sum(v > 0 for v in values) / len(values) if values else None}
     return {"evidence_type": "MODEL_COUNTERFACTUAL",
             "label_recipe": next(iter(recipes)) if recipes else None,
-            "accepted": segment(True), "rejected": segment(False),
-            "dispositions": dict(sorted(Counter(d.disposition for d in decisions).items()))}
+            "accepted": segment(d for d in decisions if d.selected),
+            "rejected": segment(d for d in decisions if not d.selected),
+            "dispositions": dict(sorted(Counter(d.disposition for d in decisions).items())),
+            "quality_by_disposition": {reason: segment(d for d in decisions if d.disposition == reason)
+                                       for reason in sorted({d.disposition for d in decisions})}}
 
 
 
