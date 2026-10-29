@@ -3,12 +3,15 @@ from dataclasses import replace
 from copy import deepcopy
 from hashlib import sha256
 from math import sin
+from datetime import datetime, timezone
+import json
 from pathlib import Path
 import sys
 
 from rles_data.core import CuratedStore, MINUTE_NS
 from rles_data.io import read_curated, write_curated
 from rles_orchestrator import application
+from rles_orchestrator.research_access import ACTIVE_OWNER
 from rles_route_a.integration.l2_adapter import CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES
 from rles_route_a.teachers.recovery import RecoveryTeacher
 from rles_route_a.teachers_1m.registry import build_teacher_1m, ALL_TEACHER_RECIPE_BY_ID
@@ -28,8 +31,8 @@ import run_route_a_train_student_screen_20261020 as harness
 import run_route_a_meta_study_20261029 as study
 
 
-def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
-    environment = recipe(tmp_path, bar_count=410, start_minute=150)
+def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, monkeypatch):
+    environment = recipe(tmp_path, bar_count=610, start_minute=150)
     events = []
     for event in read_curated(environment["market_path"]).events:
         if event.kind in ("ohlcv_1m", "mark", "index"):
@@ -51,7 +54,7 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
     marker = market.with_name(market.name + ".COMPLETED.json")
     marker_sha = sha256(marker.read_bytes()).hexdigest()
     config = {"output":str(tmp_path/"training-run"), "environment":environment,
-              "train_data_access":{"start_ns":MINUTE_NS, "end_ns":411*MINUTE_NS,
+              "train_data_access":{"start_ns":MINUTE_NS, "end_ns":611*MINUTE_NS,
               "marker_sha256":marker_sha, "label":"train-synthetic-native-training"}}
     factory = application.prepare(config, fit_scaler=True, compact_report_snapshots=False,
                                   require_scoped_train_access=True)
@@ -164,3 +167,50 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
     assert len(comparison["comparisons"]) == 44
     assert all(item["status"] == "COMPLETE" for item in comparison["window_consistency"])
     assert comparison["qualification"] == "NOT_ESTABLISHED"
+
+    # Exercise the actual production study coordinator with synthetic source
+    # and native factories; only source loading/scaler construction are stubbed.
+    def timestamp(minute):
+        return datetime.fromtimestamp(minute * 60, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    prereg = json.loads((ROOT/"configs/route_a_meta_x1_train_prereg_20261029.json").read_text())
+    prereg["protocol_id"] = "synthetic-native-full-study"
+    prereg["intervals"] = {"warmup":[timestamp(1),timestamp(272)],
+        "train_fit":[timestamp(272),timestamp(360)],
+        "train_calibration":[timestamp(360),timestamp(450)],
+        "native_screen":[[timestamp(450),timestamp(480)],[timestamp(480),timestamp(510)]]}
+    prereg["cost_scenarios"] = experiment["cost_scenarios"]
+    prereg["model"].update({"features":["market.ema_9", "teacher.T01_EMA_9_21", "consensus.count",
+                                        "cost.round_trip_bps"],
+                            "minimum_complete_fit":4, "minimum_complete_calibration":4})
+    prereg_path = tmp_path/"synthetic-study.json"
+    raw = json.dumps(prereg).encode()
+    prereg_path.write_bytes(raw)
+    prereg_path.with_suffix(".json.sha256").write_text(sha256(raw).hexdigest())
+    monkeypatch.setattr(study, "PREREG", prereg_path)
+    monkeypatch.setattr(study, "_load_source", lambda *args: ({"marker_sha256":marker_sha}, {}))
+    monkeypatch.setattr(study, "_warmup_scaler", lambda *args: factory.scaler)
+    def make_factory(source, manifest, frozen, output, scaler, *, scenario, start_ns, end_ns):
+        env = deepcopy(environment)
+        env.update(start_ns=start_ns, end_ns=end_ns, mode=scenario)
+        token = ACTIVE_OWNER.set(frozen["protocol_id"])
+        try:
+            return application.prepare({**config, "environment":env}, fit_scaler=False, scaler=scaler,
+                compact_report_snapshots=False, require_scoped_train_access=True)
+        finally:
+            ACTIVE_OWNER.reset(token)
+    monkeypatch.setattr(study, "_factory", make_factory)
+    old_fold = harness.FOLD_ID
+    harness.FOLD_ID = "synthetic-full-study"
+    try:
+        full = study.execute_study(prereg, sha256(raw).hexdigest(), source_root="synthetic",
+                                   output=tmp_path/"synthetic-full-study")
+    finally:
+        harness.FOLD_ID = old_fold
+    assert full["status"] == "COMPLETE" and full["available_cells"] == 48
+    assert full["training_failures"] == {}
+    assert full["qualification"] == "NOT_ESTABLISHED"
+    for scenario in ("base", "stress"):
+        training = tmp_path/"synthetic-full-study"/"training"/scenario
+        assert (training/"COMPLETE").is_file() and (training/"policy.json").is_file()
+        assert (training/"candidate-barriers.jsonl").is_file() and (training/"outcomes.jsonl").is_file()
+    assert (tmp_path/"synthetic-full-study"/"comparison.json").is_file()
