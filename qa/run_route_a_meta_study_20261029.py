@@ -315,7 +315,10 @@ def execute_study(config, prereg_sha, *, source_root, output):
     collection_start = fit_start - 122 * MINUTE_NS
     collection_factory = _factory(source, manifest, config, output, scaler,
         scenario="base", start_ns=collection_start, end_ns=calibration_end)
-    recorder = NativeCandidateRecorder(RiskMatchedTeacher(legacy._control("FLAT"), RecoveryTeacher()))
+    # Collect independent opportunities against a real original-teacher
+    # account, including positions and drawdown, rather than an always-flat
+    # account whose constant features make live account states unsupported.
+    recorder = NativeCandidateRecorder(RiskMatchedTeacher(build_teacher_1m("T01_EMA_9_21"), RecoveryTeacher()))
     provider, collection_grant = _provider(collection_factory, recorder, source, "meta-fit-collection")
     _prepare_context(provider, collection_factory, collection_start, calibration_end)
     run_native_candidate_collection(provider=provider, recorder=recorder, factory=collection_factory,

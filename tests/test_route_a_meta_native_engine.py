@@ -17,6 +17,9 @@ from rles_route_a.teacher_research.native_meta_funnel import MetaNativeFunnelAda
 from rles_route_a.teacher_research.native_meta_rollout import run_registered_meta_rollout
 from rles_route_a.teacher_research.optional_1m_context import bind_optional_1m_context
 from rles_route_a.teacher_research.policy_io import save_frozen_entry_policy, load_frozen_entry_policy
+from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
+from rles_route_a.teacher_research.risk_matched_teacher import RiskMatchedTeacher
+from rles_route_a.teachers_1m.registry import build_teacher_1m
 from test_historical_factory import recipe
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,6 +118,19 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
                 source={"marker_sha256":marker_sha}, config=experiment,
                 strategy=strategy, scenario="base", window=window, model=policy, output=path))
         matrix = study.compare_preregistered_native_runs(experiment, comparison_rows)
+        for attr in ("snapshots", "teacher_snapshots", "fill_references"):
+            getattr(factory, attr).clear()
+        recorder = NativeCandidateRecorder(RiskMatchedTeacher(build_teacher_1m("T01_EMA_9_21"), RecoveryTeacher()))
+        collector_provider, collector_grant = harness.make_provider(factory, recorder, marker_sha,
+            "candidate-native-synthetic", market_feature_map=CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES)
+        collector_context = native._StreamingVisibleContext(factory, start_ns=environment["start_ns"],
+            end_ns=environment["end_ns"], instrument=environment["instrument"], warmup_bars=61)
+        bind_optional_1m_context(collector_provider, collector_context)
+        _, _, records = run_native_candidate_collection(provider=collector_provider, recorder=recorder,
+            factory=factory, host_rollout=application.rollout, grant=collector_grant,
+            verify_grant=lambda g: g == collector_grant and factory.application_registered_train_read_verifier(
+                factory.application_registered_train_read), seed=7, rollout_id="candidate-native-synthetic",
+            episode_steps=11, reset_options={"rles_episode_index":0})
     finally:
         harness.FOLD_ID = old_fold
     assert len(barriers) == 10
@@ -136,3 +152,8 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
     assert cell["candidate_summary"]["native_case_reconciliation"]["native_cases"] >= 1
     assert matrix["status"] == "INCOMPLETE" and matrix["available_cells"] == 5
     assert matrix["qualification"] == "NOT_ESTABLISHED"
+    assert len(records) == 11
+    assert any(abs(row.observation.account_value("net_exposure")) > 0 for row in records), repr([
+        (row.observation.decision_ts_ns, row.action.intent, row.action.reason_codes)
+        for row in records])
+    assert any(row.collection.groups for row in records)
