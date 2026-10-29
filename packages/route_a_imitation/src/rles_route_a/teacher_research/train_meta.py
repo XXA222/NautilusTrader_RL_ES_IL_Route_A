@@ -21,6 +21,24 @@ class MetaTrainingError(ValueError):
         self.diagnostics = diagnostics
 
 
+def _overlap_diagnostics(labels):
+    """Count overlapping label windows; correlated events are not independent trials."""
+    from heapq import heappop, heappush
+
+    active = []
+    overlapping = 0
+    maximum = 0
+    for label in sorted(labels, key=lambda item: (item.decision_ts_ns, item.event_id)):
+        while active and active[0] <= label.decision_ts_ns:
+            heappop(active)
+        overlapping += bool(active)
+        heappush(active, label.label_end_ts_ns)
+        maximum = max(maximum, len(active))
+    return {"labels": len(labels), "labels_starting_during_another": overlapping,
+            "max_concurrent_labels": maximum,
+            "interpretation": "overlapping labels are dependent; counts are not independent trials"}
+
+
 @dataclass(frozen=True, slots=True)
 class MetaTrainingResult:
     policy: FrozenEntryMetaPolicy
@@ -88,6 +106,8 @@ def train_meta_on_registered_candidates(
         "calibration_feature_not_ready": len(interval_cal) - len(eligible_cal),
         "minimum_complete_fit": minimum_complete_fit,
         "minimum_complete_calibration": minimum_complete_calibration,
+        "fit_overlap": _overlap_diagnostics(eligible_fit),
+        "calibration_overlap": _overlap_diagnostics(eligible_cal),
     }
     if len(eligible_fit) < minimum_complete_fit or len(eligible_cal) < minimum_complete_calibration:
         raise MetaTrainingError("insufficient complete fit or calibration candidates",

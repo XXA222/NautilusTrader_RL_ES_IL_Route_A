@@ -36,10 +36,21 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
     result = train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True)
     assert result.diagnostics["fit_complete_used"] == 4
     assert result.diagnostics["calibration_complete_used"] == 4
+    assert result.diagnostics["fit_overlap"]["max_concurrent_labels"] == 1
     assert result.policy.return_basis_id == "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS"
     assert result.policy.available_after_ns == 8_000_000_002
     with pytest.raises(ValueError, match="before calibration"):
         result.policy.score(groups[-1])
+
+
+def test_label_overlap_reports_dependencies_and_endpoint_boundary():
+    from types import SimpleNamespace
+    from rles_route_a.teacher_research.train_meta import _overlap_diagnostics
+    labels = [SimpleNamespace(event_id=name, decision_ts_ns=start, label_end_ts_ns=end)
+              for name, start, end in (("a", 1, 5), ("b", 2, 4), ("c", 5, 6))]
+    report = _overlap_diagnostics(labels)
+    assert report["labels_starting_during_another"] == 1
+    assert report["max_concurrent_labels"] == 2
 
 
 
