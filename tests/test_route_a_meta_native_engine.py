@@ -150,6 +150,9 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
     assert cell["candidate_summary"]["same_candidate_cost_comparison"]["selected_candidates"] >= 1
     assert cell["candidate_summary"]["native_case_reconciliation"]["native_cases"] >= 1
+    coverage = cell["candidate_summary"]["teacher_signal_coverage"]
+    assert len(coverage) == 8
+    assert all(sum(row["raw_signal_counts"].values()) == 11 for row in coverage.values())
     assert matrix["status"] == "INCOMPLETE" and matrix["available_cells"] == 5
     assert matrix["qualification"] == "NOT_ESTABLISHED"
     assert len(records) == 11

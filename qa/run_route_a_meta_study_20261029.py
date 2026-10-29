@@ -183,6 +183,7 @@ def _steps(start_ns, end_ns):
 
 
 def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, native_cases=()):
+    from collections import Counter
     decisions = tuple(candidate for row in teacher.decisions for candidate in row.candidates)
     errors = [row.candidate_error for row in teacher.decisions if row.candidate_error]
     if errors:
@@ -190,6 +191,14 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
     scores = tuple(item.score for item in decisions if item.score is not None)
     result = {"scores": summarize_entry_scores(scores, margin_bps=teacher.policy.margin_bps),
               "unscored": len(decisions) - len(scores), "quality": None}
+    reasons = {}
+    for row in teacher.decisions:
+        for name, raw, reason in row.teacher_signals:
+            counts = reasons.setdefault(name, (Counter(), Counter()))
+            counts[0][raw] += 1
+            counts[1][reason] += 1
+    result["teacher_signal_coverage"] = {name: {"raw_signal_counts": dict(sorted(raw.items())),
+        "reason_counts": dict(sorted(reason.items()))} for name, (raw, reason) in sorted(reasons.items())}
     if not decisions:
         return result
     opens, funding = extract_model_price_path(factory, start_ns=start_ns, end_ns=end_ns,

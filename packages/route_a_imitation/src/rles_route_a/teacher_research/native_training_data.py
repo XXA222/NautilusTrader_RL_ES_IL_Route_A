@@ -177,13 +177,19 @@ def train_and_save_from_native(
         raise PermissionError("candidate collection and model-training grants differ")
     batch = training_batch_from_native(recorder=recorder, factory=collection_factory,
         grant=collection_grant, verify_grant=verify_grant, prereg=prereg)
+    from .native_candidate_recorder import summarize_teacher_signal_coverage
+    signal_coverage = {split: summarize_teacher_signal_coverage(recorder.require_complete(),
+        start_ns=_ns(prereg["intervals"][split][0]), end_ns=_ns(prereg["intervals"][split][1]))
+        for split in ("train_fit", "train_calibration")}
     try:
         result = train_meta_from_preregistered_x1(prereg_path=path, grant=training_grant,
             verify_grant=verify_grant, fit_groups=batch.fit_groups,
             calibration_groups=batch.calibration_groups, observations=batch.observations,
             opens=batch.opens, funding=batch.funding, scenario=scenario, native_factory=training_factory)
     except MetaTrainingError as failure:
+        failure.diagnostics["teacher_signal_coverage"] = signal_coverage
         save_rejected_training_artifacts(failure=failure, recorder=recorder, output_dir=output_dir)
         raise
+    result.diagnostics["teacher_signal_coverage"] = signal_coverage
     save_training_artifacts(result=result, recorder=recorder, output_dir=output_dir)
     return result
