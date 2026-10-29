@@ -93,3 +93,34 @@ def reconcile_counterfactual_to_native(*, replay, decision_ts_ns: int, side: int
         "native_minus_modeled_funding_cash": funding_difference,
         "modeled_slippage_cash": slip,
     }
+
+
+def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recipe, scenario):
+    """Compare matched completed account cases; retain unmatched or divergent paths."""
+    from dataclasses import asdict
+    selected = {(d.group.observation.decision_ts_ns, d.group.side): d.group
+                for d in decisions if d.selected}
+    results = []
+    for case in cases:
+        if case.status != "ORDINARY_COMPLETE":
+            continue
+        row = {"trade_case_id": case.trade_case_id}
+        group = selected.get((case.entry_decision_ts_ns, case.side))
+        if group is None:
+            results.append({**row, "status": "UNMATCHED_CANDIDATE"})
+            continue
+        row["event_id"] = group.event_id
+        native = asdict(case)
+        native["gross_cash_pnl_before_fees_and_funding"] = (
+            case.side * (case.exit_fill_price / case.entry_fill_price - 1) * case.entry_notional)
+        try:
+            fact = replay(group, "X1", execution_recipe, scenario).trade
+            comparison = reconcile_counterfactual_to_native(replay=fact,
+                decision_ts_ns=case.entry_decision_ts_ns, side=case.side, native_case=native)
+        except ValueError as exc:
+            results.append({**row, "status": "NOT_COMPARABLE", "reason": str(exc)})
+        else:
+            results.append({**row, "status": "COMPARABLE", "comparison": comparison})
+    return {"native_cases": len(results),
+            "comparable": sum(item["status"] == "COMPARABLE" for item in results),
+            "cases": results}

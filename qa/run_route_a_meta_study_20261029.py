@@ -38,6 +38,7 @@ from rles_route_a.teacher_research.meta_evaluation import (compare_preregistered
     summarize_candidate_quality, paired_cost_candidate_quality)
 from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher
 from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
+from rles_route_a.teacher_research.native_reconciliation import reconcile_selected_native_cases
 from rles_route_a.teacher_research.native_meta_funnel import MetaNativeFunnelAdapter
 from rles_route_a.teacher_research.native_meta_rollout import run_registered_meta_rollout
 from rles_route_a.teacher_research.optional_1m_context import bind_optional_1m_context
@@ -181,7 +182,7 @@ def _steps(start_ns, end_ns):
     return result
 
 
-def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns):
+def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, native_cases=()):
     decisions = tuple(candidate for row in teacher.decisions for candidate in row.candidates)
     errors = [row.candidate_error for row in teacher.decisions if row.candidate_error]
     if errors:
@@ -205,6 +206,8 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns):
         block_end_ns=end_ns, gross_return_method="simple")
     result["quality"] = summarize_candidate_quality(decisions, labels)
     result["outcomes"] = [asdict(label) for label in labels]
+    result["native_case_reconciliation"] = reconcile_selected_native_cases(
+        decisions, native_cases, replay, execution_recipe=teacher.policy.label_recipe[1], scenario=scenario)
     selected = tuple(d.group for d in decisions if d.selected)
     if selected and {"base", "stress"}.issubset(config["cost_scenarios"]):
         paired = {}
@@ -267,7 +270,7 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
             scenario=scenario, seed=seed, rollout_id=episode, episode_steps=_steps(start_ns,end_ns),
             trace_path=output/"candidate-to-native.jsonl",
             reset_options={"rles_episode_index": seed}, teacher_funnel_hook=funnel)
-        diagnostics = _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns)
+        diagnostics = _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, hook.cases)
     else:
         barriers, report = provider.rollout_with_m22_trace(
             factory=factory, host_rollout=application.rollout, grant=grant, seed=seed,
