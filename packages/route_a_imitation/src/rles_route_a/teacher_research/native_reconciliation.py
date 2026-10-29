@@ -100,14 +100,24 @@ def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recip
     from dataclasses import asdict
     selected = {(d.group.observation.decision_ts_ns, d.group.side): d.group
                 for d in decisions if d.selected}
+    selected_by_id = {d.group.event_id: d.group for d in decisions if d.selected}
     results = []
     for case in cases:
         if case.status != "ORDINARY_COMPLETE":
             continue
         row = {"trade_case_id": case.trade_case_id}
-        group = selected.get((case.entry_decision_ts_ns, case.side))
+        candidate_id = getattr(case, "candidate_event_id", None)
+        group = (selected_by_id.get(candidate_id) if candidate_id is not None
+                 else selected.get((case.entry_decision_ts_ns, case.side)))
         if group is None:
             results.append({**row, "status": "UNMATCHED_CANDIDATE"})
+            continue
+        if (group.observation.decision_ts_ns != case.entry_decision_ts_ns
+                or group.side != case.side
+                or (case.candidate_teacher_ids
+                    and case.candidate_teacher_ids != tuple(name for name, _ in group.teachers))):
+            results.append({**row, "status": "NOT_COMPARABLE",
+                            "reason": "native case candidate id disagrees with entry clock or side"})
             continue
         row["event_id"] = group.event_id
         native = asdict(case)
