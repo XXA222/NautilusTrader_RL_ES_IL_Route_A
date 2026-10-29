@@ -16,6 +16,7 @@ from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher
 from rles_route_a.teacher_research.native_meta_funnel import MetaNativeFunnelAdapter
 from rles_route_a.teacher_research.native_meta_rollout import run_registered_meta_rollout
 from rles_route_a.teacher_research.optional_1m_context import bind_optional_1m_context
+from rles_route_a.teacher_research.policy_io import save_frozen_entry_policy, load_frozen_entry_policy
 from test_historical_factory import recipe
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,6 +73,9 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
         feature_spec_hash=factory.features.hash, available_after_ns=1,
         label_recipe=("X1", factory.route_a_execution_recipe_hash, "base"),
         fee_bps_per_leg=10., slippage_bps_per_leg=1., cost_bps=22.)
+    policy_path = tmp_path / "synthetic-policy.json"
+    save_frozen_entry_policy(policy, policy_path)
+    policy = load_frozen_entry_policy(policy_path)
     teacher = MetaGatedTeacher(policy, recovery=RecoveryTeacher())
     old_fold = harness.FOLD_ID
     harness.FOLD_ID = "synthetic-meta-native"
