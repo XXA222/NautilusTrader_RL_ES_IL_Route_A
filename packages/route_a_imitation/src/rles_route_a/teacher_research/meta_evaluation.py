@@ -121,6 +121,34 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                                        for reason in sorted({d.disposition for d in decisions})}}
 
 
+def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
+    """Compare the same selected candidate paths under two modeled cost schedules."""
+    base = {item.event_id: item for item in base_outcomes}
+    stress = {item.event_id: item for item in stress_outcomes}
+    selected = tuple(item for item in decisions if item.selected)
+    if (len(base) != len(base_outcomes) or len(stress) != len(stress_outcomes)
+            or set(base) != set(stress) or set(base) != {d.group.event_id for d in selected}):
+        raise ValueError("paired costs must cover exactly the selected candidates")
+    rows = []
+    for decision in selected:
+        a, b = base[decision.group.event_id], stress[decision.group.event_id]
+        if (a.cost_scenario_id, b.cost_scenario_id) != ("base", "stress"):
+            raise ValueError("paired costs require base and stress labels")
+        if (a.evidence_type != "MODEL_COUNTERFACTUAL" or b.evidence_type != "MODEL_COUNTERFACTUAL"
+                or a.outcome_status != b.outcome_status or a.label_end_ts_ns != b.label_end_ts_ns
+                or a.return_basis_id != b.return_basis_id):
+            raise ValueError("paired cost labels must share the same modeled path")
+        rows.append({"event_id": a.event_id, "status": a.outcome_status,
+                     "base_net_bps": a.net_return_bps, "stress_net_bps": b.net_return_bps})
+    complete = [row for row in rows if row["status"] == "COMPLETE"]
+    return {"evidence_type": "MODEL_COUNTERFACTUAL", "selected_candidates": len(rows),
+            "paired_complete": len(complete), "without_complete_outcome": len(rows)-len(complete),
+            "base_mean_net_bps": fsum(row["base_net_bps"] for row in complete)/len(complete) if complete else None,
+            "stress_mean_net_bps": fsum(row["stress_net_bps"] for row in complete)/len(complete) if complete else None,
+            "positive_under_both": sum(row["base_net_bps"] > 0 and row["stress_net_bps"] > 0 for row in complete),
+            "outcomes": rows}
+
+
 
 def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
     """Build a complete strategy/scenario/window matrix from retained native runs.

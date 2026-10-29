@@ -34,7 +34,8 @@ from rles_route_a.teachers_1m.registry import build_teacher_1m
 from rles_route_a.teacher_research.conditional_outcome_labels import label_grouped_candidates
 from rles_route_a.teacher_research.entry_meta_policy import summarize_entry_scores
 from rles_route_a.teacher_research.execution_binding import validate_native_execution
-from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs, summarize_candidate_quality
+from rles_route_a.teacher_research.meta_evaluation import (compare_preregistered_native_runs,
+    summarize_candidate_quality, paired_cost_candidate_quality)
 from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher
 from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
 from rles_route_a.teacher_research.native_meta_funnel import MetaNativeFunnelAdapter
@@ -203,6 +204,23 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns):
         block_end_ns=end_ns, gross_return_method="simple")
     result["quality"] = summarize_candidate_quality(decisions, labels)
     result["outcomes"] = [asdict(label) for label in labels]
+    selected = tuple(d.group for d in decisions if d.selected)
+    if selected and {"base", "stress"}.issubset(config["cost_scenarios"]):
+        paired = {}
+        for cost_scenario in ("base", "stress"):
+            scenario_cost = config["cost_scenarios"][cost_scenario]
+            other_replay = make_x1_group_replay(
+                observations=tuple(row.observation for row in teacher.decisions), opens=opens, funding=funding,
+                block_ends={g.event_id: end_ns for g in selected},
+                fee_bps=scenario_cost["fee_bps_per_leg"], slippage_bps=scenario_cost["slippage_bps_per_leg"],
+                execution_recipe=teacher.policy.label_recipe[1], scenario=cost_scenario)
+            paired[cost_scenario] = label_grouped_candidates(selected, other_replay, exit_policy_id="X1",
+                execution_recipe=teacher.policy.label_recipe[1], cost_scenario_id=cost_scenario,
+                block_end_ns=end_ns, gross_return_method="simple")
+        result["same_candidate_cost_comparison"] = paired_cost_candidate_quality(
+            decisions, paired["base"], paired["stress"])
+    else:
+        result["same_candidate_cost_comparison"] = None
     return result
 
 

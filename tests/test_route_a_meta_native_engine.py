@@ -99,7 +99,8 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
         cell_dir = tmp_path / "study-cell"
         cell_dir.mkdir()
         experiment = {"teachers":["T01_EMA_9_21"],
-            "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.}},
+            "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.},
+                              "stress":{"fee_bps_per_leg":15., "slippage_bps_per_leg":5.}},
             "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
             "intervals":{"native_screen":[["1970-01-01T02:30:00Z","1970-01-01T02:44:00Z"]]}}
         window = experiment["intervals"]["native_screen"][0]
@@ -131,5 +132,6 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
     assert cell["equity_curve"][1:]  # Native samples follow the initial capital.
     assert (cell_dir/"native-result.json").is_file()
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
-    assert matrix["status"] == "COMPLETE" and matrix["available_cells"] == 5
+    assert cell["candidate_summary"]["same_candidate_cost_comparison"]["selected_candidates"] >= 1
+    assert matrix["status"] == "INCOMPLETE" and matrix["available_cells"] == 5
     assert matrix["qualification"] == "NOT_ESTABLISHED"

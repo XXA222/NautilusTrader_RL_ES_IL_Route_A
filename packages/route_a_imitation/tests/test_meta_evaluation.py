@@ -48,6 +48,14 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["prediction_quality"]["brier_score"] == pytest.approx(.29)
     assert result["evidence_type"] == "MODEL_COUNTERFACTUAL"
     from dataclasses import replace
+    from rles_route_a.teacher_research.meta_evaluation import paired_cost_candidate_quality
+    pair = paired_cost_candidate_quality(tuple(decisions), (labels[0],),
+        (replace(labels[0], cost_scenario_id="stress", net_return_bps=-3.),))
+    assert pair["paired_complete"] == 1 and pair["positive_under_both"] == 0
+    assert pair["base_mean_net_bps"] == 5. and pair["stress_mean_net_bps"] == -3.
+    with pytest.raises(ValueError, match="same modeled path"):
+        paired_cost_candidate_quality(tuple(decisions), (labels[0],),
+            (replace(labels[0], cost_scenario_id="stress", label_end_ts_ns=999),))
     no_pairs = summarize_candidate_quality(
         (replace(decisions[0], score=None, selected=False), decisions[2]), (labels[0], labels[2]))
     assert no_pairs["prediction_quality"]["paired_complete_scored"] == 0
