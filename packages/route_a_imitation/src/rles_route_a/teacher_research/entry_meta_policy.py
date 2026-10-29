@@ -182,7 +182,7 @@ def fit_entry_meta_policy(
     )
 
 
-def summarize_entry_scores(scores: Sequence[EntryScore]) -> dict[str, object]:
+def summarize_entry_scores(scores: Sequence[EntryScore], *, margin_bps: float | None = None) -> dict[str, object]:
     """Report every rejection and prediction distribution without changing gates."""
     from collections import Counter
     rows = tuple(scores)
@@ -195,6 +195,16 @@ def summarize_entry_scores(scores: Sequence[EntryScore]) -> dict[str, object]:
         return {key: float(value) for key, value in zip(
             ("min", "p25", "median", "p75", "max"),
             np.quantile(values, (0, .25, .5, .75, 1)))}
+    if margin_bps is not None and (not isfinite(margin_bps) or margin_bps < 0):
+        raise ValueError("margin must be finite and nonnegative")
+    gates = None if margin_bps is None else {
+        "fixed_margin_bps": margin_bps,
+        "support_pass": sum(row.in_support for row in rows),
+        "edge_pass": sum(row.expected_net_bps > margin_bps for row in rows),
+        "support_and_edge_pass": sum(row.in_support and row.expected_net_bps > margin_bps for row in rows),
+        "account_ineligible": sum(row.reason in ("PENDING_ORDER", "POSITION_OCCUPIED") for row in rows),
+        "interpretation": "overlapping gate counts among scored candidates; not native fills",
+    }
     return {
         "candidate_count": len(rows), "accepted_count": accepted,
         "coverage": accepted / len(rows) if rows else None,
@@ -202,4 +212,5 @@ def summarize_entry_scores(scores: Sequence[EntryScore]) -> dict[str, object]:
         "unsupported_feature_counts": dict(sorted(unsupported.items())),
         "expected_net_bps": distribution([row.expected_net_bps for row in rows]),
         "probability_positive": distribution([row.probability_positive for row in rows]),
+        "gate_counts": gates,
     }
