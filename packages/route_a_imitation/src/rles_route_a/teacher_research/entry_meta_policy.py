@@ -12,7 +12,7 @@ from .conditional_outcome_labels import GroupOutcome
 from .opportunity_models import _fit_logistic, _fit_platt, _sigmoid
 
 
-def _features(group: CandidateGroup, names: Sequence[str]) -> np.ndarray:
+def _features(group: CandidateGroup, names: Sequence[str], cost_bps: float | None = None) -> np.ndarray:
     obs = group.observation
     values = []
     for name in names:
@@ -20,8 +20,14 @@ def _features(group: CandidateGroup, names: Sequence[str]) -> np.ndarray:
             values.append(obs.market_value(name[7:]))
         elif name.startswith("account."):
             values.append(obs.account_value(name[8:]))
+        elif name == "consensus.count":
+            values.append(float(len(group.teachers)))
+        elif name.startswith("teacher.") and len(name) > len("teacher."):
+            values.append(float(name[8:] in {teacher for teacher, _ in group.teachers}))
+        elif name == "cost.round_trip_bps" and cost_bps is not None:
+            values.append(cost_bps)
         else:
-            raise ValueError("only causal market/account observation features are permitted")
+            raise ValueError("only configured causal market/account/teacher/consensus/cost features are permitted")
     return np.asarray([*values, float(group.side)], dtype=np.float64)
 
 
@@ -32,6 +38,7 @@ class EntryScore:
     expected_net_bps: float
     in_support: bool
     reason: str
+    unsupported_features: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +57,12 @@ class FrozenEntryMetaPolicy:
     label_recipe: tuple[str, str, str]
     available_after_ns: int
     margin_bps: float
+    cost_bps: float | None = None
+    calibration_mae_bps: float = 0.0
+    return_basis_id: str = "LOG_REFERENCE_ENTRY_NOTIONAL_BPS"
+    calibration_brier: float = 0.0
+    fit_count: int = 0
+    calibration_count: int = 0
 
     def score(self, group: CandidateGroup) -> EntryScore:
         obs = group.observation
@@ -58,7 +71,7 @@ class FrozenEntryMetaPolicy:
             raise ValueError("entry model source/fold/schema mismatch")
         if obs.decision_ts_ns <= self.available_after_ns:
             raise ValueError("entry model cannot predict before calibration labels are available")
-        x = _features(group, self.feature_names)
+        x = _features(group, self.feature_names, self.cost_bps)
         if not np.isfinite(x).all():
             raise ValueError("nonfinite entry feature")
         z = np.concatenate(([1.], (x - self.mean) / self.scale))
@@ -67,14 +80,17 @@ class FrozenEntryMetaPolicy:
         if not isfinite(probability) or not isfinite(expected):
             raise ValueError("nonfinite opportunity prediction")
         support = bool(np.all(x >= self.lower) and np.all(x <= self.upper))
+        unsupported = tuple(name for name, value, lo, hi in
+                            zip((*self.feature_names, "side"), x, self.lower, self.upper)
+                            if value < lo or value > hi)
         if obs.pending_order_ids:
-            return EntryScore("NO_TRADE", probability, expected, support, "PENDING_ORDER")
+            return EntryScore("NO_TRADE", probability, expected, support, "PENDING_ORDER", unsupported)
         if abs(obs.account_value("net_exposure")) > 1e-8:
-            return EntryScore("NO_TRADE", probability, expected, support, "POSITION_OCCUPIED")
+            return EntryScore("NO_TRADE", probability, expected, support, "POSITION_OCCUPIED", unsupported)
         if not support:
-            return EntryScore("NO_TRADE", probability, expected, support, "OUT_OF_SUPPORT")
+            return EntryScore("NO_TRADE", probability, expected, support, "OUT_OF_SUPPORT", unsupported)
         if expected <= self.margin_bps:
-            return EntryScore("NO_TRADE", probability, expected, support, "NET_EDGE_TOO_SMALL")
+            return EntryScore("NO_TRADE", probability, expected, support, "NET_EDGE_TOO_SMALL", unsupported)
         return EntryScore("LONG" if group.side > 0 else "SHORT",
                           probability, expected, support, "POSITIVE_NET_EDGE")
 
@@ -82,13 +98,16 @@ class FrozenEntryMetaPolicy:
 def fit_entry_meta_policy(
     fit: Sequence[GroupOutcome], calibration: Sequence[GroupOutcome],
     groups: Mapping[str, CandidateGroup], *, feature_names: Sequence[str],
-    margin_bps: float, l2: float = 1.0,
+    margin_bps: float, l2: float = 1.0, cost_bps: float | None = None,
 ) -> FrozenEntryMetaPolicy:
     """Fit only earlier complete research labels and calibrate on later labels."""
     names = tuple(feature_names)
     if (not names or len(set(names)) != len(names)
             or not isfinite(margin_bps) or margin_bps < 0 or not isfinite(l2) or l2 <= 0):
         raise ValueError("fixed features, nonnegative margin and positive regularization required")
+    if cost_bps is not None and (isinstance(cost_bps, bool) or not isinstance(cost_bps, (int, float))
+                                 or not isfinite(cost_bps) or cost_bps < 0):
+        raise ValueError("cost must be finite and nonnegative")
     all_labels = tuple(fit) + tuple(calibration)
     if len(fit) < 4 or len(calibration) < 4:
         raise ValueError("fit and later calibration need at least four complete samples")
@@ -96,13 +115,17 @@ def fit_entry_meta_policy(
             or set(groups) != {x.event_id for x in all_labels}):
         raise ValueError("fit/calibration groups must cover unique events exactly")
     if any(x.evidence_type != "MODEL_COUNTERFACTUAL" or x.economic_status != "SCENARIO_ONLY"
-           or x.net_return_bps is None or x.label_end_ts_ns is None for x in all_labels):
+           or x.net_return_bps is None or x.label_end_ts_ns is None
+           or x.outcome_status != "COMPLETE" or x.censor_ts_ns is not None for x in all_labels):
         raise ValueError("complete scenario-only research labels required")
     first_cal = min(x.decision_ts_ns for x in calibration)
     if any(x.label_end_ts_ns is None or x.label_end_ts_ns >= first_cal for x in fit):
         raise ValueError("fit labels overlap calibration")
     if any(x.label_end_ts_ns is None or x.label_end_ts_ns <= x.decision_ts_ns for x in all_labels):
         raise ValueError("labels must end after the decision")
+    bases = {x.return_basis_id for x in all_labels}
+    if len(bases) != 1:
+        raise ValueError("return bases cannot be mixed")
     recipes = {(x.exit_policy_id, x.execution_recipe, x.cost_scenario_id) for x in all_labels}
     if len(recipes) != 1:
         raise ValueError("frozen exit/execution/cost recipes cannot be mixed")
@@ -116,8 +139,8 @@ def fit_entry_meta_policy(
     specs = {groups[x.event_id].observation.feature_spec_hash for x in all_labels}
     if len(specs) != 1:
         raise ValueError("candidate feature schema changed")
-    train_x = np.stack([_features(groups[x.event_id], names) for x in fit])
-    cal_x = np.stack([_features(groups[x.event_id], names) for x in calibration])
+    train_x = np.stack([_features(groups[x.event_id], names, cost_bps) for x in fit])
+    cal_x = np.stack([_features(groups[x.event_id], names, cost_bps) for x in calibration])
     train_y = np.asarray([x.net_return_bps for x in fit], dtype=np.float64)
     cal_y = np.asarray([x.net_return_bps for x in calibration], dtype=np.float64)
     if (not all(np.isfinite(x).all() for x in (train_x, cal_x, train_y, cal_y))
@@ -141,4 +164,31 @@ def fit_entry_meta_policy(
         names, mean, scale, lower, upper, logistic, calibrator, value,
         all_labels[0].source_identity, all_labels[0].fold_id, next(iter(specs)),
         next(iter(recipes)), max(x.label_end_ts_ns or 0 for x in calibration), margin_bps,
+        cost_bps, float(np.mean(np.abs(cal_z @ value - cal_y))), next(iter(bases)),
+        float(np.mean((np.asarray([_sigmoid(calibrator[0] * float(x) + calibrator[1])
+                                  for x in cal_z @ logistic]) - (cal_y > 0)) ** 2)),
+        len(fit), len(calibration),
     )
+
+
+def summarize_entry_scores(scores: Sequence[EntryScore]) -> dict[str, object]:
+    """Report every rejection and prediction distribution without changing gates."""
+    from collections import Counter
+    rows = tuple(scores)
+    reasons = Counter(row.reason for row in rows)
+    unsupported = Counter(name for row in rows for name in row.unsupported_features)
+    accepted = sum(row.action in ("LONG", "SHORT") for row in rows)
+    def distribution(values):
+        if not values:
+            return None
+        return {key: float(value) for key, value in zip(
+            ("min", "p25", "median", "p75", "max"),
+            np.quantile(values, (0, .25, .5, .75, 1)))}
+    return {
+        "candidate_count": len(rows), "accepted_count": accepted,
+        "coverage": accepted / len(rows) if rows else None,
+        "reason_counts": dict(sorted(reasons.items())),
+        "unsupported_feature_counts": dict(sorted(unsupported.items())),
+        "expected_net_bps": distribution([row.expected_net_bps for row in rows]),
+        "probability_positive": distribution([row.probability_positive for row in rows]),
+    }
