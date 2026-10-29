@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from bisect import bisect_left, bisect_right
+from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
 import json
@@ -47,6 +48,20 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
            for o in observations):
         raise ValueError("X1 replay cannot mix episode/source/fold/schema")
     by_time = {o.decision_ts_ns: i for i, o in enumerate(observations)}
+    # Advance each owner once across chronological candidate decisions; copy
+    # only its signal state before replaying that candidate's future.
+    signal_states = {}
+
+    def owner_at_decision(owner, decision_index):
+        state, last_index = signal_states.get(owner, (None, -1))
+        if state is None or decision_index < last_index:
+            state, last_index = build_teacher_1m(owner), -1
+        for past in observations[last_index + 1:decision_index + 1]:
+            flat = replace(past, account={**dict(past.account), "net_exposure": 0.0},
+                           pending_order_ids=())
+            state.advise(flat)
+        signal_states[owner] = (state, decision_index)
+        return deepcopy(state)
 
     def replay(group, exit_policy, recipe, cost):
         if (exit_policy, recipe, cost) != ("X1", execution_recipe, scenario):
@@ -91,12 +106,8 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
                     or not isfinite(result.fill_price) or result.fill_price <= 0):
                 raise ValueError("invalid causal limit fill")
             entry_ts, entry_price = result.fill_ts_ns, result.fill_price
-        teacher = build_teacher_1m(owner)
         decision_index = by_time[obs.decision_ts_ns]
-        for past in observations[:decision_index + 1]:
-            flat = replace(past, account={**dict(past.account), "net_exposure": 0.0},
-                           pending_order_ids=())
-            teacher.advise(flat)
+        teacher = owner_at_decision(owner, decision_index)
         signal = teacher.last_signal
         if signal.side != group.side or signal.raw_signal not in ("LONG_ENTRY", "SHORT_ENTRY"):
             raise ValueError("X1 owner signal does not reproduce the candidate")
