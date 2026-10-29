@@ -35,6 +35,7 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
     assert len(rejected.value.fit_outcomes) == 4
     result = train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True)
     assert result.diagnostics["fit_complete_used"] == 4
+    assert result.diagnostics["fit_account_coverage"]["position_or_pending"] == 0
     assert result.diagnostics["calibration_complete_used"] == 4
     assert result.diagnostics["fit_overlap"]["max_concurrent_labels"] == 1
     assert result.policy.return_basis_id == "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS"
@@ -51,6 +52,17 @@ def test_label_overlap_reports_dependencies_and_endpoint_boundary():
     report = _overlap_diagnostics(labels)
     assert report["labels_starting_during_another"] == 1
     assert report["max_concurrent_labels"] == 2
+
+
+def test_account_candidate_denominator_preserves_held_and_pending(observed):
+    from rles_route_a.teacher_research.train_meta import _account_candidate_coverage
+    groups = []
+    for minute, pos, pending in ((1, 0., ()), (2, .3, ()), (3, -.3, ("o",)), (4, 0., ("p",))):
+        obs = observed(ts=minute * 1_000_000_000, pos=pos, pending=pending)
+        group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
+        groups.append(group)
+    assert _account_candidate_coverage(groups) == {"candidates": 4, "position_occupied": 2,
+                                                    "pending_order": 2, "position_or_pending": 3}
 
 
 

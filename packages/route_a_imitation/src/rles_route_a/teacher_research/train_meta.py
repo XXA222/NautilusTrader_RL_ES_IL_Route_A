@@ -39,6 +39,16 @@ def _overlap_diagnostics(labels):
             "interpretation": "overlapping labels are dependent; counts are not independent trials"}
 
 
+def _account_candidate_coverage(groups):
+    """Report account-state coverage for the entire candidate denominator."""
+    occupied = sum(abs(group.observation.account_value("net_exposure")) > 1e-8 for group in groups)
+    pending = sum(bool(group.observation.pending_order_ids) for group in groups)
+    return {"candidates": len(groups), "position_occupied": occupied,
+            "pending_order": pending,
+            "position_or_pending": sum(abs(group.observation.account_value("net_exposure")) > 1e-8
+                                       or bool(group.observation.pending_order_ids) for group in groups)}
+
+
 @dataclass(frozen=True, slots=True)
 class MetaTrainingResult:
     policy: FrozenEntryMetaPolicy
@@ -98,10 +108,12 @@ def train_meta_on_registered_candidates(
     diagnostics = {
         "evidence_type": "MODEL_COUNTERFACTUAL",
         "fit_candidates": len(fit_groups), "fit_complete_used": len(eligible_fit),
+        "fit_account_coverage": _account_candidate_coverage(fit_groups),
         "fit_status": dict(sorted(Counter(x.outcome_status for x in fit_outcomes).items())),
         "fit_purged_or_incomplete": len(fit_outcomes) - len(interval_fit),
         "fit_feature_not_ready": len(interval_fit) - len(eligible_fit),
         "calibration_candidates": len(calibration_groups), "calibration_complete_used": len(eligible_cal),
+        "calibration_account_coverage": _account_candidate_coverage(calibration_groups),
         "calibration_status": dict(sorted(Counter(x.outcome_status for x in calibration_outcomes).items())),
         "calibration_feature_not_ready": len(interval_cal) - len(eligible_cal),
         "minimum_complete_fit": minimum_complete_fit,
