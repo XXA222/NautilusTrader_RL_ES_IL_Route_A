@@ -86,7 +86,8 @@ class MetaGatedTeacher:
 
     def _missing_model_features(self, observation: PointInTimeObservation) -> tuple[str, ...]:
         return tuple(name for name in self.policy.feature_names
-                     if name.startswith("market.") and name[7:] not in observation.market)
+                     if (name.startswith("market.") and name[7:] not in observation.market)
+                     or (name.startswith("account.") and name[8:] not in observation.account))
 
     def advise(self, observation: PointInTimeObservation) -> ExpertAdvice:
         scope = (observation.episode_id, observation.source_id, observation.fold_id)

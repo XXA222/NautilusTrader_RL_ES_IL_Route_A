@@ -149,6 +149,17 @@ def test_missing_market_feature_rejects_candidate_without_scoring():
     assert decision.candidates[0].disposition == "REJECTED_FEATURE_NOT_READY"
 
 
+def test_missing_account_model_feature_rejects_without_fabricating_zero():
+    model = trained_policy()
+    model = replace(model, feature_names=("account.drawdown", *model.feature_names[1:]))
+    teacher = MetaGatedTeacher(model, recovery=Recovery())
+    teacher.advise(observation(10, ema_9=99.))
+    action = teacher.advise(observation(11, ema_9=101.))
+    assert action.intent == "FLAT"
+    assert teacher.decisions[-1].candidates[0].disposition == "REJECTED_FEATURE_NOT_READY"
+    assert teacher.decisions[-1].candidates[0].score is None
+
+
 def test_mixed_return_bases_are_rejected():
     # Data validation independent of model fitting.
     model = trained_policy()
