@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import inf, isfinite
 from statistics import mean
-from typing import Callable, Literal, Protocol, Sequence
+from typing import TYPE_CHECKING, Callable, Literal, Protocol, Sequence
 from rles_route_a.datasets.daggerset import DAggerSet
 from rles_route_a.integration.scope import HostTrainGrant
-from rles_route_a.training.dagger_collector import (
-    DAggerCollector, VisitedStudentState,
-)
+if TYPE_CHECKING:
+    from rles_route_a.training.dagger_collector import DAggerCollector, VisitedStudentState
 from rles_route_a.contracts import PointInTimeObservation
 
 
@@ -47,6 +46,8 @@ class NativeRecoveryEpisode:
     visited_states: tuple[VisitedStudentState, ...]
 
     def __post_init__(self) -> None:
+        from rles_route_a.training.dagger_collector import VisitedStudentState
+
         if not all(isinstance(value, str) and value.strip() for value in
                    (self.scenario_id, self.fold_id, self.source_identity,
                     self.execution_recipe, self.native_receipt_id)):
@@ -281,6 +282,8 @@ def run_native_recovery_iteration(*, runner: NativeRecoveryRunner,
     remain owned by the host. Route A only checks their binding, verifies the
     host receipt, and asks the expert to relabel states the student visited.
     """
+    from rles_route_a.training.dagger_collector import DAggerCollector
+
     if not isinstance(collector, DAggerCollector):
         raise TypeError("Route A DAgger collector with host grant verifier required")
     collector.authorize_train_grant(grant)

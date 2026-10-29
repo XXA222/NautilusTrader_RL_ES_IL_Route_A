@@ -1,0 +1,63 @@
+"""Synthetic host contract test; no real exchange or market data is accessed."""
+from hashlib import sha256
+import json
+
+from rles_route_a.integration.gym_rollout import NativeGymTeacherProvider
+from rles_route_a.integration.scope import HostTrainGrant
+from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher
+from test_candidate_collector import observation
+from test_meta_gated_teacher import Recovery, trained_policy
+from test_v03_host_context import _feature
+
+
+def test_meta_teacher_receives_verified_gym_barrier():
+    obs = observation(10)
+    class Env:
+        def reset(self, *, seed):
+            return None, {}
+        def close(self):
+            pass
+        def step(self, action):
+            receipt = sha256(json.dumps({"before": (), "after": ()}, sort_keys=True,
+                separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+            info = {
+                "decision_ts_ns": obs.decision_ts_ns + 60,
+                "terminal_settled": False, "execution_plan_action": "NOOP",
+                "execution_client_order_id": None, "execution_related_order_ids": (),
+                "native_pending_order_ids_before": (), "native_pending_order_ids_after": (),
+                "native_policy_fills": (), "native_order_statuses_before": (),
+                "native_order_statuses_after": (), "native_order_status_receipt": receipt,
+                "execution_decision_id": "decision-1", "execution_plan_id": "plan-1",
+                "execution_idempotency_key": "idempotency-1", "execution_plan_reason": "flat",
+                "evidence_hash": "e"*64, "policy_equity_currency": "USDT",
+                "requested_action": action[0], "risk_soft_target": action[0],
+                "risk_adjusted_target": action[0], "quantity_rounded_target_exposure": action[0],
+                "policy_executed_action_pre_terminal": action[0],
+                "policy_equity_before": "10000", "policy_equity_after": "10000",
+                "policy_equity_change": "0", "r_econ": 0., "execution_cancel_order_ids": (),
+            }
+            return None, 0., False, False, info
+
+    def visible(_env):
+        return {"decision_ts_ns": obs.decision_ts_ns, "source_id": obs.source_id,
+                "snapshot_id": obs.snapshot_id, "feature_spec_hash": obs.feature_spec_hash,
+                "market": {name: _feature(value, obs.decision_ts_ns)
+                           for name, value in obs.market.items()},
+                "account": dict(obs.account), "pending_order_ids": (),
+                "risk": {}, "execution": {}, "time": {}}
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    provider = NativeGymTeacherProvider(
+        env_factory=Env, teacher=teacher, fold_id="train", source_identity="synthetic",
+        execution_recipe="native", market_feature_map={k: k for k in obs.market},
+        visible_context=visible, episode_id=lambda _env, _info: "e",
+        native_order_facts_verifier=lambda *_: True,
+        no_external_cashflow_receipt=lambda _: "no-flow",
+        no_external_cashflow_verifier=lambda *_: True)
+    grant = HostTrainGrant("train", "owner", "reservation", "synthetic", "train", True)
+    rollout = provider.rollout(fold_id="train", grant=grant, seed=7)
+    barrier = next(rollout)
+    rollout.close()
+    assert barrier.trace.requested_action == 0.
+    assert len(teacher.decisions) == len(teacher.native_receipts) == 1
+    assert teacher.native_receipts[0].trace is barrier.trace
