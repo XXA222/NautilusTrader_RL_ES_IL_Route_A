@@ -69,6 +69,19 @@ def test_missing_or_invalid_manifest_never_enters_payload_verifier(tmp_path, mon
         study._load_source(config, "hash", "data")
 
 
+def test_candidate_collector_rejects_different_registered_teacher_set(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    config = json.loads((ROOT/"configs/route_a_meta_x1_train_prereg_20261029.json").read_text())
+    config["teachers"] = config["teachers"][:-1]
+    monkeypatch.setattr(study, "_load_source", lambda *args: ({"marker_sha256":"a"*64}, {}))
+    monkeypatch.setattr(study, "_warmup_scaler", lambda *args: "scaler")
+    monkeypatch.setattr(study, "_factory", lambda *args, **kwargs: SimpleNamespace())
+    monkeypatch.setattr(study, "_provider", lambda *args: pytest.fail("candidate collection must not start"))
+    with pytest.raises(ValueError, match="registered teacher set"):
+        study.execute_study(config, "b"*64, source_root="unused", output=tmp_path/"study")
+
+
 
 @pytest.mark.parametrize("reject_stress,expected", [(False, 48), (True, 46)])
 def test_runner_dispatches_all_native_cells_or_preserves_missing_model(

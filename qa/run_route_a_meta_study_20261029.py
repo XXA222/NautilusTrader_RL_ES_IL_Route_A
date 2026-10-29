@@ -328,6 +328,8 @@ def execute_study(config, prereg_sha, *, source_root, output):
     # account, including positions and drawdown, rather than an always-flat
     # account whose constant features make live account states unsupported.
     recorder = NativeCandidateRecorder(RiskMatchedTeacher(build_teacher_1m("T01_EMA_9_21"), RecoveryTeacher()))
+    if tuple(sorted(config["teachers"])) != recorder.collector.teacher_ids:
+        raise ValueError("registered teacher set differs from native candidate collector")
     provider, collection_grant = _provider(collection_factory, recorder, source, "meta-fit-collection")
     _prepare_context(provider, collection_factory, collection_start, calibration_end)
     run_native_candidate_collection(provider=provider, recorder=recorder, factory=collection_factory,
