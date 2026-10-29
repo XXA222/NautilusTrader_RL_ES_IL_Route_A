@@ -131,6 +131,7 @@ class MetaGatedTeacher:
         missing = self._missing_model_features(observation)
         scored = [(group, None if missing else self.policy.score(group)) for group in collection.groups]
         selected = None
+        owner_not_ready = set()
         if observation.pending_order_ids:
             action = advice(observation, self.expert_id,
                             "HOLD" if abs(current) > 1e-8 else "FLAT",
@@ -141,15 +142,18 @@ class MetaGatedTeacher:
             self._owner = None
             eligible = [(group, score) for group, score in scored
                         if score is not None and score.action in ("LONG", "SHORT")]
+            for group, score in eligible:
+                expected = "OPEN_LONG" if group.side > 0 else "OPEN_SHORT"
+                if native_advice[group.teachers[0][0]].intent != expected:
+                    owner_not_ready.add(group.event_id)
+            eligible = [(group, score) for group, score in eligible
+                        if group.event_id not in owner_not_ready]
             if eligible:
                 # Deterministic arbitration selects one group, never both directions.
                 selected, score = max(eligible, key=lambda item:
                     (item[1].expected_net_bps, item[1].probability_positive, item[0].side))
                 self._owner = selected.teachers[0][0]
                 underlying = native_advice[self._owner]
-                expected_intent = "OPEN_LONG" if selected.side > 0 else "OPEN_SHORT"
-                if underlying.intent != expected_intent:
-                    raise ValueError("selected teacher lifecycle disagrees with candidate")
                 action = underlying
             else:
                 action = advice(observation, self.expert_id, "FLAT", 0., "NO_ACCEPTED_CANDIDATE")
@@ -157,6 +161,7 @@ class MetaGatedTeacher:
             CandidateDecision(group, score, selected is not None and group.event_id == selected.event_id,
                               "PENDING_ORDER" if observation.pending_order_ids else
                               "POSITION_OPEN" if abs(current) > 1e-8 else
+                              "OWNER_NOT_READY" if group.event_id in owner_not_ready else
                               "FEATURE_NOT_READY" if score is None else None)
             for group, score in scored), action, self._owner))
         return action
