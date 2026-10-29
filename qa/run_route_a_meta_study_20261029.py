@@ -206,6 +206,16 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns):
     return result
 
 
+def _account_costs_including_first_row(account):
+    """Include first-bar facts when anchoring equity to initial capital."""
+    from math import fsum
+    rows = account["account_rows"]
+    return {**account["metrics"],
+            "total_fee": fsum(row["fee"] for row in rows),
+            "total_slippage_cost": fsum(row["slippage_cost"] for row in rows),
+            "total_funding": fsum(row["funding"] for row in rows)}
+
+
 def _run_screen_cell(*, factory, source, config, strategy, scenario, window, model, output):
     start_ns, end_ns = map(preflight.ns, window)
     seed = 20261029
@@ -263,7 +273,7 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
               # Start at the configured native account capital even if the
               # first sampled barrier already contains an entry and its costs.
               "equity_curve": (float(factory.capital), *(row["equity"] for row in account["account_rows"])),
-              "native_order_verification": verify, "account_metrics": account["metrics"],
+              "native_order_verification": verify, "account_metrics": _account_costs_including_first_row(account),
               "candidate_summary": ({key: value for key, value in diagnostics.items() if key != "outcomes"}
                                     if diagnostics is not None else None)}
     serializable = {**record, "cases": [asdict(case) for case in hook.cases],

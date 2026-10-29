@@ -12,6 +12,16 @@ study = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(study)
 
 
+def test_account_costs_include_first_native_sample():
+    account = {"metrics": {"total_fee": 2., "total_slippage_cost": 1., "total_funding": -.1},
+               "account_rows": [{"fee": .5, "slippage_cost": .2, "funding": .3},
+                                {"fee": 2., "slippage_cost": 1., "funding": -.1}]}
+    costs = study._account_costs_including_first_row(account)
+    assert costs["total_fee"] == pytest.approx(2.5)
+    assert costs["total_slippage_cost"] == pytest.approx(1.2)
+    assert costs["total_funding"] == pytest.approx(.2)
+
+
 def source_metadata(config):
     start = datetime.fromisoformat(config["source"]["start_utc_inclusive"].replace("Z", "+00:00"))
     end = datetime.fromisoformat(config["source"]["end_utc_exclusive"].replace("Z", "+00:00"))
