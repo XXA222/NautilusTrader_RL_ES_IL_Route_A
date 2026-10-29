@@ -34,3 +34,62 @@ def reconcile_native_trade(row: Mapping[str, object], *, tolerance: float = 1e-7
         "gross_cash": gross, "fees_cash": fees, "funding_cash": funding,
         "net_cash": net, "net_bps": net / notional * 10000,
     }
+
+
+
+def reconcile_counterfactual_to_native(*, replay, decision_ts_ns: int, side: int,
+                                       native_case: Mapping[str, object],
+                                       max_clock_difference_ns: int = 1_000_000_000) -> dict[str, float | str]:
+    """Compare a linear reference-price label against the same native completed case.
+
+    The research path and native fills may use different reference prices.
+    The returned cash decomposition preserves that difference explicitly.
+    """
+    from .opportunity_labels import CounterfactualTradeReplay
+
+    if not isinstance(replay, CounterfactualTradeReplay) or replay.exit_ts_ns is None:
+        raise ValueError("completed counterfactual replay required")
+    if (type(decision_ts_ns) is not int or type(side) is not int or side not in (-1, 1)
+            or type(max_clock_difference_ns) is not int or max_clock_difference_ns < 0
+            or native_case.get("entry_decision_ts_ns") != decision_ts_ns
+            or native_case.get("side") != side
+            or type(native_case.get("entry_fill_ts_ns")) is not int
+            or type(native_case.get("exit_fill_ts_ns")) is not int
+            or replay.entry_ts_ns <= decision_ts_ns
+            or abs(replay.entry_ts_ns - native_case["entry_fill_ts_ns"]) > max_clock_difference_ns
+            or abs(replay.exit_ts_ns - native_case["exit_fill_ts_ns"]) > max_clock_difference_ns):
+        raise ValueError("research replay and native case do not identify the same trade and clocks")
+    native = reconcile_native_trade(native_case)
+    assert replay.exit_price is not None
+    native_entry = float(native_case["entry_fill_price"])
+    native_notional = float(native_case["entry_notional"])
+    quantity = native_notional / native_entry
+    modeled_notional = quantity * replay.entry_price
+    gross = side * quantity * (replay.exit_price - replay.entry_price)
+    fee = modeled_notional * (replay.entry_fee_bps + replay.exit_fee_bps) / 10000
+    slip = modeled_notional * (replay.entry_slippage_bps + replay.exit_slippage_bps) / 10000
+    funding = modeled_notional * replay.funding_cashflow_bps / 10000
+    model_net = gross - fee - slip + funding
+    native_net = float(native["net_cash"])
+    price_and_native_slippage = float(native["gross_cash"]) - gross
+    fees_difference = fee - float(native["fees_cash"])
+    funding_difference = float(native["funding_cash"]) - funding
+    decomposition = price_and_native_slippage + fees_difference + funding_difference + slip
+    if abs((native_net - model_net) - decomposition) > 1e-8:
+        raise ValueError("native/model return difference does not reconcile")
+    return {
+        "trade_case_id": str(native["trade_case_id"]),
+        "model_evidence_type": "MODEL_COUNTERFACTUAL",
+        "native_economic_status": str(native_case.get("economic_status", "")),
+        "reference_basis": "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS",
+        "native_basis": str(native["return_basis_id"]),
+        "quantity": quantity, "modeled_reference_entry": replay.entry_price,
+        "modeled_reference_exit": replay.exit_price,
+        "modeled_net_cash": model_net, "modeled_net_bps": model_net / modeled_notional * 10000,
+        "native_net_cash": native_net, "native_net_bps": float(native["net_bps"]),
+        "native_minus_modeled_cash": native_net - model_net,
+        "native_fill_vs_reference_gross_cash": price_and_native_slippage,
+        "modeled_fee_minus_native_fee_cash": fees_difference,
+        "native_minus_modeled_funding_cash": funding_difference,
+        "modeled_slippage_cash": slip,
+    }

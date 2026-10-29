@@ -8,6 +8,7 @@ from typing import Any
 from rles_route_a.integration.gym_rollout import NativeGymTeacherProvider
 from rles_route_a.integration.scope import HostTrainGrant
 from .meta_gated_teacher import MetaGatedTeacher, write_meta_trace
+from .execution_binding import validate_native_execution
 
 
 def run_registered_meta_rollout(
@@ -28,8 +29,14 @@ def run_registered_meta_rollout(
     policy = teacher.policy
     if (policy.source_id, policy.fold_id) != (grant.source_identity, grant.fold_id):
         raise PermissionError("trained model and native Train source differ")
-    if (provider.execution_recipe, scenario) != (policy.label_recipe[1], policy.label_recipe[2]):
-        raise ValueError("native execution or cost scenario differs from training labels")
+    if getattr(factory, "transition_hash", None) != provider.execution_recipe:
+        raise ValueError("native provider does not match its episode transition")
+    if scenario != policy.label_recipe[2]:
+        raise ValueError("native cost scenario differs from training labels")
+    if policy.fee_bps_per_leg is None or policy.slippage_bps_per_leg is None:
+        raise ValueError("model lacks frozen per-leg fee and slippage costs")
+    validate_native_execution(factory, scenario=scenario, expected_recipe=policy.label_recipe[1],
+        fee_bps=policy.fee_bps_per_leg, slippage_bps=policy.slippage_bps_per_leg)
     if (not callable(host_rollout) or type(seed) is not int
             or not isinstance(rollout_id, str) or not rollout_id.strip()
             or type(episode_steps) is not int or episode_steps <= 0):

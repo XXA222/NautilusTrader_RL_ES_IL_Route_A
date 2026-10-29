@@ -83,6 +83,10 @@ class MetaGatedTeacher:
         self.decisions.clear()
         self.native_receipts.clear()
 
+    def _missing_model_features(self, observation: PointInTimeObservation) -> tuple[str, ...]:
+        return tuple(name for name in self.policy.feature_names
+                     if name.startswith("market.") and name[7:] not in observation.market)
+
     def advise(self, observation: PointInTimeObservation) -> ExpertAdvice:
         scope = (observation.episode_id, observation.source_id, observation.fold_id)
         current = observation.account_value("net_exposure")
@@ -105,7 +109,8 @@ class MetaGatedTeacher:
             scored = []
             for group in collection.groups if collection is not None else ():
                 try:
-                    score = self.policy.score(group)
+                    score = (None if self._missing_model_features(observation)
+                             else self.policy.score(group))
                 except Exception as exc:
                     score = None
                     failures.append(f"score {group.event_id} {type(exc).__name__}: {exc}")
@@ -123,7 +128,8 @@ class MetaGatedTeacher:
         collection = self.collector.collect(observation)
         native_advice = {name: teacher.advise(observation)
                          for name, teacher in self._teachers.items()}
-        scored = [(group, self.policy.score(group)) for group in collection.groups]
+        missing = self._missing_model_features(observation)
+        scored = [(group, None if missing else self.policy.score(group)) for group in collection.groups]
         selected = None
         if observation.pending_order_ids:
             action = advice(observation, self.expert_id,
@@ -134,7 +140,7 @@ class MetaGatedTeacher:
         else:
             self._owner = None
             eligible = [(group, score) for group, score in scored
-                        if score.action in ("LONG", "SHORT")]
+                        if score is not None and score.action in ("LONG", "SHORT")]
             if eligible:
                 # Deterministic arbitration selects one group, never both directions.
                 selected, score = max(eligible, key=lambda item:
@@ -148,7 +154,8 @@ class MetaGatedTeacher:
             else:
                 action = advice(observation, self.expert_id, "FLAT", 0., "NO_ACCEPTED_CANDIDATE")
         self.decisions.append(MetaDecision(observation, tuple(
-            CandidateDecision(group, score, selected is not None and group.event_id == selected.event_id)
+            CandidateDecision(group, score, selected is not None and group.event_id == selected.event_id,
+                              "FEATURE_NOT_READY" if score is None else None)
             for group, score in scored), action, self._owner))
         return action
 

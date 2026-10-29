@@ -72,25 +72,29 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
         block_end = block_ends[group.event_id]
         if type(block_end) is not int or block_end <= obs.decision_ts_ns:
             raise ValueError("invalid X1 block end")
+        decision_index = by_time[obs.decision_ts_ns]
         final_index = bisect_left(times, block_end) - 1
-        if final_index < 0 or block_end - times[final_index] > MINUTE_NS:
-            raise ValueError("X1 replay observation coverage ends before the block")
+        if final_index < decision_index:
+            raise ValueError("X1 replay observation coverage ends before the candidate")
+        # A host episode may stop before the block boundary for native
+        # terminal settlement. Do not infer exits across its unobserved tail.
+        coverage_end = min(block_end, times[final_index] + MINUTE_NS)
         owner = group.teachers[0][0]
         if owner not in ALL_TEACHER_RECIPE_BY_ID:
             raise ValueError("X1 candidate has unknown originating teacher")
         if limit_entry is None:
             entry_index = bisect_right(open_times, obs.decision_ts_ns)
-            if entry_index >= len(opens) or open_times[entry_index] >= block_end:
-                return FrozenReplay(NoEntryReplay(group.event_id, "RIGHT_CENSORED", block_end,
-                                                  "no-in-block-execution-open"),
+            if entry_index >= len(opens) or open_times[entry_index] >= coverage_end:
+                return FrozenReplay(NoEntryReplay(group.event_id, "RIGHT_CENSORED", coverage_end,
+                                                  "no-in-coverage-execution-open"),
                                     exit_policy, recipe, cost)
             entry_ts, entry_price = opens[entry_index]
         else:
-            result = limit_entry(group, block_end)
+            result = limit_entry(group, coverage_end)
             if not isinstance(result, LimitEntryResult):
                 raise TypeError("limit replay must return its explicit entry result")
             if (type(result.observed_until_ns) is not int
-                    or not obs.decision_ts_ns < result.observed_until_ns <= block_end):
+                    or not obs.decision_ts_ns < result.observed_until_ns <= coverage_end):
                 raise ValueError("limit entry observation outside causal block")
             if result.status in ("CANCELLED", "RIGHT_CENSORED"):
                 if result.fill_ts_ns is not None or result.fill_price is not None:
@@ -100,20 +104,19 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
                     exit_policy, recipe, cost)
             if (result.status != "FILLED" or type(result.fill_ts_ns) is not int
                     or result.fill_ts_ns != result.observed_until_ns
-                    or not obs.decision_ts_ns < result.fill_ts_ns < block_end
+                    or not obs.decision_ts_ns < result.fill_ts_ns < coverage_end
                     or isinstance(result.fill_price, bool)
                     or not isinstance(result.fill_price, (int, float))
                     or not isfinite(result.fill_price) or result.fill_price <= 0):
                 raise ValueError("invalid causal limit fill")
             entry_ts, entry_price = result.fill_ts_ns, result.fill_price
-        decision_index = by_time[obs.decision_ts_ns]
         teacher = owner_at_decision(owner, decision_index)
         signal = teacher.last_signal
         if signal.side != group.side or signal.raw_signal not in ("LONG_ENTRY", "SHORT_ENTRY"):
             raise ValueError("X1 owner signal does not reproduce the candidate")
         exit_decision = None
         for future in observations[decision_index + 1:]:
-            if future.decision_ts_ns >= block_end:
+            if future.decision_ts_ns >= coverage_end:
                 break
             if future.decision_ts_ns <= entry_ts:
                 # The new fill cannot influence an earlier/simultaneous decision.
@@ -129,18 +132,18 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
                 exit_decision = future.decision_ts_ns
                 break
         exit_index = bisect_right(open_times, exit_decision) if exit_decision is not None else len(opens)
-        closed = exit_index < len(opens) and open_times[exit_index] < block_end
+        closed = exit_index < len(opens) and open_times[exit_index] < coverage_end
         exit_ts, exit_price = opens[exit_index] if closed else (None, None)
-        end = exit_ts if exit_ts is not None else block_end - 1
+        end = exit_ts if exit_ts is not None else coverage_end - 1
         payments = funding[bisect_right(funding_times, entry_ts):bisect_right(funding_times, end)]
         funding_bps = -group.side * fsum(rate * mark / entry_price for _, rate, mark in payments) * 10000
         exit_ratio = exit_price / entry_price if exit_price is not None else 0.0
         receipt = sha256(json.dumps([group.event_id, owner, entry_ts, entry_price, exit_decision,
-            exit_ts, exit_price, payments, fee_bps, slippage_bps, block_end],
+            exit_ts, exit_price, payments, fee_bps, slippage_bps, block_end, coverage_end],
             allow_nan=False, separators=(",", ":")).encode()).hexdigest()
         fact = CounterfactualTradeReplay(
             group.event_id, entry_ts, entry_price, exit_ts, exit_price, fee_bps,
             fee_bps * exit_ratio, slippage_bps, slippage_bps * exit_ratio,
-            funding_bps, None if closed else block_end, receipt)
+            funding_bps, None if closed else coverage_end, receipt)
         return FrozenReplay(fact, exit_policy, recipe, cost)
     return replay

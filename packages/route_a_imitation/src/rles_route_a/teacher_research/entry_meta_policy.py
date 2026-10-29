@@ -63,6 +63,8 @@ class FrozenEntryMetaPolicy:
     calibration_brier: float = 0.0
     fit_count: int = 0
     calibration_count: int = 0
+    fee_bps_per_leg: float | None = None
+    slippage_bps_per_leg: float | None = None
 
     def score(self, group: CandidateGroup) -> EntryScore:
         obs = group.observation
@@ -99,6 +101,7 @@ def fit_entry_meta_policy(
     fit: Sequence[GroupOutcome], calibration: Sequence[GroupOutcome],
     groups: Mapping[str, CandidateGroup], *, feature_names: Sequence[str],
     margin_bps: float, l2: float = 1.0, cost_bps: float | None = None,
+    fee_bps_per_leg: float | None = None, slippage_bps_per_leg: float | None = None,
 ) -> FrozenEntryMetaPolicy:
     """Fit only earlier complete research labels and calibrate on later labels."""
     names = tuple(feature_names)
@@ -108,6 +111,14 @@ def fit_entry_meta_policy(
     if cost_bps is not None and (isinstance(cost_bps, bool) or not isinstance(cost_bps, (int, float))
                                  or not isfinite(cost_bps) or cost_bps < 0):
         raise ValueError("cost must be finite and nonnegative")
+    if (fee_bps_per_leg is None) != (slippage_bps_per_leg is None):
+        raise ValueError("fee and slippage must be specified together")
+    if fee_bps_per_leg is not None:
+        if (any(isinstance(x, bool) or not isinstance(x, (int, float))
+                or not isfinite(x) or x < 0 for x in (fee_bps_per_leg, slippage_bps_per_leg))
+                or cost_bps is None
+                or abs(cost_bps - 2 * (fee_bps_per_leg + slippage_bps_per_leg)) > 1e-9):
+            raise ValueError("round-trip cost must match the frozen per-leg costs")
     all_labels = tuple(fit) + tuple(calibration)
     if len(fit) < 4 or len(calibration) < 4:
         raise ValueError("fit and later calibration need at least four complete samples")
@@ -167,7 +178,7 @@ def fit_entry_meta_policy(
         cost_bps, float(np.mean(np.abs(cal_z @ value - cal_y))), next(iter(bases)),
         float(np.mean((np.asarray([_sigmoid(calibrator[0] * float(x) + calibrator[1])
                                   for x in cal_z @ logistic]) - (cal_y > 0)) ** 2)),
-        len(fit), len(calibration),
+        len(fit), len(calibration), fee_bps_per_leg, slippage_bps_per_leg,
     )
 
 

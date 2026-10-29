@@ -34,7 +34,8 @@ def trained_policy():
     return fit_entry_meta_policy(labels[:4], labels[4:], groups,
                                  feature_names=("market.ema_9", "teacher.T01_EMA_9_21",
                                                 "consensus.count", "cost.round_trip_bps"),
-                                 margin_bps=1., cost_bps=12.)
+                                 margin_bps=1., cost_bps=12.,
+                                 fee_bps_per_leg=5., slippage_bps_per_leg=1.)
 
 
 def test_native_hold_exit_pending_and_trace(tmp_path):
@@ -89,6 +90,22 @@ def test_rejection_diagnostics_identify_out_of_support_feature():
     result = summarize_entry_scores([score])
     assert result["coverage"] == 0 and result["reason_counts"]["OUT_OF_SUPPORT"] == 1
     assert result["unsupported_feature_counts"]["market.ema_9"] == 1
+
+
+def test_missing_market_feature_rejects_candidate_without_scoring():
+    model = trained_policy()
+    model = replace(model, feature_names=("market.zscore_60", *model.feature_names[1:]))
+    teacher = MetaGatedTeacher(model, recovery=Recovery())
+    def without_zscore(obs):
+        return replace(obs, market={k: v for k, v in obs.market.items() if k != "zscore_60"},
+                       feature_available_at_ns={k: v for k, v in obs.feature_available_at_ns.items()
+                                                if k != "zscore_60"})
+    teacher.advise(without_zscore(observation(10, ema_9=99.)))
+    action = teacher.advise(without_zscore(observation(11, ema_9=101.)))
+    decision = teacher.decisions[-1]
+    assert action.intent == "FLAT"
+    assert decision.candidates and decision.candidates[0].score is None
+    assert decision.candidates[0].disposition == "REJECTED_FEATURE_NOT_READY"
 
 
 def test_mixed_return_bases_are_rejected():
