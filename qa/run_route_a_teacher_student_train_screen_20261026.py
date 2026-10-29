@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT / "qa"))
 
 import run_route_a_1m_teacher_native as native  # noqa: E402
 import run_route_a_train_student_screen_20261020 as harness  # noqa: E402
+from route_a_run_identity import RunIdentityV1, canonical_sha, require_identity  # noqa: E402
 from rles_orchestrator.research_access import (  # noqa: E402
     ACTIVE_OWNER,
     market_key,
@@ -497,6 +498,73 @@ def _require_scenario_only_development_result(
         )
 
 
+def _identity_context(prereg_sha: str, scaler_sha: str, warmup_marker_sha: str) -> dict[str, str]:
+    # Bind the actual runnable source rather than trusting a self-reported revision.
+    source_files = sorted(
+        path for path in (ROOT / "packages").glob("*/src/**/*.py")
+        if "__pycache__" not in path.parts
+    )
+    source_files += [ROOT / name for name in (
+        "qa/route_a_run_identity.py",
+        "qa/run_route_a_teacher_student_train_screen_20261026.py",
+        "qa/run_route_a_1m_teacher_native.py",
+        "qa/run_route_a_train_student_screen_20261020.py",
+        "qa/validate_route_a_teacher_student_prereg_20261026.py",
+        "pyproject.toml", "uv.lock",
+    )]
+    code = {str(path.relative_to(ROOT)).replace("\\", "/"): _digest(path)
+            for path in source_files}
+    return {
+        "protocol_sha256": prereg_sha,
+        "errata_sha256": _digest(ERRATA),
+        "source_errata_sha256": _digest(SOURCE_ERRATA),
+        "code_manifest_sha256": canonical_sha(code),
+        "feature_recipe_sha256": _digest(FEATURE_RECIPE),
+        "scaler_sha256": scaler_sha,
+        "warmup_marker_sha256": warmup_marker_sha,
+        "execution_template_sha256": _digest(EXECUTION_TEMPLATE),
+        "instrument_rules_sha256": _digest(SCENARIO_RULES),
+    }
+
+
+def _make_identity(
+    context: dict[str, str], source: dict[str, Any], *, candidate_id: str,
+    recipe: dict[str, Any], scenario: str, costs: dict[str, Any], seed: int,
+    window_ns: tuple[int, int],
+) -> RunIdentityV1:
+    return RunIdentityV1(
+        **context,
+        market_marker_sha256=source["marker_sha256"],
+        market_snapshot_sha256=source["snapshot_hash"],
+        import_manifest_sha256=source["import_manifest_sha256"],
+        cost_recipe_sha256=canonical_sha(costs),
+        teacher_recipe_sha256=canonical_sha(recipe),
+        candidate_id=candidate_id,
+        exit_variant=recipe["exit_variant"],
+        scenario=scenario, seed=seed, window_ns=window_ns,
+    )
+
+
+def _summary_source(spec: dict[str, Any]) -> dict[str, str]:
+    # Metadata only: do not decode or re-read already consumed market rows.
+    rel = Path(spec["output"])
+    if rel.is_absolute() or ".." in rel.parts:
+        raise RuntimeError("registered summary source escapes the project")
+    directory = (ROOT / rel).resolve()
+    if not directory.is_relative_to(ROOT.resolve()):
+        raise RuntimeError("registered summary source escapes the project")
+    marker = directory / "market.parquet.COMPLETED.json"
+    manifest = directory / "import.json"
+    marker_doc, manifest_doc = _read_json(marker), _read_json(manifest)
+    if (manifest_doc.get("start_day") != spec["start_day"]
+            or manifest_doc.get("end_day") != spec["end_day_inclusive"]
+            or manifest_doc.get("event_count") != marker_doc.get("events")):
+        raise RuntimeError("summary source metadata differs from the registered window")
+    return {"marker_sha256": _digest(marker),
+            "snapshot_hash": marker_doc["snapshot_hash"],
+            "import_manifest_sha256": _digest(manifest)}
+
+
 def _completed_run(path: Path, expected: dict[str, Any]) -> dict[str, Any] | None:
     report_path = path / "native-run.json"
     if not path.exists():
@@ -516,8 +584,10 @@ def _completed_run(path: Path, expected: dict[str, Any]) -> dict[str, Any] | Non
     if not all(checks):
         raise RuntimeError(f"existing native run does not match the frozen run key: {path}")
     _require_scenario_only_development_result(report, path)
+    require_identity(report, expected["run_identity"])
     decisions = report.get("decisions", {})
-    if decisions.get("observed") != decisions.get("m22_verified"):
+    if (type(decisions.get("observed")) is not int or decisions["observed"] <= 0
+            or decisions.get("observed") != decisions.get("m22_verified")):
         raise RuntimeError(f"existing run lacks complete M2.2 verification: {path}")
     if float(report.get("account", {}).get("liquidations", -1)) != 0:
         raise RuntimeError(f"existing run reports liquidation: {path}")
@@ -529,6 +599,7 @@ def _write_screen_summary(
     prereg: dict[str, Any],
     errata: dict[str, Any],
     source_errata: dict[str, Any] | None = None,
+    *, identity_context: dict[str, str], window_sources: dict[int, dict[str, str]],
 ) -> dict[str, Any]:
     preregistered_rows = errata["corrected_candidate_matrix"]
     teacher_rows = _candidate_rows_in_scope(errata, source_errata)
@@ -643,6 +714,16 @@ def _write_screen_summary(
                 or observed != m22_verified
                 or float(run.get("account", {}).get("liquidations", -1)) != 0):
             raise RuntimeError(f"native run identity or execution evidence is invalid: {path}")
+        if scenario not in scenario_costs or window_index not in window_sources:
+            raise RuntimeError(f"registered identity evidence is missing: {path}")
+        expected_identity = _make_identity(
+            identity_context, window_sources[window_index],
+            candidate_id=candidate_id,
+            recipe=expected_teacher_recipes[(candidate_id, scenario)],
+            scenario=scenario, costs=scenario_costs[scenario], seed=seed,
+            window_ns=(expected_bounds[0], expected_bounds[1]),
+        )
+        require_identity(run, expected_identity)
         report["completed_runs"].append({
             "candidate_id": candidate_id,
             "window_index": window_index,
@@ -830,6 +911,14 @@ def run_window(window_index: int) -> dict[str, Any]:
         session_id=session_id,
     )
     report_doc = _run_doc(prereg, source, source_errata)
+    identity_context = _identity_context(
+        prereg_sha, scaler.hash, warmup_source["marker_sha256"],
+    )
+    identity_source = {
+        "marker_sha256": source["marker_sha256"],
+        "snapshot_hash": source["snapshot_hash"],
+        "import_manifest_sha256": _digest(ROOT / source["import_manifest_path"]),
+    }
     run_rows: list[dict[str, Any]] = []
     candidate_specs = [
         (_candidate_id(row), row)
@@ -860,7 +949,14 @@ def run_window(window_index: int) -> dict[str, Any]:
                 run_dir = output / _run_key(
                     window_index, scenario, int(seed), candidate_id,
                 )
+                recipe = _teacher_recipe_document(teacher, exit_variant)
+                identity = _make_identity(
+                    identity_context, identity_source, candidate_id=candidate_id,
+                    recipe=recipe, scenario=scenario, costs=scenario_costs,
+                    seed=int(seed), window_ns=(start_ns, end_ns),
+                )
                 expected = {
+                    "run_identity": identity,
                     "protocol_id": prereg["protocol_id"],
                     "teacher": teacher.expert_id,
                     "teacher_recipe": _teacher_recipe_document(teacher, exit_variant),
@@ -889,12 +985,24 @@ def run_window(window_index: int) -> dict[str, Any]:
                         bounds_override=(start_ns, end_ns, block_id),
                         seed=int(seed),
                         teacher_override=teacher,
+                        run_identity=identity,
                     )
                     run_rows.append(run)
         factory.snapshots.clear()
         factory.teacher_snapshots.clear()
         factory.fill_references.clear()
-    summary = _write_screen_summary(output, prereg, errata, source_errata)
+    populated_windows = {
+        int(path.relative_to(output).parts[0].split("-")[1]) - 1
+        for path in output.glob("window-*/**/native-run.json")
+    }
+    window_sources = {
+        index: _summary_source(source_errata["teacher_window_imports"][index])
+        for index in populated_windows
+    }
+    summary = _write_screen_summary(
+        output, prereg, errata, source_errata,
+        identity_context=identity_context, window_sources=window_sources,
+    )
     return {
         "window_index": window_index,
         "block_id": block_id,

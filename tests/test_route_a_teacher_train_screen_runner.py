@@ -16,11 +16,43 @@ from qa.run_route_a_teacher_student_train_screen_20261026 import (
     _protocol as _load_registered_protocol,
     _run_spec,
     _teacher_recipe_document,
-    _write_screen_summary,
+    _write_screen_summary as _real_write_screen_summary,
+    _make_identity,
     source_errata_fit_window,
 )
 import qa.run_route_a_train_student_screen_20261020 as harness
 from rles_route_a.teachers_1m.contracts import TeacherSignal
+
+
+CONTEXT = {name: "a" * 64 for name in (
+    "protocol_sha256", "errata_sha256", "source_errata_sha256",
+    "code_manifest_sha256", "feature_recipe_sha256", "scaler_sha256",
+    "warmup_marker_sha256", "execution_template_sha256", "instrument_rules_sha256",
+)}
+COSTS = {
+    "base": {"taker_fee_bps_per_leg": 5, "slippage_bps_per_leg": 1},
+    "stress": {"taker_fee_bps_per_leg": 10, "slippage_bps_per_leg": 5},
+}
+
+
+def _source(marker: str) -> dict[str, str]:
+    return {"marker_sha256": marker, "snapshot_hash": "b" * 64,
+            "import_manifest_sha256": "c" * 64}
+
+
+def _identity(candidate: str, scenario: str, seed: int, start: int, end: int,
+              marker: str, recipe: dict[str, Any]):
+    return _make_identity(CONTEXT, _source(marker), candidate_id=candidate,
+                          recipe=recipe, scenario=scenario, costs=COSTS[scenario],
+                          seed=seed, window_ns=(start, end))
+
+
+def _write_screen_summary(output, prereg, errata, source_errata=None):
+    source_errata = dict(source_errata or {})
+    source_errata.setdefault("cost_scenarios", COSTS)
+    sources = {i: _source("a" * 63 + str(i)) for i in range(4)}
+    return _real_write_screen_summary(output, prereg, errata, source_errata,
+                                      identity_context=CONTEXT, window_sources=sources)
 
 
 def _recipe_document(candidate: str, scenario: str, seed: int) -> dict[str, Any]:
@@ -60,15 +92,24 @@ def _native_run(
     recipe_candidate: str | None = None,
 ) -> dict[str, Any]:
     teacher_id = candidate.split("--", 1)[0]
+    recipe = _recipe_document(recipe_candidate or candidate, scenario, seed)
+    identity = _identity(candidate, scenario, seed, window_start, window_end,
+                         marker_sha, recipe)
     return {
+        "run_identity": identity.document(),
+        "preregistration_sha256": CONTEXT["protocol_sha256"],
+        "verified_feature_recipe_sha256": CONTEXT["feature_recipe_sha256"],
         "protocol_id": "frozen-protocol",
         "teacher": teacher_id,
         "teacher_recipe": _recipe_document(recipe_candidate or candidate, scenario, seed),
         "source": {
             "marker_sha256": marker_sha,
+            "snapshot_hash": "b" * 64,
             "window_ns": [window_start, window_end],
         },
-        "execution": {"scenario": scenario, "seed": seed},
+        "execution": {"scenario": scenario, "seed": seed,
+                      "scaler_hash": CONTEXT["scaler_sha256"],
+                      "scenario_costs": COSTS[scenario]},
         "qualification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_NOT_G1_G2",
         "economic_status": "SCENARIO_ONLY",
         "account": {
@@ -506,7 +547,7 @@ def test_window_summary_rejects_mismatched_source_marker_within_pair(tmp_path: P
         tmp_path, "FLAT", 0, "base", 20261026, 0.0, start, end,
         marker_sha="b" * 64,
     )
-    with pytest.raises(RuntimeError, match="identity or execution evidence"):
+    with pytest.raises(RuntimeError, match="identity"):
         _write_screen_summary(tmp_path, prereg, errata)
 
 
@@ -522,3 +563,89 @@ def test_missing_controls_cannot_pass_the_teacher_screen(tmp_path: Path) -> None
     assert report["screen_complete"] is False
     assert report["qualifying_candidates"] == []
     assert report["student_training_eligible"] is False
+
+
+
+@pytest.mark.parametrize("field", list(CONTEXT) + [
+    "market_marker_sha256", "market_snapshot_sha256", "import_manifest_sha256",
+    "cost_recipe_sha256", "teacher_recipe_sha256", "candidate_id",
+    "exit_variant", "scenario", "seed", "window_ns",
+])
+def test_identity_tampering_rejected_by_resume_and_summary(tmp_path, field):
+    candidate = "T01_EMA_9_21"
+    start = _ns("2026-10-25T00:00:00Z")
+    end = _ns("2026-10-30T00:00:00Z")
+    marker = "a" * 63 + "0"
+    report = _native_run(candidate=candidate, scenario="base", seed=20261026,
+                         net_return=0.1, window_start=start, window_end=end,
+                         marker_sha=marker)
+    expected_identity = _identity(candidate, "base", 20261026, start, end,
+                                  marker, report["teacher_recipe"])
+    expected = {"protocol_id": "frozen-protocol", "teacher": candidate,
+                "teacher_recipe": report["teacher_recipe"], "marker_sha256": marker,
+                "window_ns": [start, end], "scenario": "base", "seed": 20261026,
+                "run_identity": expected_identity}
+    path = tmp_path / "window-1" / "base" / "seed-20261026" / candidate
+    path.mkdir(parents=True)
+    file = path / "native-run.json"
+    file.write_text(json.dumps(report), encoding="utf-8")
+    assert _completed_run(path, expected) == report
+    report["run_identity"][field] = "changed"
+    file.write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="identity"):
+        _completed_run(path, expected)
+    prereg, errata = _protocol()
+    with pytest.raises(RuntimeError, match="identity"):
+        _write_screen_summary(tmp_path, prereg, errata)
+
+
+def test_legacy_report_without_identity_rejected(tmp_path):
+    start = _ns("2026-10-25T00:00:00Z")
+    end = _ns("2026-10-30T00:00:00Z")
+    marker = "a" * 63 + "0"
+    report = _native_run(candidate="T01_EMA_9_21", scenario="base", seed=20261026,
+                         net_return=0.1, window_start=start, window_end=end,
+                         marker_sha=marker)
+    identity = _identity("T01_EMA_9_21", "base", 20261026, start, end,
+                         marker, report["teacher_recipe"])
+    del report["run_identity"]
+    path = tmp_path / "window-1" / "base" / "seed-20261026" / "T01_EMA_9_21"
+    path.mkdir(parents=True)
+    (path / "native-run.json").write_text(json.dumps(report), encoding="utf-8")
+    expected = {"protocol_id": "frozen-protocol", "teacher": "T01_EMA_9_21",
+                "teacher_recipe": report["teacher_recipe"], "marker_sha256": marker,
+                "window_ns": [start, end], "scenario": "base", "seed": 20261026,
+                "run_identity": identity}
+    with pytest.raises(RuntimeError, match="LEGACY_INCOMPATIBLE"):
+        _completed_run(path, expected)
+    prereg, errata = _protocol()
+    with pytest.raises(RuntimeError, match="LEGACY_INCOMPATIBLE"):
+        _write_screen_summary(tmp_path, prereg, errata)
+
+
+@pytest.mark.parametrize(("section", "field", "value"), [
+    ("execution", "scaler_hash", "d" * 64),
+    ("execution", "scenario_costs", {"taker_fee_bps_per_leg": 0}),
+    ("source", "snapshot_hash", "d" * 64),
+    ("source", "marker_sha256", "d" * 64),
+    ("teacher_recipe", "target_exposure", 0.9),
+])
+def test_identity_also_binds_report_facts(tmp_path, section, field, value):
+    start = _ns("2026-10-25T00:00:00Z")
+    end = _ns("2026-10-30T00:00:00Z")
+    marker = "a" * 63 + "0"
+    report = _native_run(candidate="T01_EMA_9_21", scenario="base", seed=20261026,
+                         net_return=0.1, window_start=start, window_end=end,
+                         marker_sha=marker)
+    identity = _identity("T01_EMA_9_21", "base", 20261026, start, end,
+                         marker, report["teacher_recipe"])
+    expected = {"protocol_id": "frozen-protocol", "teacher": "T01_EMA_9_21",
+                "teacher_recipe": report["teacher_recipe"].copy(), "marker_sha256": marker,
+                "window_ns": [start, end], "scenario": "base", "seed": 20261026,
+                "run_identity": identity}
+    report[section][field] = value
+    path = tmp_path / "run"
+    path.mkdir()
+    (path / "native-run.json").write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="identity|Identity|frozen run key"):
+        _completed_run(path, expected)

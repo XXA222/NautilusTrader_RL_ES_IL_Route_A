@@ -796,7 +796,8 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
                        ema_reversal_mode: EmaReversalMode = "EXIT_ONLY_V1",
                        bounds_override: tuple[int, int, str] | None = None,
                        seed: int = 20261026,
-                       teacher_override: Any | None = None) -> dict[str, Any]:
+                       teacher_override: Any | None = None,
+                       run_identity: Any | None = None) -> dict[str, Any]:
     started = monotonic()
     source = doc["source"]
     market = ROOT / source["market_path"]
@@ -1023,6 +1024,13 @@ def _run_native_window(doc: dict[str, Any], prereg_sha: str, output: Path,
             "bounded single-teacher smoke is not an economic teacher selection",
         ],
     }
+    if run_identity is not None:
+        from route_a_run_identity import RunIdentityV1, require_identity
+
+        if not isinstance(run_identity, RunIdentityV1):
+            raise TypeError("RunIdentityV1 required for fresh teacher screen")
+        result["run_identity"] = run_identity.document()
+        require_identity(result, run_identity)
     destination = output / ("native-smoke.json" if window_id == "smoke" else "native-run.json")
     destination.write_text(
         json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n",

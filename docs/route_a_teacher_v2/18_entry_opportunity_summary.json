@@ -1,0 +1,3753 @@
+{
+  "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+  "market_payload_read": false,
+  "runs": [
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 978,
+        "censored_trades": 0,
+        "completed_trades": 978,
+        "fees": 243.19037546000004,
+        "funding": -1.71224348,
+        "gross_price_cash": 61.974610000000396,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 12.998385274819114,
+            "observed": 977
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.8059614038853893,
+            "observed": 978
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.0814002815432917,
+            "observed": 978
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 6.652735155234132,
+            "observed": 978
+          }
+        },
+        "mean_mae_bps": 10.386750036841988,
+        "mean_mfe_bps": 23.24133042624557,
+        "net_cash": -232.53055893999954,
+        "slippage_attribution": 49.60255000000043
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 0,
+        "censored_trades": 0,
+        "completed_trades": 0,
+        "fees": 0.0,
+        "funding": 0.0,
+        "gross_price_cash": 0.0,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          }
+        },
+        "mean_mae_bps": null,
+        "mean_mfe_bps": null,
+        "net_cash": 0.0,
+        "slippage_attribution": 0.0
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 978,
+        "censored_trades": 0,
+        "completed_trades": 978,
+        "fees": 486.38051822000057,
+        "funding": -1.71224348,
+        "gross_price_cash": 61.757829999999565,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 12.998385274819114,
+            "observed": 977
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.8059614038853893,
+            "observed": 978
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.0814002815432917,
+            "observed": 978
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 6.652735155234132,
+            "observed": 978
+          }
+        },
+        "mean_mae_bps": 14.370247327441055,
+        "mean_mfe_bps": 20.614916507726683,
+        "net_cash": -670.4873217000004,
+        "slippage_attribution": 244.15239000000034
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 0,
+        "censored_trades": 0,
+        "completed_trades": 0,
+        "fees": 0.0,
+        "funding": 0.0,
+        "gross_price_cash": 0.0,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          }
+        },
+        "mean_mae_bps": null,
+        "mean_mfe_bps": null,
+        "net_cash": 0.0,
+        "slippage_attribution": 0.0
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 1098,
+        "censored_trades": 0,
+        "completed_trades": 1098,
+        "fees": 272.47796289999974,
+        "funding": -3.6591237099999994,
+        "gross_price_cash": 0.654229999999436,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 2.05417596511043,
+            "observed": 1096
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.12286435352946763,
+            "observed": 1098
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.9155213915886831,
+            "observed": 1098
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 2.826733469024063,
+            "observed": 1097
+          }
+        },
+        "mean_mae_bps": 15.515386168043007,
+        "mean_mfe_bps": 28.838158627931403,
+        "net_cash": -330.7754066100006,
+        "slippage_attribution": 55.29255000000031
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 0,
+        "censored_trades": 0,
+        "completed_trades": 0,
+        "fees": 0.0,
+        "funding": 0.0,
+        "gross_price_cash": 0.0,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          }
+        },
+        "mean_mae_bps": null,
+        "mean_mfe_bps": null,
+        "net_cash": 0.0,
+        "slippage_attribution": 0.0
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 1098,
+        "censored_trades": 0,
+        "completed_trades": 1098,
+        "fees": 544.9562429599999,
+        "funding": -3.6099815399999997,
+        "gross_price_cash": 0.9689300000000749,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 2.05417596511043,
+            "observed": 1096
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.12286435352946763,
+            "observed": 1098
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.9155213915886831,
+            "observed": 1098
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 2.826733469024063,
+            "observed": 1097
+          }
+        },
+        "mean_mae_bps": 19.488079404872867,
+        "mean_mfe_bps": 26.275454231475543,
+        "net_cash": -820.8275444999999,
+        "slippage_attribution": 273.23025
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 0,
+        "censored_trades": 0,
+        "completed_trades": 0,
+        "fees": 0.0,
+        "funding": 0.0,
+        "gross_price_cash": 0.0,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          }
+        },
+        "mean_mae_bps": null,
+        "mean_mfe_bps": null,
+        "net_cash": 0.0,
+        "slippage_attribution": 0.0
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 0,
+        "censored_trades": 0,
+        "completed_trades": 0,
+        "fees": 0.0,
+        "funding": 0.0,
+        "gross_price_cash": 0.0,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          }
+        },
+        "mean_mae_bps": null,
+        "mean_mfe_bps": null,
+        "net_cash": 0.0,
+        "slippage_attribution": 0.0
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 458,
+        "censored_trades": 1,
+        "completed_trades": 457,
+        "fees": 113.44331212999998,
+        "funding": 0.8199993900000001,
+        "gross_price_cash": 63.48192000000092,
+        "horizons": {
+          "120": {
+            "censored": 5,
+            "mean_directional_bps": 7.201866021666443,
+            "observed": 453
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 1.099490177893398,
+            "observed": 457
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.28570467933894156,
+            "observed": 458
+          },
+          "60": {
+            "censored": 4,
+            "mean_directional_bps": 8.849908941389085,
+            "observed": 454
+          }
+        },
+        "mean_mae_bps": 12.345140868685252,
+        "mean_mfe_bps": 35.368363134337564,
+        "net_cash": -72.19870273999913,
+        "slippage_attribution": 23.057310000000022
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 0,
+        "censored_trades": 0,
+        "completed_trades": 0,
+        "fees": 0.0,
+        "funding": 0.0,
+        "gross_price_cash": 0.0,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": null,
+            "observed": 0
+          }
+        },
+        "mean_mae_bps": null,
+        "mean_mfe_bps": null,
+        "net_cash": 0.0,
+        "slippage_attribution": 0.0
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 458,
+        "censored_trades": 1,
+        "completed_trades": 457,
+        "fees": 226.88659809000006,
+        "funding": 0.8199993900000001,
+        "gross_price_cash": 63.48191999999954,
+        "horizons": {
+          "120": {
+            "censored": 5,
+            "mean_directional_bps": 7.201866021666443,
+            "observed": 453
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 1.099490177893398,
+            "observed": 457
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.28570467933894156,
+            "observed": 458
+          },
+          "60": {
+            "censored": 4,
+            "mean_directional_bps": 8.849908941389085,
+            "observed": 454
+          }
+        },
+        "mean_mae_bps": 16.243974492111466,
+        "mean_mfe_bps": 32.644666266634864,
+        "net_cash": -276.35766870000043,
+        "slippage_attribution": 113.7729900000002
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 654,
+        "censored_trades": 0,
+        "completed_trades": 654,
+        "fees": 162.61155525999993,
+        "funding": -1.1052432699999999,
+        "gross_price_cash": 19.45260999998213,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 14.246638209951554,
+            "observed": 653
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.3938662025994903,
+            "observed": 654
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.1873693639738625,
+            "observed": 654
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 6.2594335615161905,
+            "observed": 654
+          }
+        },
+        "mean_mae_bps": 11.01808674651831,
+        "mean_mfe_bps": 20.927033636804378,
+        "net_cash": -177.41432853001788,
+        "slippage_attribution": 33.1501400000001
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 686,
+        "censored_trades": 1,
+        "completed_trades": 685,
+        "fees": 170.30528821,
+        "funding": 0.82968003,
+        "gross_price_cash": -5.859879999982685,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -9.429158798908011,
+            "observed": 684
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -1.262313459645894,
+            "observed": 685
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 0.5071147908759511,
+            "observed": 685
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -3.716731124232948,
+            "observed": 685
+          }
+        },
+        "mean_mae_bps": 11.209431372802584,
+        "mean_mfe_bps": 19.587911122836534,
+        "net_cash": -210.0780581799827,
+        "slippage_attribution": 34.74257000000004
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 654,
+        "censored_trades": 0,
+        "completed_trades": 654,
+        "fees": 325.22187683999994,
+        "funding": -0.96294094,
+        "gross_price_cash": 18.21209000000094,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 14.246638209951554,
+            "observed": 653
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.3938662025994903,
+            "observed": 654
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.1873693639738625,
+            "observed": 654
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 6.2594335615161905,
+            "observed": 654
+          }
+        },
+        "mean_mae_bps": 15.004458447417353,
+        "mean_mfe_bps": 17.863531485360987,
+        "net_cash": -471.20617777999905,
+        "slippage_attribution": 163.2334499999996
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 686,
+        "censored_trades": 1,
+        "completed_trades": 685,
+        "fees": 340.61044519000023,
+        "funding": 0.7139579,
+        "gross_price_cash": -5.722050000000242,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -9.429158798908011,
+            "observed": 684
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -1.262313459645894,
+            "observed": 685
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 0.5071147908759511,
+            "observed": 685
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -3.716731124232948,
+            "observed": 685
+          }
+        },
+        "mean_mae_bps": 15.182666803319385,
+        "mean_mfe_bps": 16.777341683188542,
+        "net_cash": -516.6077972900002,
+        "slippage_attribution": 170.9892599999994
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 693,
+        "censored_trades": 0,
+        "completed_trades": 693,
+        "fees": 171.93028155000005,
+        "funding": -2.3054921299999998,
+        "gross_price_cash": -20.250690000009044,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 2.6094539794273772,
+            "observed": 691
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.8109855573858913,
+            "observed": 693
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.2836298320519535,
+            "observed": 693
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 1.4112618318808459,
+            "observed": 692
+          }
+        },
+        "mean_mae_bps": 19.05271203899963,
+        "mean_mfe_bps": 30.61726515194067,
+        "net_cash": -229.37346368000908,
+        "slippage_attribution": 34.88699999999995
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 662,
+        "censored_trades": 1,
+        "completed_trades": 661,
+        "fees": 164.05667748000016,
+        "funding": 2.67814514,
+        "gross_price_cash": -37.683179999991665,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -2.2161866419830094,
+            "observed": 660
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -1.0453468416807372,
+            "observed": 661
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.109947396817978,
+            "observed": 662
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -1.8831807477268223,
+            "observed": 661
+          }
+        },
+        "mean_mae_bps": 17.107065115403458,
+        "mean_mfe_bps": 30.399511632363357,
+        "net_cash": -232.34958233999168,
+        "slippage_attribution": 33.28786999999998
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 693,
+        "censored_trades": 0,
+        "completed_trades": 693,
+        "fees": 343.8651523000004,
+        "funding": -2.1617009199999995,
+        "gross_price_cash": -15.661740000022855,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 2.6094539794273772,
+            "observed": 691
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.8109855573858913,
+            "observed": 693
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.2836298320519535,
+            "observed": 693
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 1.4112618318808459,
+            "observed": 692
+          }
+        },
+        "mean_mae_bps": 23.032377663071294,
+        "mean_mfe_bps": 27.551748778212772,
+        "net_cash": -534.0998532200229,
+        "slippage_attribution": 172.41126000000077
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 662,
+        "censored_trades": 1,
+        "completed_trades": 661,
+        "fees": 328.10879844999994,
+        "funding": 2.5287122799999997,
+        "gross_price_cash": -33.10613999997733,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -2.2161866419830094,
+            "observed": 660
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -1.0453468416807372,
+            "observed": 661
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.109947396817978,
+            "observed": 662
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -1.8831807477268223,
+            "observed": 661
+          }
+        },
+        "mean_mae_bps": 21.072005379735153,
+        "mean_mfe_bps": 27.349803643776028,
+        "net_cash": -523.2002561699774,
+        "slippage_attribution": 164.51403000000028
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 281,
+        "censored_trades": 0,
+        "completed_trades": 281,
+        "fees": 69.75733171000002,
+        "funding": -0.25821363,
+        "gross_price_cash": -7.542189999986606,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -8.416613993266761,
+            "observed": 281
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.2991593841083264,
+            "observed": 281
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.08581478021965246,
+            "observed": 281
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -1.7234218855425516,
+            "observed": 281
+          }
+        },
+        "mean_mae_bps": 17.976577503428665,
+        "mean_mfe_bps": 28.435289547932342,
+        "net_cash": -91.73879533998661,
+        "slippage_attribution": 14.181059999999968
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 291,
+        "censored_trades": 1,
+        "completed_trades": 290,
+        "fees": 72.00145724999997,
+        "funding": 0.66060269,
+        "gross_price_cash": 18.408759999986735,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 4.845102641736125,
+            "observed": 289
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.5432040504621984,
+            "observed": 291
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.37956960160405095,
+            "observed": 291
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 6.2291962001672365,
+            "observed": 290
+          }
+        },
+        "mean_mae_bps": 15.216532129484156,
+        "mean_mfe_bps": 30.51581334385234,
+        "net_cash": -67.56705456001328,
+        "slippage_attribution": 14.634959999999976
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 281,
+        "censored_trades": 0,
+        "completed_trades": 281,
+        "fees": 139.51467777000008,
+        "funding": -0.25821363,
+        "gross_price_cash": -7.54219000000767,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -8.416613993266761,
+            "observed": 281
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.2991593841083264,
+            "observed": 281
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.08581478021965246,
+            "observed": 281
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -1.7234218855425516,
+            "observed": 281
+          }
+        },
+        "mean_mae_bps": 21.926299289155107,
+        "mean_mfe_bps": 25.421420323004448,
+        "net_cash": -217.27676140000767,
+        "slippage_attribution": 69.96168000000006
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 291,
+        "censored_trades": 1,
+        "completed_trades": 290,
+        "fees": 144.0029058399999,
+        "funding": 0.66060269,
+        "gross_price_cash": 18.408760000007327,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 4.845102641736125,
+            "observed": 289
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.5432040504621984,
+            "observed": 291
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.37956960160405095,
+            "observed": 291
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 6.2291962001672365,
+            "observed": 290
+          }
+        },
+        "mean_mae_bps": 19.167223704722943,
+        "mean_mfe_bps": 27.361523295541932,
+        "net_cash": -197.1431631499927,
+        "slippage_attribution": 72.20962000000002
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T01_EMA_9_21"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 1741,
+        "censored_trades": 0,
+        "completed_trades": 1741,
+        "fees": 432.9102081200001,
+        "funding": -1.02629915,
+        "gross_price_cash": 52.37188999998508,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 13.553385725882649,
+            "observed": 1739
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.1091460668573443,
+            "observed": 1741
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.6027962152987946,
+            "observed": 1741
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 7.70383043218938,
+            "observed": 1740
+          }
+        },
+        "mean_mae_bps": 5.721534188428633,
+        "mean_mfe_bps": 9.915454006858507,
+        "net_cash": -469.8802672700149,
+        "slippage_attribution": 88.31565000000062
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 1517,
+        "censored_trades": 0,
+        "completed_trades": 1517,
+        "fees": 377.1642112000001,
+        "funding": 1.0204532200000003,
+        "gross_price_cash": -28.013119999985157,
+        "horizons": {
+          "120": {
+            "censored": 3,
+            "mean_directional_bps": -11.543523524603046,
+            "observed": 1514
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.1403376669595615,
+            "observed": 1517
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.07234638915356773,
+            "observed": 1517
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -6.009036859087303,
+            "observed": 1517
+          }
+        },
+        "mean_mae_bps": 6.013018770226378,
+        "mean_mfe_bps": 9.098149707167613,
+        "net_cash": -481.05305797998517,
+        "slippage_attribution": 76.8961800000008
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 1741,
+        "censored_trades": 0,
+        "completed_trades": 1741,
+        "fees": 853.4463100500005,
+        "funding": -0.69879889,
+        "gross_price_cash": 33.49986999998485,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 13.553385725882649,
+            "observed": 1739
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.1091460668573443,
+            "observed": 1741
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.6027962152987946,
+            "observed": 1741
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 7.70383043218938,
+            "observed": 1740
+          }
+        },
+        "mean_mae_bps": 9.675693369275741,
+        "mean_mfe_bps": 8.403591976289679,
+        "net_cash": -1249.0585989400151,
+        "slippage_attribution": 428.41336000000274
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 1517,
+        "censored_trades": 0,
+        "completed_trades": 1517,
+        "fees": 744.2460829500005,
+        "funding": 0.6829720100000001,
+        "gross_price_cash": -24.821599999985335,
+        "horizons": {
+          "120": {
+            "censored": 3,
+            "mean_directional_bps": -11.543523524603046,
+            "observed": 1514
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.1403376669595615,
+            "observed": 1517
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.07234638915356773,
+            "observed": 1517
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -6.009036859087303,
+            "observed": 1517
+          }
+        },
+        "mean_mae_bps": 9.950548670615683,
+        "mean_mfe_bps": 7.7002005404727525,
+        "net_cash": -1141.9882009399853,
+        "slippage_attribution": 373.60349000000093
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 1752,
+        "censored_trades": 0,
+        "completed_trades": 1752,
+        "fees": 434.84470341000053,
+        "funding": -2.3012816599999995,
+        "gross_price_cash": 18.620549999998627,
+        "horizons": {
+          "120": {
+            "censored": 10,
+            "mean_directional_bps": 1.4284181644598617,
+            "observed": 1742
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 0.00615582285806716,
+            "observed": 1751
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 0.667460341418849,
+            "observed": 1751
+          },
+          "60": {
+            "censored": 2,
+            "mean_directional_bps": 0.8046633789123172,
+            "observed": 1750
+          }
+        },
+        "mean_mae_bps": 8.02535165417981,
+        "mean_mfe_bps": 13.361550362182767,
+        "net_cash": -506.7698250700014,
+        "slippage_attribution": 88.24438999999946
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 1714,
+        "censored_trades": 0,
+        "completed_trades": 1714,
+        "fees": 425.31197267999977,
+        "funding": 2.8217506199999995,
+        "gross_price_cash": -9.037269999998982,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -0.9507778831346129,
+            "observed": 1713
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.6416805991207587,
+            "observed": 1714
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.8833619413420319,
+            "observed": 1714
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -2.6627826373691104,
+            "observed": 1713
+          }
+        },
+        "mean_mae_bps": 7.7252277154773425,
+        "mean_mfe_bps": 15.876808674977548,
+        "net_cash": -517.799942059999,
+        "slippage_attribution": 86.27244999999958
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 1752,
+        "censored_trades": 0,
+        "completed_trades": 1752,
+        "fees": 853.0531348899989,
+        "funding": -1.8725489,
+        "gross_price_cash": 24.80664000000787,
+        "horizons": {
+          "120": {
+            "censored": 10,
+            "mean_directional_bps": 1.4284181644598617,
+            "observed": 1742
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 0.00615582285806716,
+            "observed": 1751
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 0.667460341418849,
+            "observed": 1751
+          },
+          "60": {
+            "censored": 2,
+            "mean_directional_bps": 0.8046633789123172,
+            "observed": 1750
+          }
+        },
+        "mean_mae_bps": 11.97994216510218,
+        "mean_mfe_bps": 11.743033562293773,
+        "net_cash": -1257.813173789992,
+        "slippage_attribution": 427.6941300000007
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 1714,
+        "censored_trades": 0,
+        "completed_trades": 1714,
+        "fees": 836.4085018100003,
+        "funding": 2.1492761799999998,
+        "gross_price_cash": 0.23145999999202413,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -0.9507778831346129,
+            "observed": 1713
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.6416805991207587,
+            "observed": 1714
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.8833619413420319,
+            "observed": 1714
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -2.6627826373691104,
+            "observed": 1713
+          }
+        },
+        "mean_mae_bps": 11.550551263679923,
+        "mean_mfe_bps": 14.031025169362877,
+        "net_cash": -1253.390875630008,
+        "slippage_attribution": 419.36311000000126
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 850,
+        "censored_trades": 0,
+        "completed_trades": 850,
+        "fees": 211.10960528000032,
+        "funding": -0.14935009,
+        "gross_price_cash": 10.165060000011396,
+        "horizons": {
+          "120": {
+            "censored": 7,
+            "mean_directional_bps": -6.58104048490494,
+            "observed": 843
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.8637042909047491,
+            "observed": 850
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.057947278628793744,
+            "observed": 850
+          },
+          "60": {
+            "censored": 3,
+            "mean_directional_bps": -3.0830055386271966,
+            "observed": 847
+          }
+        },
+        "mean_mae_bps": 7.3082777468315285,
+        "mean_mfe_bps": 10.859277341888987,
+        "net_cash": -244.0076053699886,
+        "slippage_attribution": 42.91371000000008
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 736,
+        "censored_trades": 1,
+        "completed_trades": 735,
+        "fees": 182.46963762000004,
+        "funding": 0.5624118800000001,
+        "gross_price_cash": 50.165869999988296,
+        "horizons": {
+          "120": {
+            "censored": 6,
+            "mean_directional_bps": 2.6528988141407917,
+            "observed": 730
+          },
+          "15": {
+            "censored": 2,
+            "mean_directional_bps": 0.9876177727562271,
+            "observed": 734
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": -0.3364152384154883,
+            "observed": 735
+          },
+          "60": {
+            "censored": 6,
+            "mean_directional_bps": 4.46014016545393,
+            "observed": 730
+          }
+        },
+        "mean_mae_bps": 6.971953110317617,
+        "mean_mfe_bps": 17.23386946174737,
+        "net_cash": -168.8439857400117,
+        "slippage_attribution": 37.10263000000009
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 850,
+        "censored_trades": 0,
+        "completed_trades": 850,
+        "fees": 422.21432108,
+        "funding": -0.14190209,
+        "gross_price_cash": 5.277739999987837,
+        "horizons": {
+          "120": {
+            "censored": 7,
+            "mean_directional_bps": -6.58104048490494,
+            "observed": 843
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.8637042909047491,
+            "observed": 850
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.057947278628793744,
+            "observed": 850
+          },
+          "60": {
+            "censored": 3,
+            "mean_directional_bps": -3.0830055386271966,
+            "observed": 847
+          }
+        },
+        "mean_mae_bps": 11.246733269039499,
+        "mean_mfe_bps": 9.36888507324619,
+        "net_cash": -628.8223231700122,
+        "slippage_attribution": 211.74384000000057
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 736,
+        "censored_trades": 1,
+        "completed_trades": 735,
+        "fees": 364.95071814,
+        "funding": 0.55647371,
+        "gross_price_cash": 38.71094000001137,
+        "horizons": {
+          "120": {
+            "censored": 6,
+            "mean_directional_bps": 2.6528988141407917,
+            "observed": 730
+          },
+          "15": {
+            "censored": 2,
+            "mean_directional_bps": 0.9876177727562271,
+            "observed": 734
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": -0.3364152384154883,
+            "observed": 735
+          },
+          "60": {
+            "censored": 6,
+            "mean_directional_bps": 4.46014016545393,
+            "observed": 730
+          }
+        },
+        "mean_mae_bps": 10.835981452319077,
+        "mean_mfe_bps": 15.544748644661635,
+        "net_cash": -508.69290442998863,
+        "slippage_attribution": 183.00960000000043
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 773,
+        "censored_trades": 0,
+        "completed_trades": 773,
+        "fees": 192.22055024000028,
+        "funding": -1.07454927,
+        "gross_price_cash": 36.325340000021036,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 11.985565517585202,
+            "observed": 771
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.1842441940252773,
+            "observed": 773
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.5880673762021965,
+            "observed": 773
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 5.815619041876076,
+            "observed": 772
+          }
+        },
+        "mean_mae_bps": 10.696596989020968,
+        "mean_mfe_bps": 21.88344817577914,
+        "net_cash": -196.19742950997897,
+        "slippage_attribution": 39.227670000000074
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 717,
+        "censored_trades": 0,
+        "completed_trades": 717,
+        "fees": 178.25317737000003,
+        "funding": 1.2660167399999998,
+        "gross_price_cash": -22.106670000020358,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -13.584252221612855,
+            "observed": 715
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.32700036517511,
+            "observed": 717
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.15005343465127158,
+            "observed": 717
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -7.317429702843116,
+            "observed": 717
+          }
+        },
+        "mean_mae_bps": 11.700006950828074,
+        "mean_mfe_bps": 19.379836927089087,
+        "net_cash": -235.43049063002036,
+        "slippage_attribution": 36.33666000000009
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 773,
+        "censored_trades": 0,
+        "completed_trades": 773,
+        "fees": 384.43750997000006,
+        "funding": -0.8957126599999999,
+        "gross_price_cash": 32.738860000010355,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 11.985565517585202,
+            "observed": 771
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.1842441940252773,
+            "observed": 773
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.5880673762021965,
+            "observed": 773
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 5.815619041876076,
+            "observed": 772
+          }
+        },
+        "mean_mae_bps": 14.681946720325781,
+        "mean_mfe_bps": 18.93004613286654,
+        "net_cash": -545.5868326299897,
+        "slippage_attribution": 192.9924699999997
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 717,
+        "censored_trades": 0,
+        "completed_trades": 717,
+        "fees": 356.5012719699996,
+        "funding": 1.04911049,
+        "gross_price_cash": -17.023900000010887,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -13.584252221612855,
+            "observed": 715
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.32700036517511,
+            "observed": 717
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.15005343465127158,
+            "observed": 717
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -7.317429702843116,
+            "observed": 717
+          }
+        },
+        "mean_mae_bps": 15.693431535258053,
+        "mean_mfe_bps": 16.571120896690665,
+        "net_cash": -551.4310514800109,
+        "slippage_attribution": 178.95498999999938
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 775,
+        "censored_trades": 1,
+        "completed_trades": 774,
+        "fees": 192.08762335999967,
+        "funding": -2.5476653600000003,
+        "gross_price_cash": 9.607539999991682,
+        "horizons": {
+          "120": {
+            "censored": 4,
+            "mean_directional_bps": 0.44403073562490986,
+            "observed": 771
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -0.5207518714605431,
+            "observed": 774
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 0.14544817860793424,
+            "observed": 774
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 0.43375996242246034,
+            "observed": 774
+          }
+        },
+        "mean_mae_bps": 17.365787782433816,
+        "mean_mfe_bps": 30.356020925025717,
+        "net_cash": -224.02871872000833,
+        "slippage_attribution": 39.00097000000011
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 731,
+        "censored_trades": 0,
+        "completed_trades": 731,
+        "fees": 181.36733617999968,
+        "funding": 2.8234900600000006,
+        "gross_price_cash": -1.0434699999919577,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -1.8063956098548766,
+            "observed": 731
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.5820706133395324,
+            "observed": 731
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.04799261085686417,
+            "observed": 731
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -1.4794067135110067,
+            "observed": 731
+          }
+        },
+        "mean_mae_bps": 17.69872932746711,
+        "mean_mfe_bps": 36.45044741519565,
+        "net_cash": -216.37038611999196,
+        "slippage_attribution": 36.7830700000001
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 775,
+        "censored_trades": 1,
+        "completed_trades": 774,
+        "fees": 384.17706764000053,
+        "funding": -2.32380432,
+        "gross_price_cash": 11.439330000029095,
+        "horizons": {
+          "120": {
+            "censored": 4,
+            "mean_directional_bps": 0.44403073562490986,
+            "observed": 771
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -0.5207518714605431,
+            "observed": 774
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 0.14544817860793424,
+            "observed": 774
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 0.43375996242246034,
+            "observed": 774
+          }
+        },
+        "mean_mae_bps": 21.35406822900489,
+        "mean_mfe_bps": 27.36077739611016,
+        "net_cash": -567.6759519599709,
+        "slippage_attribution": 192.61441000000048
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 731,
+        "censored_trades": 0,
+        "completed_trades": 731,
+        "fees": 362.73319426,
+        "funding": 2.64549851,
+        "gross_price_cash": 0.4282499999705624,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -1.8063956098548766,
+            "observed": 731
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.5820706133395324,
+            "observed": 731
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.04799261085686417,
+            "observed": 731
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -1.4794067135110067,
+            "observed": 731
+          }
+        },
+        "mean_mae_bps": 21.67806368085902,
+        "mean_mfe_bps": 33.235412471582045,
+        "net_cash": -541.5308157500294,
+        "slippage_attribution": 181.87137000000047
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 344,
+        "censored_trades": 0,
+        "completed_trades": 344,
+        "fees": 85.44967008999993,
+        "funding": -0.24840190999999998,
+        "gross_price_cash": 23.497580000006792,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -6.56901060660334,
+            "observed": 342
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.2096704094278894,
+            "observed": 344
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.09969578200347319,
+            "observed": 344
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -0.2649675112908631,
+            "observed": 344
+          }
+        },
+        "mean_mae_bps": 14.849236900695717,
+        "mean_mfe_bps": 28.854462628420638,
+        "net_cash": -79.56834199999321,
+        "slippage_attribution": 17.367849999999976
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 331,
+        "censored_trades": 1,
+        "completed_trades": 330,
+        "fees": 81.89495458999995,
+        "funding": 0.6461090199999999,
+        "gross_price_cash": 33.32048999999294,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -1.398161496938835,
+            "observed": 330
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.4330587767781395,
+            "observed": 331
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.4881721781477373,
+            "observed": 331
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 2.7427843200764044,
+            "observed": 330
+          }
+        },
+        "mean_mae_bps": 15.99985681460589,
+        "mean_mfe_bps": 35.520228412198904,
+        "net_cash": -64.56511557000704,
+        "slippage_attribution": 16.636759999999967
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 344,
+        "censored_trades": 0,
+        "completed_trades": 344,
+        "fees": 170.89933496999996,
+        "funding": -0.24840190999999998,
+        "gross_price_cash": 23.497579999984985,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -6.56901060660334,
+            "observed": 342
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.2096704094278894,
+            "observed": 344
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.09969578200347319,
+            "observed": 344
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -0.2649675112908631,
+            "observed": 344
+          }
+        },
+        "mean_mae_bps": 18.809451066454898,
+        "mean_mfe_bps": 25.775920571473318,
+        "net_cash": -233.35230688001502,
+        "slippage_attribution": 85.70215000000016
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 331,
+        "censored_trades": 1,
+        "completed_trades": 330,
+        "fees": 163.78989572999987,
+        "funding": 0.6461090199999999,
+        "gross_price_cash": 33.32049000001498,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -1.398161496938835,
+            "observed": 330
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.4330587767781395,
+            "observed": 331
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.4881721781477373,
+            "observed": 331
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 2.7427843200764044,
+            "observed": 330
+          }
+        },
+        "mean_mae_bps": 19.977499359440802,
+        "mean_mfe_bps": 32.3912480022382,
+        "net_cash": -211.959376709985,
+        "slippage_attribution": 82.13608000000006
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T02_ROC_20_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 684,
+        "censored_trades": 0,
+        "completed_trades": 684,
+        "fees": 170.08772955999964,
+        "funding": -0.82065695,
+        "gross_price_cash": 42.03324000001673,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 13.771508133346835,
+            "observed": 682
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.5024433097718372,
+            "observed": 684
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.6059752875326483,
+            "observed": 684
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 7.292927355462927,
+            "observed": 684
+          }
+        },
+        "mean_mae_bps": 12.041868351296115,
+        "mean_mfe_bps": 24.804333024244873,
+        "net_cash": -163.55284650998328,
+        "slippage_attribution": 34.67770000000001
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 620,
+        "censored_trades": 1,
+        "completed_trades": 619,
+        "fees": 153.89635828,
+        "funding": 0.9385895500000001,
+        "gross_price_cash": -55.20362000001675,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -11.468412843942309,
+            "observed": 618
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -1.9634351464616115,
+            "observed": 619
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": -0.397293300303107,
+            "observed": 619
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -6.032736038959223,
+            "observed": 619
+          }
+        },
+        "mean_mae_bps": 14.030956494478824,
+        "mean_mfe_bps": 21.7236422429452,
+        "net_cash": -239.5302187300167,
+        "slippage_attribution": 31.368830000000052
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 684,
+        "censored_trades": 0,
+        "completed_trades": 684,
+        "fees": 340.16896219000023,
+        "funding": -0.77096803,
+        "gross_price_cash": 35.536949999994114,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 13.771508133346835,
+            "observed": 682
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.5024433097718372,
+            "observed": 684
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.6059752875326483,
+            "observed": 684
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 7.292927355462927,
+            "observed": 684
+          }
+        },
+        "mean_mae_bps": 16.02791322230991,
+        "mean_mfe_bps": 21.801389214374492,
+        "net_cash": -476.1471402200059,
+        "slippage_attribution": 170.74415999999948
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 620,
+        "censored_trades": 1,
+        "completed_trades": 619,
+        "fees": 307.78813652000014,
+        "funding": 0.84480738,
+        "gross_price_cash": -50.60154999999486,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -11.468412843942309,
+            "observed": 618
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -1.9634351464616115,
+            "observed": 619
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": -0.397293300303107,
+            "observed": 619
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -6.032736038959223,
+            "observed": 619
+          }
+        },
+        "mean_mae_bps": 18.003954050037418,
+        "mean_mfe_bps": 18.80066127085563,
+        "net_cash": -512.0349091399949,
+        "slippage_attribution": 154.49002999999968
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 684,
+        "censored_trades": 0,
+        "completed_trades": 684,
+        "fees": 169.75227397999998,
+        "funding": -2.6942902299999996,
+        "gross_price_cash": 11.954690000016033,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 2.4605603442241137,
+            "observed": 682
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.9604068197582621,
+            "observed": 684
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.45367789346018333,
+            "observed": 684
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 2.209318333833308,
+            "observed": 683
+          }
+        },
+        "mean_mae_bps": 18.884895792851783,
+        "mean_mfe_bps": 33.21091835007079,
+        "net_cash": -194.93612420998397,
+        "slippage_attribution": 34.44424999999997
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 667,
+        "censored_trades": 0,
+        "completed_trades": 667,
+        "fees": 165.54035587999996,
+        "funding": 3.22658854,
+        "gross_price_cash": -5.244240000015851,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 0.0020133215518029304,
+            "observed": 667
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.8711036923906165,
+            "observed": 667
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.025631279956249205,
+            "observed": 667
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 0.02407464757127775,
+            "observed": 667
+          }
+        },
+        "mean_mae_bps": 18.22039469899315,
+        "mean_mfe_bps": 38.4963802959849,
+        "net_cash": -201.15003734001584,
+        "slippage_attribution": 33.59203
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 684,
+        "censored_trades": 0,
+        "completed_trades": 684,
+        "fees": 339.50346986999966,
+        "funding": -2.5543733399999997,
+        "gross_price_cash": 10.885360000032168,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 2.4605603442241137,
+            "observed": 682
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.9604068197582621,
+            "observed": 684
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.45367789346018333,
+            "observed": 684
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 2.209318333833308,
+            "observed": 683
+          }
+        },
+        "mean_mae_bps": 22.859535911533992,
+        "mean_mfe_bps": 30.141831500233476,
+        "net_cash": -501.38879320996784,
+        "slippage_attribution": 170.21631000000045
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 667,
+        "censored_trades": 0,
+        "completed_trades": 667,
+        "fees": 331.07937323999994,
+        "funding": 3.0572396799999995,
+        "gross_price_cash": -3.8925600000317084,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 0.0020133215518029304,
+            "observed": 667
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.8711036923906165,
+            "observed": 667
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.025631279956249205,
+            "observed": 667
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 0.02407464757127775,
+            "observed": 667
+          }
+        },
+        "mean_mae_bps": 22.153806031255424,
+        "mean_mfe_bps": 35.368737100516086,
+        "net_cash": -497.9212935600317,
+        "slippage_attribution": 166.00660000000036
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 312,
+        "censored_trades": 0,
+        "completed_trades": 312,
+        "fees": 77.46415592000004,
+        "funding": -0.28336391000000005,
+        "gross_price_cash": 10.115899999996197,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -12.061587504205406,
+            "observed": 311
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.7985551653228539,
+            "observed": 312
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.4995433114223506,
+            "observed": 312
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -6.208993576763819,
+            "observed": 311
+          }
+        },
+        "mean_mae_bps": 16.390608317336493,
+        "mean_mfe_bps": 29.977057294920368,
+        "net_cash": -83.36969983000381,
+        "slippage_attribution": 15.73807999999997
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 291,
+        "censored_trades": 1,
+        "completed_trades": 290,
+        "fees": 71.97296777000007,
+        "funding": 0.6337147299999999,
+        "gross_price_cash": 59.54765000000402,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 4.087808940690169,
+            "observed": 290
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 3.5808405325372044,
+            "observed": 290
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 1.0550163233252865,
+            "observed": 290
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 4.818673687855554,
+            "observed": 290
+          }
+        },
+        "mean_mae_bps": 15.094641504167,
+        "mean_mfe_bps": 43.260250971886386,
+        "net_cash": -26.420693039995967,
+        "slippage_attribution": 14.629089999999975
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 312,
+        "censored_trades": 0,
+        "completed_trades": 312,
+        "fees": 154.92830916000003,
+        "funding": -0.28336391000000005,
+        "gross_price_cash": 10.115899999990306,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -12.061587504205406,
+            "observed": 311
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.7985551653228539,
+            "observed": 312
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.4995433114223506,
+            "observed": 312
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -6.208993576763819,
+            "observed": 311
+          }
+        },
+        "mean_mae_bps": 20.355071230222023,
+        "mean_mfe_bps": 26.93159394213578,
+        "net_cash": -222.7922930700097,
+        "slippage_attribution": 77.69652000000012
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 291,
+        "censored_trades": 1,
+        "completed_trades": 290,
+        "fees": 143.94591948000004,
+        "funding": 0.6337147299999999,
+        "gross_price_cash": 59.54765000001049,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 4.087808940690169,
+            "observed": 290
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 3.5808405325372044,
+            "observed": 290
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 1.0550163233252865,
+            "observed": 290
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 4.818673687855554,
+            "observed": 290
+          }
+        },
+        "mean_mae_bps": 19.038636116055734,
+        "mean_mfe_bps": 40.141212442157354,
+        "net_cash": -155.95814474998951,
+        "slippage_attribution": 72.19359000000004
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 750,
+        "censored_trades": 0,
+        "completed_trades": 750,
+        "fees": 186.50905706999953,
+        "funding": -1.08702932,
+        "gross_price_cash": 33.50199999999931,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 13.797713268070115,
+            "observed": 749
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.4927344885960674,
+            "observed": 750
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.0414704987985743,
+            "observed": 750
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 8.533186896558938,
+            "observed": 749
+          }
+        },
+        "mean_mae_bps": 11.076013923801202,
+        "mean_mfe_bps": 21.84213997945073,
+        "net_cash": -192.11794639000072,
+        "slippage_attribution": 38.02386
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 703,
+        "censored_trades": 1,
+        "completed_trades": 702,
+        "fees": 174.5478860699999,
+        "funding": 0.96551892,
+        "gross_price_cash": -31.822919999998888,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -11.798812381442636,
+            "observed": 701
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -2.3743310936842184,
+            "observed": 702
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": -0.49512793223396195,
+            "observed": 702
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -6.3414277732464255,
+            "observed": 702
+          }
+        },
+        "mean_mae_bps": 12.226342070935141,
+        "mean_mfe_bps": 18.92593391790072,
+        "net_cash": -241.00256714999887,
+        "slippage_attribution": 35.597280000000076
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 750,
+        "censored_trades": 0,
+        "completed_trades": 750,
+        "fees": 373.0140565700001,
+        "funding": -0.9070868200000001,
+        "gross_price_cash": 29.44259000000494,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 13.797713268070115,
+            "observed": 749
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.4927344885960674,
+            "observed": 750
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.0414704987985743,
+            "observed": 750
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 8.533186896558938,
+            "observed": 749
+          }
+        },
+        "mean_mae_bps": 15.062149608819528,
+        "mean_mfe_bps": 18.897611429145524,
+        "net_cash": -531.702373389995,
+        "slippage_attribution": 187.22381999999945
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 703,
+        "censored_trades": 1,
+        "completed_trades": 702,
+        "fees": 349.09363405999994,
+        "funding": 0.8020772599999999,
+        "gross_price_cash": -29.672390000005844,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -11.798812381442636,
+            "observed": 701
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -2.3743310936842184,
+            "observed": 702
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": -0.49512793223396195,
+            "observed": 702
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -6.3414277732464255,
+            "observed": 702
+          }
+        },
+        "mean_mae_bps": 16.19823804205103,
+        "mean_mfe_bps": 16.10084494661888,
+        "net_cash": -553.1926368000059,
+        "slippage_attribution": 175.2286899999995
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 728,
+        "censored_trades": 0,
+        "completed_trades": 728,
+        "fees": 180.66510547000013,
+        "funding": -2.8599133500000002,
+        "gross_price_cash": 15.179609999995302,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 0.7975287204847644,
+            "observed": 726
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.046617569795981625,
+            "observed": 728
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.24409439666587782,
+            "observed": 728
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 1.2978846569124667,
+            "observed": 727
+          }
+        },
+        "mean_mae_bps": 18.10838388119114,
+        "mean_mfe_bps": 31.74129594047006,
+        "net_cash": -205.0050588200047,
+        "slippage_attribution": 36.65965000000006
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 718,
+        "censored_trades": 1,
+        "completed_trades": 717,
+        "fees": 177.96271891000006,
+        "funding": 3.1710049399999996,
+        "gross_price_cash": -27.683529999995155,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -5.255509171804747,
+            "observed": 717
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -2.4912388577965556,
+            "observed": 717
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.13111636600373383,
+            "observed": 718
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -0.35071572092042086,
+            "observed": 717
+          }
+        },
+        "mean_mae_bps": 18.015526564634452,
+        "mean_mfe_bps": 34.86070332799898,
+        "net_cash": -238.58310396999514,
+        "slippage_attribution": 36.107860000000066
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 728,
+        "censored_trades": 0,
+        "completed_trades": 728,
+        "fees": 361.33015501999967,
+        "funding": -2.6907029400000004,
+        "gross_price_cash": 15.137220000003492,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": 0.7975287204847644,
+            "observed": 726
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.046617569795981625,
+            "observed": 728
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.24409439666587782,
+            "observed": 728
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 1.2978846569124667,
+            "observed": 727
+          }
+        },
+        "mean_mae_bps": 22.086010414902233,
+        "mean_mfe_bps": 28.76279799421182,
+        "net_cash": -530.0493779599965,
+        "slippage_attribution": 181.1657400000004
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 718,
+        "censored_trades": 1,
+        "completed_trades": 717,
+        "fees": 355.9249577699997,
+        "funding": 2.9770350900000007,
+        "gross_price_cash": -27.18439000000376,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -5.255509171804747,
+            "observed": 717
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": -2.4912388577965556,
+            "observed": 717
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 0.13111636600373383,
+            "observed": 718
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -0.35071572092042086,
+            "observed": 717
+          }
+        },
+        "mean_mae_bps": 21.95126511349138,
+        "mean_mfe_bps": 31.753702952568023,
+        "net_cash": -558.5889526800038,
+        "slippage_attribution": 178.45664000000036
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 336,
+        "censored_trades": 0,
+        "completed_trades": 336,
+        "fees": 83.40918202000002,
+        "funding": -0.1589391,
+        "gross_price_cash": 4.138429999989813,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -9.49294069140049,
+            "observed": 334
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.7923803313017488,
+            "observed": 336
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.3043028113080917,
+            "observed": 336
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -4.977858906992002,
+            "observed": 335
+          }
+        },
+        "mean_mae_bps": 16.891549934545335,
+        "mean_mfe_bps": 28.15680600059071,
+        "net_cash": -96.37528112001019,
+        "slippage_attribution": 16.945589999999967
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 313,
+        "censored_trades": 1,
+        "completed_trades": 312,
+        "fees": 77.44158080000003,
+        "funding": 0.63307189,
+        "gross_price_cash": 59.20040000001062,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 3.9371639941738645,
+            "observed": 312
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 4.218786264977077,
+            "observed": 312
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 2.6280299128406317,
+            "observed": 312
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 3.5796689067882577,
+            "observed": 312
+          }
+        },
+        "mean_mae_bps": 14.183422309140242,
+        "mean_mfe_bps": 37.99589524775829,
+        "net_cash": -33.350278909989356,
+        "slippage_attribution": 15.742169999999968
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 336,
+        "censored_trades": 0,
+        "completed_trades": 336,
+        "fees": 166.81837434999983,
+        "funding": -0.1589391,
+        "gross_price_cash": 4.13843000000255,
+        "horizons": {
+          "120": {
+            "censored": 2,
+            "mean_directional_bps": -9.49294069140049,
+            "observed": 334
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.7923803313017488,
+            "observed": 336
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.3043028113080917,
+            "observed": 336
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": -4.977858906992002,
+            "observed": 335
+          }
+        },
+        "mean_mae_bps": 20.856139317382297,
+        "mean_mfe_bps": 25.357812423727626,
+        "net_cash": -246.48782344999745,
+        "slippage_attribution": 83.64894000000017
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 313,
+        "censored_trades": 1,
+        "completed_trades": 312,
+        "fees": 154.88313328000004,
+        "funding": 0.63307189,
+        "gross_price_cash": 59.20039999999756,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 3.9371639941738645,
+            "observed": 312
+          },
+          "15": {
+            "censored": 1,
+            "mean_directional_bps": 4.218786264977077,
+            "observed": 312
+          },
+          "5": {
+            "censored": 1,
+            "mean_directional_bps": 2.6280299128406317,
+            "observed": 312
+          },
+          "60": {
+            "censored": 1,
+            "mean_directional_bps": 3.5796689067882577,
+            "observed": 312
+          }
+        },
+        "mean_mae_bps": 18.125052029974206,
+        "mean_mfe_bps": 34.8839365101462,
+        "net_cash": -172.72070139000243,
+        "slippage_attribution": 77.67104000000005
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T03_DONCHIAN_20"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 189,
+        "censored_trades": 0,
+        "completed_trades": 189,
+        "fees": 46.99513847000002,
+        "funding": -0.73055519,
+        "gross_price_cash": 16.26712000000456,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 11.542621257036295,
+            "observed": 188
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.5439092581354144,
+            "observed": 189
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.5307058292628075,
+            "observed": 189
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 1.0362197427627673,
+            "observed": 189
+          }
+        },
+        "mean_mae_bps": 35.05645981815646,
+        "mean_mfe_bps": 16.018900299494,
+        "net_cash": -41.02565365999544,
+        "slippage_attribution": 9.567079999999995
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 224,
+        "censored_trades": 0,
+        "completed_trades": 224,
+        "fees": 55.69195612999998,
+        "funding": 0.6456932800000001,
+        "gross_price_cash": -18.333590000004,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -9.79814762558178,
+            "observed": 224
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -4.7506158379163494,
+            "observed": 224
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.581130582744883,
+            "observed": 224
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -10.572172782771705,
+            "observed": 224
+          }
+        },
+        "mean_mae_bps": 41.41011775262352,
+        "mean_mfe_bps": 13.74533827585895,
+        "net_cash": -84.736662850004,
+        "slippage_attribution": 11.356809999999992
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 189,
+        "censored_trades": 0,
+        "completed_trades": 189,
+        "fees": 93.99027136999999,
+        "funding": -0.73055519,
+        "gross_price_cash": 16.267120000002333,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 11.542621257036295,
+            "observed": 188
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.5439092581354144,
+            "observed": 189
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.5307058292628075,
+            "observed": 189
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 1.0362197427627673,
+            "observed": 189
+          }
+        },
+        "mean_mae_bps": 39.030644254448944,
+        "mean_mfe_bps": 12.713360629039132,
+        "net_cash": -125.61997655999767,
+        "slippage_attribution": 47.16626999999999
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 224,
+        "censored_trades": 0,
+        "completed_trades": 224,
+        "fees": 111.38391986000005,
+        "funding": 0.6456932800000001,
+        "gross_price_cash": -18.33359000000274,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -9.79814762558178,
+            "observed": 224
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -4.7506158379163494,
+            "observed": 224
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -1.581130582744883,
+            "observed": 224
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -10.572172782771705,
+            "observed": 224
+          }
+        },
+        "mean_mae_bps": 45.381815378598375,
+        "mean_mfe_bps": 10.514695613103399,
+        "net_cash": -184.97748658000273,
+        "slippage_attribution": 55.90566999999997
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 199,
+        "censored_trades": 0,
+        "completed_trades": 199,
+        "fees": 49.40014091000004,
+        "funding": -1.4365877800000002,
+        "gross_price_cash": -18.843169999999485,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -2.783093481800791,
+            "observed": 199
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -3.4152586668356233,
+            "observed": 199
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.999570411111171,
+            "observed": 199
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -6.664145121528064,
+            "observed": 199
+          }
+        },
+        "mean_mae_bps": 65.31587073427471,
+        "mean_mfe_bps": 20.64802295190947,
+        "net_cash": -79.70876868999949,
+        "slippage_attribution": 10.028869999999982
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 221,
+        "censored_trades": 0,
+        "completed_trades": 221,
+        "fees": 54.80724400999999,
+        "funding": 1.32963049,
+        "gross_price_cash": 15.082919999999556,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 6.592706930087154,
+            "observed": 221
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.35073975919736433,
+            "observed": 221
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.20516549033941084,
+            "observed": 221
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 4.876929453057698,
+            "observed": 221
+          }
+        },
+        "mean_mae_bps": 44.54200131090643,
+        "mean_mfe_bps": 23.76373532260111,
+        "net_cash": -49.51579352000044,
+        "slippage_attribution": 11.12109999999998
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 199,
+        "censored_trades": 0,
+        "completed_trades": 199,
+        "fees": 98.80029043000002,
+        "funding": -1.4365877800000002,
+        "gross_price_cash": -18.84317000001009,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -2.783093481800791,
+            "observed": 199
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -3.4152586668356233,
+            "observed": 199
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.999570411111171,
+            "observed": 199
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -6.664145121528064,
+            "observed": 199
+          }
+        },
+        "mean_mae_bps": 69.2673357250425,
+        "mean_mfe_bps": 17.467240010764957,
+        "net_cash": -168.62048821001008,
+        "slippage_attribution": 49.54043999999999
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 221,
+        "censored_trades": 0,
+        "completed_trades": 221,
+        "fees": 109.61447505000001,
+        "funding": 1.32963049,
+        "gross_price_cash": 15.082920000009723,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 6.592706930087154,
+            "observed": 221
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 0.35073975919736433,
+            "observed": 221
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.20516549033941084,
+            "observed": 221
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 4.876929453057698,
+            "observed": 221
+          }
+        },
+        "mean_mae_bps": 48.522155573685126,
+        "mean_mfe_bps": 20.28421989778411,
+        "net_cash": -148.15343455999027,
+        "slippage_attribution": 54.951509999999985
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 94,
+        "censored_trades": 0,
+        "completed_trades": 94,
+        "fees": 23.32136794,
+        "funding": -0.28080934,
+        "gross_price_cash": -44.92959000000495,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -16.573173793261706,
+            "observed": 94
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -10.480297317181623,
+            "observed": 94
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.0185315698912274,
+            "observed": 94
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -18.988712534034256,
+            "observed": 94
+          }
+        },
+        "mean_mae_bps": 80.89315870745651,
+        "mean_mfe_bps": 20.304077296801616,
+        "net_cash": -73.27167728000495,
+        "slippage_attribution": 4.739910000000001
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 97,
+        "censored_trades": 0,
+        "completed_trades": 97,
+        "fees": 24.094819479999998,
+        "funding": 0.07518425000000001,
+        "gross_price_cash": -0.4590599999958309,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 0.0863783355593281,
+            "observed": 96
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -4.556659109467113,
+            "observed": 97
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.81981229856363,
+            "observed": 97
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -2.51087955434147,
+            "observed": 97
+          }
+        },
+        "mean_mae_bps": 39.179653681231095,
+        "mean_mfe_bps": 18.324130346092243,
+        "net_cash": -29.37942522999583,
+        "slippage_attribution": 4.900730000000001
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X1",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 94,
+        "censored_trades": 0,
+        "completed_trades": 94,
+        "fees": 46.642754769999996,
+        "funding": -0.28080934,
+        "gross_price_cash": -44.929589999999635,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -16.573173793261706,
+            "observed": 94
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -10.480297317181623,
+            "observed": 94
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.0185315698912274,
+            "observed": 94
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -18.988712534034256,
+            "observed": 94
+          }
+        },
+        "mean_mae_bps": 84.85755070118917,
+        "mean_mfe_bps": 16.8398027791475,
+        "net_cash": -115.24329410999962,
+        "slippage_attribution": 23.39014
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 97,
+        "censored_trades": 0,
+        "completed_trades": 97,
+        "fees": 48.189637209999994,
+        "funding": 0.07518425000000001,
+        "gross_price_cash": -0.4590599999999986,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 0.0863783355593281,
+            "observed": 96
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -4.556659109467113,
+            "observed": 97
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.81981229856363,
+            "observed": 97
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -2.51087955434147,
+            "observed": 97
+          }
+        },
+        "mean_mae_bps": 43.185974119974595,
+        "mean_mfe_bps": 14.874422323255125,
+        "net_cash": -72.73328296,
+        "slippage_attribution": 24.159769999999995
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 260,
+        "censored_trades": 0,
+        "completed_trades": 260,
+        "fees": 64.63822618999995,
+        "funding": -0.7413322099999999,
+        "gross_price_cash": -2.983179999990184,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 15.481162695919219,
+            "observed": 259
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.1186690917670972,
+            "observed": 260
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.5941178223352898,
+            "observed": 260
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 3.1920894758359317,
+            "observed": 260
+          }
+        },
+        "mean_mae_bps": 15.192730126910789,
+        "mean_mfe_bps": 24.742091937516953,
+        "net_cash": -81.52481839999018,
+        "slippage_attribution": 13.162079999999984
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 320,
+        "censored_trades": 0,
+        "completed_trades": 320,
+        "fees": 79.5687008,
+        "funding": 0.5204385699999999,
+        "gross_price_cash": -28.50295000001058,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -8.325130088300446,
+            "observed": 320
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -7.530479485388059,
+            "observed": 320
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.9648325691804165,
+            "observed": 320
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -8.738246332614235,
+            "observed": 320
+          }
+        },
+        "mean_mae_bps": 15.163109696308249,
+        "mean_mfe_bps": 21.273803912965697,
+        "net_cash": -123.77619223001057,
+        "slippage_attribution": 16.22497999999998
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-1",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 260,
+        "censored_trades": 0,
+        "completed_trades": 260,
+        "fees": 129.27645343999993,
+        "funding": -0.7413322099999999,
+        "gross_price_cash": -2.9831800000080677,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": 15.481162695919219,
+            "observed": 259
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": 1.1186690917670972,
+            "observed": 260
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.5941178223352898,
+            "observed": 260
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 3.1920894758359317,
+            "observed": 260
+          }
+        },
+        "mean_mae_bps": 19.152512276433328,
+        "mean_mfe_bps": 21.725848844441376,
+        "net_cash": -197.87516565000806,
+        "slippage_attribution": 64.87419999999993
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 320,
+        "censored_trades": 0,
+        "completed_trades": 320,
+        "fees": 159.13740497999999,
+        "funding": 0.5204385699999999,
+        "gross_price_cash": -28.502949999992214,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -8.325130088300446,
+            "observed": 320
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -7.530479485388059,
+            "observed": 320
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -2.9648325691804165,
+            "observed": 320
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -8.738246332614235,
+            "observed": 320
+          }
+        },
+        "mean_mae_bps": 19.13033032349221,
+        "mean_mfe_bps": 18.365598869069878,
+        "net_cash": -266.9897464099922,
+        "slippage_attribution": 79.86983000000004
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 254,
+        "censored_trades": 0,
+        "completed_trades": 254,
+        "fees": 63.04785406999994,
+        "funding": -0.9605728599999999,
+        "gross_price_cash": -27.684719999986026,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 3.1014734885768456,
+            "observed": 254
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.8844759069201085,
+            "observed": 254
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.8441949818245518,
+            "observed": 254
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -6.722928715966547,
+            "observed": 254
+          }
+        },
+        "mean_mae_bps": 24.710828277062472,
+        "mean_mfe_bps": 35.330923509138245,
+        "net_cash": -104.48912692998601,
+        "slippage_attribution": 12.795979999999966
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 288,
+        "censored_trades": 0,
+        "completed_trades": 288,
+        "fees": 71.41782233999999,
+        "funding": 1.5076313899999998,
+        "gross_price_cash": 5.769789999986855,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 4.574050545698189,
+            "observed": 288
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.8030029746321732,
+            "observed": 288
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.25360067272921977,
+            "observed": 288
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 4.571164562435131,
+            "observed": 288
+          }
+        },
+        "mean_mae_bps": 17.58480870941918,
+        "mean_mfe_bps": 34.992189818928736,
+        "net_cash": -78.62455095001314,
+        "slippage_attribution": 14.48414999999996
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-2",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 254,
+        "censored_trades": 0,
+        "completed_trades": 254,
+        "fees": 126.09571516000001,
+        "funding": -0.9605728599999999,
+        "gross_price_cash": -27.684720000019322,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 3.1014734885768456,
+            "observed": 254
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -1.8844759069201085,
+            "observed": 254
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.8441949818245518,
+            "observed": 254
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -6.722928715966547,
+            "observed": 254
+          }
+        },
+        "mean_mae_bps": 28.682536355900574,
+        "mean_mfe_bps": 32.248097659015144,
+        "net_cash": -217.96686802001932,
+        "slippage_attribution": 63.225859999999976
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 288,
+        "censored_trades": 0,
+        "completed_trades": 288,
+        "fees": 142.83564522999998,
+        "funding": 1.5076313899999998,
+        "gross_price_cash": 5.7697900000184905,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": 4.574050545698189,
+            "observed": 288
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -0.8030029746321732,
+            "observed": 288
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -0.25360067272921977,
+            "observed": 288
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": 4.571164562435131,
+            "observed": 288
+          }
+        },
+        "mean_mae_bps": 21.55183517054196,
+        "mean_mfe_bps": 31.762591049549453,
+        "net_cash": -207.1710038399815,
+        "slippage_attribution": 71.61278000000001
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 133,
+        "censored_trades": 0,
+        "completed_trades": 133,
+        "fees": 33.01107293,
+        "funding": -0.20678004,
+        "gross_price_cash": -33.840209999999544,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -19.777527606402526,
+            "observed": 133
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -14.381311928722516,
+            "observed": 133
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -5.531553237317974,
+            "observed": 133
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -15.083905762049264,
+            "observed": 133
+          }
+        },
+        "mean_mae_bps": 27.937740035425023,
+        "mean_mfe_bps": 31.60921223729631,
+        "net_cash": -73.76746296999954,
+        "slippage_attribution": 6.709400000000002
+      },
+      "scenario": "base",
+      "short": {
+        "candidate_count": 117,
+        "censored_trades": 0,
+        "completed_trades": 117,
+        "fees": 29.066826290000005,
+        "funding": 0.17368197,
+        "gross_price_cash": -6.1161799999997495,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -6.221901022677193,
+            "observed": 116
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -3.3391536946825364,
+            "observed": 117
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.6459727400861393,
+            "observed": 117
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -3.6231248753681133,
+            "observed": 117
+          }
+        },
+        "mean_mae_bps": 15.535758123930961,
+        "mean_mfe_bps": 26.347462770712323,
+        "net_cash": -40.91338431999975,
+        "slippage_attribution": 5.904060000000001
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    },
+    {
+      "block": "inner-screen-3",
+      "classification": "D1_DEVELOPMENT_DIAGNOSTIC_ONLY_SCENARIO_ONLY",
+      "exit": "X2",
+      "fold_id": "route-a-1m-multiteacher-train-diagnostic-20261026-v1",
+      "interpretation": "Close-to-close horizons and MFE/MAE are not executable profits or OOS evidence.",
+      "long": {
+        "candidate_count": 133,
+        "censored_trades": 0,
+        "completed_trades": 133,
+        "fees": 66.02215941,
+        "funding": -0.20678004,
+        "gross_price_cash": -33.84021000000689,
+        "horizons": {
+          "120": {
+            "censored": 0,
+            "mean_directional_bps": -19.777527606402526,
+            "observed": 133
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -14.381311928722516,
+            "observed": 133
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": -5.531553237317974,
+            "observed": 133
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -15.083905762049264,
+            "observed": 133
+          }
+        },
+        "mean_mae_bps": 31.916090324469913,
+        "mean_mfe_bps": 28.548173092771616,
+        "net_cash": -133.18122945000687,
+        "slippage_attribution": 33.11208
+      },
+      "scenario": "stress",
+      "short": {
+        "candidate_count": 117,
+        "censored_trades": 0,
+        "completed_trades": 117,
+        "fees": 58.13365560000001,
+        "funding": 0.17368197,
+        "gross_price_cash": -6.116179999992241,
+        "horizons": {
+          "120": {
+            "censored": 1,
+            "mean_directional_bps": -6.221901022677193,
+            "observed": 116
+          },
+          "15": {
+            "censored": 0,
+            "mean_directional_bps": -3.3391536946825364,
+            "observed": 117
+          },
+          "5": {
+            "censored": 0,
+            "mean_directional_bps": 1.6459727400861393,
+            "observed": 117
+          },
+          "60": {
+            "censored": 0,
+            "mean_directional_bps": -3.6231248753681133,
+            "observed": 117
+          }
+        },
+        "mean_mae_bps": 19.520110079775915,
+        "mean_mfe_bps": 23.09494268182829,
+        "net_cash": -93.22535362999224,
+        "slippage_attribution": 29.149199999999997
+      },
+      "source_identity": "9e5fb5a628f4ca849aeafbdc0dce50545b1d43c2fa1642bab005cef1469728b2",
+      "teacher": "T04_ZSCORE_60"
+    }
+  ],
+  "schema": "rles.route-a.entry-opportunity-audit.v1",
+  "scope": "previously consumed native decision and trade artifacts",
+  "warning": "Descriptive diagnosis only; horizons and MFE are not executable profit. Results do not prove predictive edge or independent OOS."
+}

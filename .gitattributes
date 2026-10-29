@@ -4,3 +4,8 @@ tests/fixtures/** -text
 docs/audit_evidence/** -text
 configs/** -text
 *.sha256 -text
+
+# These frozen teacher code hashes bind raw bytes across Windows and Ubuntu.
+packages/route_a_imitation/src/rles_route_a/teachers_1m/__init__.py -text
+packages/route_a_imitation/src/rles_route_a/teachers_1m/exits.py -text
+packages/route_a_imitation/src/rles_route_a/teachers_1m/registry.py -text
