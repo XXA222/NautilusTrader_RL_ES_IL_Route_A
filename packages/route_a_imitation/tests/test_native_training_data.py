@@ -154,6 +154,10 @@ def test_synthetic_native_candidate_to_frozen_model_pipeline(tmp_path, monkeypat
         verify_grant=lambda value: value == grant, scenario="base", output_dir=tmp_path/"fit")
     assert result.diagnostics["fit_complete_used"] >= 4
     assert result.diagnostics["calibration_complete_used"] >= 4
+    fit_signals = result.diagnostics["teacher_signal_coverage"]["train_fit"]
+    assert len(fit_signals["teachers"]) == 8
+    assert all(sum(row["raw_signal_counts"].values()) == fit_signals["barriers"]
+               for row in fit_signals["teachers"].values())
     assert result.policy.label_recipe == ("X1", "stable-recipe", "base")
     assert load_frozen_entry_policy(tmp_path/"fit"/"policy.json").fit_count == result.policy.fit_count
     assert (tmp_path/"fit"/"COMPLETE").read_text().strip() == "MODEL_COUNTERFACTUAL_TRAIN_ONLY"

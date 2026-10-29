@@ -66,6 +66,7 @@ def test_native_hold_exit_pending_and_trace(tmp_path):
     output = tmp_path / "trace.jsonl"
     write_meta_trace(teacher, output)
     rows = [json.loads(line) for line in output.read_text().splitlines()]
+    assert len(rows[0]["teacher_signals"]) == 8
     assert rows[1]["candidates"][0]["disposition"] == "ACCEPTED_SELECTED"
     assert rows[-1]["native_order_facts"]["filled_order_ids"] == ["o"]
 

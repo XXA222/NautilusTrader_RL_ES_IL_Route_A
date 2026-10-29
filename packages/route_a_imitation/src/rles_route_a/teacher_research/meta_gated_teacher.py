@@ -39,6 +39,7 @@ class MetaDecision:
     action: ExpertAdvice
     owner_id: str | None
     candidate_error: str | None = None
+    teacher_signals: tuple[tuple[str, str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,7 +117,7 @@ class MetaGatedTeacher:
                     failures.append(f"score {group.event_id} {type(exc).__name__}: {exc}")
                 scored.append(CandidateDecision(group, score, False, "HARD_RISK_OVERRIDE"))
             self.decisions.append(MetaDecision(observation, tuple(scored), override, self._owner,
-                                                "; ".join(failures) or None))
+                "; ".join(failures) or None, collection.teacher_signals if collection is not None else ()))
             return override
         if self._scope is not None and self._scope != scope:
             if abs(current) > 1e-8 or observation.pending_order_ids:
@@ -163,7 +164,7 @@ class MetaGatedTeacher:
                               "POSITION_OPEN" if abs(current) > 1e-8 else
                               "OWNER_NOT_READY" if group.event_id in owner_not_ready else
                               "FEATURE_NOT_READY" if score is None else None)
-            for group, score in scored), action, self._owner))
+            for group, score in scored), action, self._owner, teacher_signals=collection.teacher_signals))
         return action
 
     def observe_native_action(self, action: ExpertAdvice, trace: NativeActionTrace,

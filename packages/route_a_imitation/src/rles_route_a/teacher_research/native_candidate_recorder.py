@@ -57,6 +57,28 @@ class NativeCandidateRecorder:
         return tuple(self.records)
 
 
+def summarize_teacher_signal_coverage(records, *, start_ns: int, end_ns: int):
+    """Count all per-minute teacher signals, including indicator unavailability."""
+    from collections import Counter
+    if type(start_ns) is not int or type(end_ns) is not int or start_ns >= end_ns:
+        raise ValueError("valid signal coverage interval required")
+    counters = {}
+    barriers = 0
+    for record in records:
+        if not start_ns <= record.observation.decision_ts_ns < end_ns:
+            continue
+        if record.collection is None or record.collection_error is not None:
+            raise ValueError("signal coverage requires complete candidate records")
+        barriers += 1
+        for teacher_id, raw, reason in record.collection.teacher_signals:
+            raw_counts, reason_counts = counters.setdefault(teacher_id, (Counter(), Counter()))
+            raw_counts[raw] += 1
+            reason_counts[reason] += 1
+    return {"barriers": barriers, "teachers": {teacher_id: {
+        "raw_signal_counts": dict(sorted(raw.items())), "reason_counts": dict(sorted(reasons.items()))}
+        for teacher_id, (raw, reasons) in sorted(counters.items())}}
+
+
 
 def run_native_candidate_collection(
     *, provider, recorder: NativeCandidateRecorder, factory, host_rollout, grant,
