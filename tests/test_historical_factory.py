@@ -583,7 +583,7 @@ def test_funding_schedule_countdown_is_bounded_and_uses_strict_future_schedule()
 
 
 def recipe(tmp_path, *, price_jump=False, bar_count=20, start_minute=6,
-           include_flow=False, funding_settlement_minutes=()):
+           include_flow=False, funding_settlement_minutes=(), taker_fee="0.001"):
     symbol = "ETHUSDT-PERP.SIM"
     rule = {
         "instrument": symbol,
@@ -592,7 +592,7 @@ def recipe(tmp_path, *, price_jump=False, bar_count=20, start_minute=6,
         "min_qty": "0.001",
         "min_notional": "1",
         "maker_fee": "0.001",
-        "taker_fee": "0.001",
+        "taker_fee": taker_fee,
         "initial_margin_rate": "1",
         "maintenance_margin_rate": "0.35",
         "effective_ns": MINUTE_NS,

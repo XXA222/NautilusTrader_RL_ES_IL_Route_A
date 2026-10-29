@@ -34,7 +34,13 @@ import run_route_a_meta_study_20261029 as study
 
 
 def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, monkeypatch):
-    environment = recipe(tmp_path, bar_count=1439, start_minute=150, funding_settlement_minutes=(480,))
+    environment = recipe(tmp_path, bar_count=1439, start_minute=150,
+                         funding_settlement_minutes=(480,), taker_fee="0.0005")
+    # Exercise the frozen Train economics exactly: 5/1 bps per leg for Base,
+    # 10/5 for Stress, with the registered fee represented in the synthetic
+    # instrument rule and a 2x stress fee multiplier.
+    environment["execution"]["stress_fill"].update({"fee_multiplier":"2", "slippage_bps":"5"})
+    preregistered_model = json.loads((ROOT/"configs/route_a_meta_x1_train_prereg_20261029.json").read_text())["model"]
     events = []
     for event in read_curated(environment["market_path"]).events:
         if event.kind in ("ohlcv_1m", "mark", "index"):
@@ -87,13 +93,13 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     replay = make_x1_group_replay(observations=tuple(row.observation for row in records),
         opens=opens, funding=funding, block_ends={g.event_id: split if g.observation.decision_ts_ns < split
                                                  else environment["end_ns"] for g in groups},
-        fee_bps=10., slippage_bps=1., execution_recipe=factory.route_a_execution_recipe_hash, scenario="base")
+        fee_bps=5., slippage_bps=1., execution_recipe=factory.route_a_execution_recipe_hash, scenario="base")
     result = train_meta_on_registered_candidates(grant=grant, verify_grant=lambda g: g == grant,
         fit_groups=fit, calibration_groups=cal, fit_interval=(environment["start_ns"], split),
         calibration_interval=(split, environment["end_ns"]), replay=replay,
         execution_recipe=factory.route_a_execution_recipe_hash, scenario="base",
-        feature_names=("market.ema_9", "teacher.T01_EMA_9_21", "consensus.count", "cost.round_trip_bps"),
-        margin_bps=1., cost_bps=22., fee_bps_per_leg=10., slippage_bps_per_leg=1.)
+        feature_names=preregistered_model["features"],
+        margin_bps=5., cost_bps=12., fee_bps_per_leg=5., slippage_bps_per_leg=1.)
     path = tmp_path/"synthetic-native-model.json"
     save_frozen_entry_policy(result.policy, path)
     restored = load_frozen_entry_policy(path)
@@ -104,13 +110,13 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     stress_replay = make_x1_group_replay(observations=tuple(row.observation for row in records),
         opens=opens, funding=funding, block_ends={g.event_id: split if g.observation.decision_ts_ns < split
                                                  else environment["end_ns"] for g in groups},
-        fee_bps=10., slippage_bps=2., execution_recipe=factory.route_a_execution_recipe_hash, scenario="stress")
+        fee_bps=10., slippage_bps=5., execution_recipe=factory.route_a_execution_recipe_hash, scenario="stress")
     stress_result = train_meta_on_registered_candidates(grant=grant, verify_grant=lambda g: g == grant,
         fit_groups=fit, calibration_groups=cal, fit_interval=(environment["start_ns"], split),
         calibration_interval=(split, environment["end_ns"]), replay=stress_replay,
         execution_recipe=factory.route_a_execution_recipe_hash, scenario="stress",
-        feature_names=("market.ema_9", "teacher.T01_EMA_9_21", "consensus.count", "cost.round_trip_bps"),
-        margin_bps=1., cost_bps=24., fee_bps_per_leg=10., slippage_bps_per_leg=2.)
+        feature_names=preregistered_model["features"],
+        margin_bps=5., cost_bps=30., fee_bps_per_leg=10., slippage_bps_per_leg=5.)
     stress_path = tmp_path/"synthetic-native-stress-model.json"
     save_frozen_entry_policy(stress_result.policy, stress_path)
     stress_model = load_frozen_entry_policy(stress_path)
@@ -124,8 +130,8 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     stress_factory = application.prepare({**config, "environment":stress_environment}, fit_scaler=False,
         scaler=factory.scaler, compact_report_snapshots=False, require_scoped_train_access=True)
     experiment = {"teachers":sorted(ALL_TEACHER_RECIPE_BY_ID),
-        "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.},
-                          "stress":{"fee_bps_per_leg":10., "slippage_bps_per_leg":2.}},
+        "cost_scenarios":{"base":{"fee_bps_per_leg":5., "slippage_bps_per_leg":1.},
+                          "stress":{"fee_bps_per_leg":10., "slippage_bps_per_leg":5.}},
         "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
         "intervals":{"native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"],
                                       ["1970-01-01T06:00:00Z","1970-01-01T06:30:00Z"]]}}
@@ -184,9 +190,7 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
         "train_calibration":[timestamp(360),timestamp(450)],
         "native_screen":[[timestamp(450),timestamp(480)],[timestamp(480),timestamp(510)]]}
     prereg["cost_scenarios"] = experiment["cost_scenarios"]
-    prereg["model"].update({"features":["market.ema_9", "teacher.T01_EMA_9_21", "consensus.count",
-                                        "cost.round_trip_bps"],
-                            "minimum_complete_fit":4, "minimum_complete_calibration":4})
+    prereg["model"].update({"minimum_complete_fit":4, "minimum_complete_calibration":4})
     prereg_path = tmp_path/"synthetic-study.json"
     raw = json.dumps(prereg).encode()
     prereg_path.write_bytes(raw)
