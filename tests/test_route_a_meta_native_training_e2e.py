@@ -11,7 +11,7 @@ from rles_data.io import read_curated, write_curated
 from rles_orchestrator import application
 from rles_route_a.integration.l2_adapter import CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES
 from rles_route_a.teachers.recovery import RecoveryTeacher
-from rles_route_a.teachers_1m.registry import build_teacher_1m
+from rles_route_a.teachers_1m.registry import build_teacher_1m, ALL_TEACHER_RECIPE_BY_ID
 from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
 from rles_route_a.teacher_research.native_training_data import extract_model_price_path
 from rles_route_a.teacher_research.optional_1m_context import bind_optional_1m_context
@@ -99,7 +99,7 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
     screen_config = {**config, "environment": screen_environment}
     screen_factory = application.prepare(screen_config, fit_scaler=False, scaler=factory.scaler,
                                          compact_report_snapshots=False, require_scoped_train_access=True)
-    experiment = {"teachers":["T01_EMA_9_21"],
+    experiment = {"teachers":sorted(ALL_TEACHER_RECIPE_BY_ID),
         "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.}},
         "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
         "intervals":{"native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"]]}}
@@ -112,7 +112,7 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
             config=experiment, strategy="META_X1", scenario="base",
             window=experiment["intervals"]["native_screen"][0], model=restored, output=cell_dir)
         runs = [cell]
-        for strategy in ("T01_EMA_9_21", "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
+        for strategy in (*experiment["teachers"], "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
             target = tmp_path / ("synthetic-screen-" + strategy)
             target.mkdir()
             runs.append(study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
@@ -124,6 +124,6 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
     assert cell["native_order_verification"]["barriers"] == 27
     assert cell["candidate_summary"]["scores"]["candidate_count"] > 0
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
-    assert comparison["status"] == "COMPLETE" and comparison["available_cells"] == 5
-    assert len(comparison["comparisons"]) == 4
+    assert comparison["status"] == "COMPLETE" and comparison["available_cells"] == 12
+    assert len(comparison["comparisons"]) == 11
     assert comparison["qualification"] == "NOT_ESTABLISHED"
