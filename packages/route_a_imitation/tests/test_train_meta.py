@@ -28,6 +28,9 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
                                  "cost.round_trip_bps"), margin_bps=1., cost_bps=4.)
     with pytest.raises(PermissionError):
         train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: False)
+    with pytest.raises(ValueError, match="insufficient complete"):
+        train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True,
+                                            minimum_complete_fit=5)
     result = train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True)
     assert result.diagnostics["fit_complete_used"] == 4
     assert result.diagnostics["calibration_complete_used"] == 4
@@ -35,3 +38,22 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
     assert result.policy.available_after_ns == 8_000_000_002
     with pytest.raises(ValueError, match="before calibration"):
         result.policy.score(groups[-1])
+
+
+
+def test_frozen_meta_training_rejects_foreign_or_screen_inputs(observed):
+    from pathlib import Path
+    from rles_route_a.teacher_research.train_meta import train_meta_from_preregistered_x1
+    config = Path(__file__).resolve().parents[3] / "configs/route_a_meta_x1_train_prereg_20261029.json"
+    grant = HostTrainGrant("f1", "route-a-meta-x1-train-20261201-20261219-v1",
+                           "reservation", "fixture-source", "train", True)
+    kwargs = dict(prereg_path=config, grant=grant, verify_grant=lambda _: True,
+                  fit_groups=(), calibration_groups=(), observations=(observed(),),
+                  opens=(), funding=(), scenario="base")
+    with pytest.raises(ValueError, match="cannot include native-screen"):
+        train_meta_from_preregistered_x1(**kwargs)
+    with pytest.raises(ValueError, match="unregistered cost"):
+        train_meta_from_preregistered_x1(**{**kwargs, "scenario": "unknown"})
+    foreign = HostTrainGrant("f1", "other", "reservation", "fixture-source", "train", True)
+    with pytest.raises(PermissionError, match="preregistered"):
+        train_meta_from_preregistered_x1(**{**kwargs, "grant": foreign})
