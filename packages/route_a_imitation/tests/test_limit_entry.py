@@ -32,3 +32,24 @@ def test_missing_bars_end_observation_without_claiming_cancellation():
         bars=(LimitBar(2, 3, 100., 110.), LimitBar(5, 6, 80., 110.)),
         cancel_at_ns=8, block_end_ns=10)
     assert result.status == "RIGHT_CENSORED" and result.observed_until_ns == 3
+
+
+def test_complete_no_touch_and_expiry_preserve_distinct_no_entry_states():
+    complete = (LimitBar(20, 30, 100., 110.), LimitBar(30, 50, 100., 110.))
+    result = replay_limit_entry(decision_ts_ns=15, side=1, limit_price=90.,
+                                bars=complete, block_end_ns=50)
+    assert (result.status, result.observed_until_ns) == ("MISSED", 50)
+
+    expiring = (LimitBar(20, 30, 100., 110.), LimitBar(30, 40, 100., 110.))
+    result = replay_limit_entry(decision_ts_ns=15, side=1, limit_price=90.,
+        bars=expiring, block_end_ns=50, cancel_at_ns=40, cancel_status="UNFILLED")
+    assert (result.status, result.observed_until_ns) == ("UNFILLED", 40)
+
+    result = replay_limit_entry(decision_ts_ns=15, side=1, limit_price=90.,
+        bars=expiring, block_end_ns=50, cancel_at_ns=40)
+    assert (result.status, result.observed_until_ns) == ("CANCELLED", 40)
+
+    touched_at_boundary = (LimitBar(20, 30, 100., 110.), LimitBar(30, 50, 80., 110.))
+    result = replay_limit_entry(decision_ts_ns=15, side=1, limit_price=90.,
+                                bars=touched_at_boundary, block_end_ns=50)
+    assert (result.status, result.observed_until_ns, result.fill_price) == ("MISSED", 50, None)

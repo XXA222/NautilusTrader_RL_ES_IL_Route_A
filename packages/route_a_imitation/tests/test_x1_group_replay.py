@@ -63,6 +63,14 @@ def test_limit_touch_integrates_with_x1_exit_and_censor():
         execution_recipe="limit", cost_scenario_id="base", block_end_ns=7*M)
     assert censored.outcome_status == "RIGHT_CENSORED" and censored.net_return_bps is None
 
+    complete_no_touch = make_limit_entry_provider(
+        bars=(LimitBar(3*M, 4*M, 100., 105.), LimitBar(4*M, 7*M, 100., 105.)),
+        price_for_group=lambda group: 90.)
+    missed, = label_grouped_candidates([group],
+        make_x1_group_replay(**common, limit_entry=complete_no_touch), exit_policy_id="X1",
+        execution_recipe="limit", cost_scenario_id="base", block_end_ns=7*M)
+    assert missed.outcome_status == "MISSED" and missed.net_return_bps is None
+
 
 
 def test_incomplete_tail_is_censored_at_observed_coverage():

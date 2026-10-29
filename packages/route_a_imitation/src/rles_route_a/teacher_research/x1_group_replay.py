@@ -96,7 +96,7 @@ def make_x1_group_replay(*, observations, opens, funding, block_ends,
             if (type(result.observed_until_ns) is not int
                     or not obs.decision_ts_ns < result.observed_until_ns <= coverage_end):
                 raise ValueError("limit entry observation outside causal block")
-            if result.status in ("CANCELLED", "RIGHT_CENSORED"):
+            if result.status in ("UNFILLED", "CANCELLED", "MISSED", "RIGHT_CENSORED"):
                 if result.fill_ts_ns is not None or result.fill_price is not None:
                     raise ValueError("non-filled limit entry cannot contain a fill")
                 return FrozenReplay(NoEntryReplay(group.event_id, result.status,
