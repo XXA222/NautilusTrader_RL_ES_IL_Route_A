@@ -20,9 +20,10 @@
 .venv-ubuntu/bin/python qa/run_route_a_meta_study_20261029.py
 ```
 
-来源窗口结束后，须按预登记范围导入并验证完整物理来源，再执行：
+来源窗口结束后，先按预登记范围导入完整物理来源，再执行研究；导入入口同样在窗口未结束时拒绝读取市场数据：
 
 ```bash
+.venv-ubuntu/bin/python qa/import_route_a_meta_source_20261029.py
 .venv-ubuntu/bin/python qa/run_route_a_meta_study_20261029.py --execute
 ```
 
