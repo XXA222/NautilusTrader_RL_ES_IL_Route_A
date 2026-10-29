@@ -70,33 +70,47 @@ def test_missing_or_invalid_manifest_never_enters_payload_verifier(tmp_path, mon
 
 
 def test_synthetic_complete_source_passes_real_loader(tmp_path, monkeypatch):
-    """Only synthetic bars and synthetic provenance; no remote data are read."""
+    """Run the real importer and loader against generated ZIP/REST fixtures."""
     import json
+    from hashlib import sha256
+    from zipfile import ZipFile
+    from rles_data import binance_archive
     from rles_data.core import MINUTE_NS
-    from rles_data.io import read_curated, write_curated
-    from test_historical_factory import recipe
-    fixture = tmp_path/"fixture"
-    fixture.mkdir()
-    env = recipe(fixture, bar_count=1439, start_minute=150)
     source_dir = tmp_path/"data"/"synthetic"
-    source_dir.mkdir(parents=True)
-    market = source_dir/"market.parquet"
-    write_curated(market, read_curated(env["market_path"]))
-    marker = market.with_name("market.parquet.COMPLETED.json")
+    def fake_fetch(relative_url, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        rows = []
+        for minute in range(1440):
+            opened = minute * 60000
+            rows.append(f"{opened},100,101,99,100,1,{opened+59999},100,1,0.5,50,0")
+        with ZipFile(destination, "w") as archive:
+            archive.writestr("synthetic.csv", "\n".join(rows) + "\n")
+        return {"path":str(destination), "url":"https://data.binance.vision/data/futures/um/"+relative_url,
+                "sha256":sha256(destination.read_bytes()).hexdigest()}
+    def fake_funding(symbol, month, first, last, raw):
+        rows = [{"symbol":symbol, "fundingTime":hour*3_600_000, "fundingRate":"0.0001", "rateType":"Regular"}
+                for hour in (0, 8, 16)]
+        content = json.dumps(rows).encode()
+        query = urlencode({"symbol":symbol, "startTime":0, "endTime":86_400_000-1, "limit":1000})
+        return {"path":str(raw/"synthetic-funding.json"),
+                "url":"https://fapi.binance.com/fapi/v1/fundingRate?"+query,
+                "sha256":sha256(content).hexdigest()}, content
+    monkeypatch.setattr(binance_archive, "_guard_project_archive_scope", lambda **kwargs: None)
+    monkeypatch.setattr(binance_archive, "fetch_archive", fake_fetch)
+    monkeypatch.setattr(binance_archive, "fetch_funding_api", fake_funding)
+    imported = binance_archive.import_range(symbol="ETHUSDT", start_day="1970-01-01", end_day="1970-01-01",
+        output=source_dir, delay_ns=1_000_000, funding_api_months=("1970-01",))
+    marker = source_dir/"market.parquet.COMPLETED.json"
     marker_doc = json.loads(marker.read_text(encoding="utf-8"))
     config = {"protocol_id":"synthetic-test", "market":"ETHUSDT",
               "source":{"start_utc_inclusive":"1970-01-01T00:00:00Z",
                         "end_utc_exclusive":"1970-01-02T00:00:00Z"}}
-    manifest = source_metadata(config)
-    manifest.update({"schema":"rles.binance-archive-range.v1", "start_day":"1970-01-01",
-        "end_day":"1970-01-01", "start_ns":MINUTE_NS, "end_ns":1440*MINUTE_NS,
-        "event_count":marker_doc["events"]})
-    (source_dir/"import.json").write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(study, "ROOT", tmp_path)
     monkeypatch.setattr(study.legacy, "ROOT", tmp_path)
     source, loaded = study._load_source(config, "a"*64, "data/synthetic")
     assert source["market_path"] == "data/synthetic/market.parquet"
     assert loaded["event_count"] == marker_doc["events"]
+    assert imported["event_count"] == loaded["event_count"]
     assert source["read_scope_start_ns"] >= 0 and source["read_scope_end_ns"] <= 1440*MINUTE_NS
 
 
