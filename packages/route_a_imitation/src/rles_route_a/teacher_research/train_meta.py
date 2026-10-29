@@ -8,7 +8,7 @@ from typing import Callable, Sequence
 from rles_route_a.integration.scope import HostTrainGrant
 from .candidate_event_union import CandidateGroup
 from .conditional_outcome_labels import FrozenReplay, GroupOutcome, label_grouped_candidates, purge_before
-from .entry_meta_policy import FrozenEntryMetaPolicy, fit_entry_meta_policy
+from .entry_meta_policy import FrozenEntryMetaPolicy, fit_entry_meta_policy, missing_candidate_features
 
 
 class MetaTrainingError(ValueError):
@@ -100,11 +100,10 @@ def train_meta_on_registered_candidates(
     interval_cal = tuple(x for x in calibration_outcomes if x.outcome_status == "COMPLETE"
                          and x.label_end_ts_ns is not None and x.net_return_bps is not None)
     group_by_id = {g.event_id: g for g in (*fit_groups, *calibration_groups)}
+    def missing(label):
+        return missing_candidate_features(group_by_id[label.event_id].observation, feature_names)
     def ready(label):
-        obs = group_by_id[label.event_id].observation
-        return all((not name.startswith("market.") or name[7:] in obs.market)
-                   and (not name.startswith("account.") or name[8:] in obs.account)
-                   for name in feature_names)
+        return not missing(label)
     eligible_fit = tuple(x for x in interval_fit if ready(x))
     eligible_cal = tuple(x for x in interval_cal if ready(x))
     diagnostics = {
@@ -114,10 +113,12 @@ def train_meta_on_registered_candidates(
         "fit_status": dict(sorted(Counter(x.outcome_status for x in fit_outcomes).items())),
         "fit_purged_or_incomplete": len(fit_outcomes) - len(interval_fit),
         "fit_feature_not_ready": len(interval_fit) - len(eligible_fit),
+        "fit_missing_feature_counts": dict(sorted(Counter(name for label in interval_fit for name in missing(label)).items())),
         "calibration_candidates": len(calibration_groups), "calibration_complete_used": len(eligible_cal),
         "calibration_account_coverage": _account_candidate_coverage(calibration_groups),
         "calibration_status": dict(sorted(Counter(x.outcome_status for x in calibration_outcomes).items())),
         "calibration_feature_not_ready": len(interval_cal) - len(eligible_cal),
+        "calibration_missing_feature_counts": dict(sorted(Counter(name for label in interval_cal for name in missing(label)).items())),
         "minimum_complete_fit": minimum_complete_fit,
         "minimum_complete_calibration": minimum_complete_calibration,
         "fit_overlap": _overlap_diagnostics(eligible_fit),

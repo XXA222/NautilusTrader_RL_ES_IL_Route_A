@@ -12,6 +12,12 @@ from .conditional_outcome_labels import GroupOutcome
 from .opportunity_models import _fit_logistic, _fit_platt, _sigmoid
 
 
+def missing_candidate_features(observation, names: Sequence[str]) -> tuple[str, ...]:
+    return tuple(name for name in names
+                 if (name.startswith("market.") and name[7:] not in observation.market)
+                 or (name.startswith("account.") and name[8:] not in observation.account))
+
+
 def _features(group: CandidateGroup, names: Sequence[str], cost_bps: float | None = None) -> np.ndarray:
     obs = group.observation
     values = []
