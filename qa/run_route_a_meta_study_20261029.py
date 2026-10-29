@@ -191,7 +191,8 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns):
               "unscored": len(decisions) - len(scores), "quality": None}
     if not decisions:
         return result
-    opens, funding = extract_model_price_path(factory, start_ns=start_ns, end_ns=end_ns)
+    opens, funding = extract_model_price_path(factory, start_ns=start_ns, end_ns=end_ns,
+                                               funding_after_ns=teacher.decisions[0].observation.decision_ts_ns)
     groups = tuple(item.group for item in decisions)
     costs = config["cost_scenarios"][scenario]
     replay = make_x1_group_replay(

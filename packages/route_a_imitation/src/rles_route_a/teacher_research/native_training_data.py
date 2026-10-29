@@ -58,16 +58,20 @@ def training_batch_from_native(
                        if fit_start <= group.observation.decision_ts_ns < fit_end)
     calibration_groups = tuple(group for row in rows for group in row.collection.groups
                                if cal_start <= group.observation.decision_ts_ns < cal_end)
-    opens, funding = extract_model_price_path(factory, start_ns=warmup_start, end_ns=cal_end)
+    opens, funding = extract_model_price_path(factory, start_ns=warmup_start, end_ns=cal_end,
+                                              funding_after_ns=observations[0].decision_ts_ns)
     return NativeTrainingBatch(observations, fit_groups, calibration_groups, opens, funding)
 
 
 
 
-def extract_model_price_path(factory, *, start_ns: int, end_ns: int):
+def extract_model_price_path(factory, *, start_ns: int, end_ns: int, funding_after_ns: int | None = None):
     """Extract only the authorized label interval from the existing native store."""
     if type(start_ns) is not int or type(end_ns) is not int or not 0 < start_ns < end_ns:
         raise ValueError("valid model price-path interval required")
+    if funding_after_ns is not None and (type(funding_after_ns) is not int
+                                         or not start_ns <= funding_after_ns < end_ns):
+        raise ValueError("funding cutoff must be inside the model interval")
     store = getattr(factory, "store", None)
     instrument = getattr(factory, "instrument", None)
     if store is None or not isinstance(instrument, str) or not instrument:
@@ -79,6 +83,11 @@ def extract_model_price_path(factory, *, start_ns: int, end_ns: int):
     rates, marks = [], {}
     for event in store.events:
         if not start_ns <= event.ts_event_ns < end_ns or event.kind not in ("funding_settlement", "mark"):
+            continue
+        # All modeled entries occur strictly after the first decision, so an
+        # earlier settlement cannot contribute to any candidate's funding.
+        if (event.kind == "funding_settlement" and funding_after_ns is not None
+                and event.ts_event_ns <= funding_after_ns):
             continue
         if event.payload.get("instrument") != instrument:
             continue
