@@ -94,15 +94,34 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
     assert restored.available_after_ns < 330*MINUTE_NS
     assert any(abs(row.observation.account_value("net_exposure")) > 0 for row in records)
     assert all(outcome.evidence_type == "MODEL_COUNTERFACTUAL" for outcome in result.fit_outcomes)
+    stress_replay = make_x1_group_replay(observations=tuple(row.observation for row in records),
+        opens=opens, funding=funding, block_ends={g.event_id: split if g.observation.decision_ts_ns < split
+                                                 else environment["end_ns"] for g in groups},
+        fee_bps=10., slippage_bps=2., execution_recipe=factory.route_a_execution_recipe_hash, scenario="stress")
+    stress_result = train_meta_on_registered_candidates(grant=grant, verify_grant=lambda g: g == grant,
+        fit_groups=fit, calibration_groups=cal, fit_interval=(environment["start_ns"], split),
+        calibration_interval=(split, environment["end_ns"]), replay=stress_replay,
+        execution_recipe=factory.route_a_execution_recipe_hash, scenario="stress",
+        feature_names=("market.ema_9", "teacher.T01_EMA_9_21", "consensus.count", "cost.round_trip_bps"),
+        margin_bps=1., cost_bps=24., fee_bps_per_leg=10., slippage_bps_per_leg=2.)
+    stress_path = tmp_path/"synthetic-native-stress-model.json"
+    save_frozen_entry_policy(stress_result.policy, stress_path)
+    stress_model = load_frozen_entry_policy(stress_path)
     screen_environment = deepcopy(environment)
     screen_environment.update(start_ns=330*MINUTE_NS, end_ns=360*MINUTE_NS)
     screen_config = {**config, "environment": screen_environment}
     screen_factory = application.prepare(screen_config, fit_scaler=False, scaler=factory.scaler,
                                          compact_report_snapshots=False, require_scoped_train_access=True)
+    stress_environment = deepcopy(screen_environment)
+    stress_environment["mode"] = "stress"
+    stress_factory = application.prepare({**config, "environment":stress_environment}, fit_scaler=False,
+        scaler=factory.scaler, compact_report_snapshots=False, require_scoped_train_access=True)
     experiment = {"teachers":sorted(ALL_TEACHER_RECIPE_BY_ID),
-        "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.}},
+        "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.},
+                          "stress":{"fee_bps_per_leg":10., "slippage_bps_per_leg":2.}},
         "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
-        "intervals":{"native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"]]}}
+        "intervals":{"native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"],
+                                      ["1970-01-01T06:00:00Z","1970-01-01T06:30:00Z"]]}}
     cell_dir = tmp_path/"synthetic-frozen-model-screen"
     cell_dir.mkdir()
     old_fold = harness.FOLD_ID
@@ -118,12 +137,30 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path):
             runs.append(study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
                 config=experiment, strategy=strategy, scenario="base",
                 window=experiment["intervals"]["native_screen"][0], model=restored, output=target))
+        for strategy in ("META_X1", *experiment["teachers"], "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
+            target = tmp_path / ("synthetic-stress-" + strategy)
+            target.mkdir()
+            runs.append(study._run_screen_cell(factory=stress_factory, source={"marker_sha256":marker_sha},
+                config=experiment, strategy=strategy, scenario="stress",
+                window=experiment["intervals"]["native_screen"][0], model=stress_model, output=target))
+        for scenario, model in (("base", restored), ("stress", stress_model)):
+            later_environment = deepcopy(screen_environment)
+            later_environment.update(start_ns=360*MINUTE_NS, end_ns=390*MINUTE_NS, mode=scenario)
+            later_factory = application.prepare({**config, "environment":later_environment}, fit_scaler=False,
+                scaler=factory.scaler, compact_report_snapshots=False, require_scoped_train_access=True)
+            for strategy in ("META_X1", *experiment["teachers"], "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
+                target = tmp_path / ("synthetic-later-" + scenario + "-" + strategy)
+                target.mkdir()
+                runs.append(study._run_screen_cell(factory=later_factory, source={"marker_sha256":marker_sha},
+                    config=experiment, strategy=strategy, scenario=scenario,
+                    window=experiment["intervals"]["native_screen"][1], model=model, output=target))
         comparison = study.compare_preregistered_native_runs(experiment, runs)
     finally:
         harness.FOLD_ID = old_fold
     assert cell["native_order_verification"]["barriers"] == 27
     assert cell["candidate_summary"]["scores"]["candidate_count"] > 0
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
-    assert comparison["status"] == "COMPLETE" and comparison["available_cells"] == 12
-    assert len(comparison["comparisons"]) == 11
+    assert comparison["status"] == "COMPLETE" and comparison["available_cells"] == 48
+    assert len(comparison["comparisons"]) == 44
+    assert all(item["status"] == "COMPLETE" for item in comparison["window_consistency"])
     assert comparison["qualification"] == "NOT_ESTABLISHED"
