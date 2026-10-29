@@ -33,6 +33,11 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
                                             minimum_complete_fit=5)
     assert rejected.value.diagnostics["fit_complete_used"] == 4
     assert len(rejected.value.fit_outcomes) == 4
+    with pytest.raises(ValueError, match="insufficient complete") as missing_account:
+        train_meta_on_registered_candidates(**{**kwargs, "feature_names": ("account.missing",)},
+                                            verify_grant=lambda grant: True)
+    assert missing_account.value.diagnostics["fit_feature_not_ready"] == 4
+    assert missing_account.value.diagnostics["calibration_feature_not_ready"] == 4
     result = train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: True)
     assert result.diagnostics["fit_complete_used"] == 4
     assert result.diagnostics["fit_account_coverage"]["position_or_pending"] == 0

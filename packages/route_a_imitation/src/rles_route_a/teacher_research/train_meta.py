@@ -101,8 +101,10 @@ def train_meta_on_registered_candidates(
                          and x.label_end_ts_ns is not None and x.net_return_bps is not None)
     group_by_id = {g.event_id: g for g in (*fit_groups, *calibration_groups)}
     def ready(label):
-        market = group_by_id[label.event_id].observation.market
-        return all(not name.startswith("market.") or name[7:] in market for name in feature_names)
+        obs = group_by_id[label.event_id].observation
+        return all((not name.startswith("market.") or name[7:] in obs.market)
+                   and (not name.startswith("account.") or name[8:] in obs.account)
+                   for name in feature_names)
     eligible_fit = tuple(x for x in interval_fit if ready(x))
     eligible_cal = tuple(x for x in interval_cal if ready(x))
     diagnostics = {
