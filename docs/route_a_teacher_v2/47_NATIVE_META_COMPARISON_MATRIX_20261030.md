@@ -10,13 +10,14 @@ The comparison report now distinguishes the full preregistered plan (52 cells) f
 
 The native comparison also verifies the per-cell provenance receipts before aggregation. It rejects mixed receipt/no-receipt matrices and rejects protocol, market-source, seed, strategy, scenario, or time-window mismatches. The result states `run_receipt_status`; pure synthetic/legacy matrix inputs without receipts are marked `UNVERIFIED_NO_REGISTERED_RECEIPTS` and cannot be mistaken for a registered source run.
 
+Each Meta-to-baseline comparison now reports per-window deltas for completed trades, gross PnL before costs, fees, slippage, funding, net PnL, account costs, inferred gross account PnL, win rate, average winning/losing/overall trade PnL, and average holding time. It also reports LONG and SHORT count, net PnL, and win-rate deltas. If either run lacks a denominator or a metric, the delta is `null` instead of implying a zero change.
+
 ## Verification
 
 - Ubuntu 24.04 / WSL2 / Python 3.14.7: comparison and runner regression tests verify 52 planned cells, 48 active cells, explicit aggregate-control omission, and separate active/full completion states.
-- Native engine, native Train-to-screen synthetic end-to-end, runner, matrix, control-scope, temporal-split, and mixed-receipt rejection tests: **27 passed**. Ruff passed for changed Python files; `git diff --check` passed.
-- Ruff passed for the changed evaluation module and its tests; `git diff --check` passed.
+- Native engine, native Train-to-screen synthetic end-to-end, runner, matrix, control-scope, temporal-split, mixed-receipt rejection, and economic-delta tests: **27 passed**. Ruff passed for changed Python files; `git diff --check` passed.
 - The live study was not run. Its registered source remains future dated and the last metadata-only preflight reported zero completed screen windows and no market payload read.
 
 ## Evidence boundary
 
-This fixes a comparison-runner integration defect. It is not an economic result and does not qualify any teacher.
+This fixes comparison-runner integration and reporting defects. It is not an economic result and does not qualify any teacher.

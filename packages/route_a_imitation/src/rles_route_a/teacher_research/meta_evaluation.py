@@ -520,6 +520,32 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
                      "status": "AVAILABLE" if metrics is not None else "MISSING",
                      "metrics": metrics})
     comparisons = []
+    comparison_metrics = {
+        "completed_trade_count_delta": "ordinary_completed_trades",
+        "completed_trade_gross_before_costs_delta": "completed_trade_gross_before_costs",
+        "completed_trade_fees_delta": "completed_trade_fees",
+        "completed_trade_slippage_delta": "completed_trade_slippage",
+        "completed_trade_funding_delta": "completed_trade_funding",
+        "completed_trade_net_pnl_delta": "completed_trade_net_pnl",
+        "account_fees_delta": "account_fees",
+        "account_slippage_delta": "account_slippage",
+        "account_funding_delta": "account_funding",
+        "account_gross_before_costs_delta": "account_gross_before_costs_inferred",
+        "win_rate_delta": "win_rate",
+        "average_winning_trade_pnl_delta": "average_winning_trade_pnl",
+        "average_losing_trade_pnl_delta": "average_losing_trade_pnl",
+        "average_trade_pnl_delta": "average_trade_pnl",
+        "average_holding_minutes_delta": "average_holding_minutes",
+    }
+
+    def metric_delta(meta_metrics, baseline_metrics, metric):
+        meta_value, baseline_value = meta_metrics.get(metric), baseline_metrics.get(metric)
+        if (isinstance(meta_value, bool) or isinstance(baseline_value, bool)
+                or not isinstance(meta_value, (int, float))
+                or not isinstance(baseline_value, (int, float))):
+            return None
+        return meta_value - baseline_value
+
     for scenario in scenarios:
         for window in windows:
             meta = supplied.get(("META_X1", scenario, window))
@@ -529,9 +555,16 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
                 baseline = supplied.get((other, scenario, window))
                 if baseline is None:
                     continue
-                comparisons.append({"scenario": scenario, "window": window, "baseline": other,
+                comparison = {"scenario": scenario, "window": window, "baseline": other,
                     "net_equity_improvement": meta["account_equity_change"] - baseline["account_equity_change"],
-                    "drawdown_change": meta["max_drawdown"] - baseline["max_drawdown"]})
+                    "drawdown_change": meta["max_drawdown"] - baseline["max_drawdown"]}
+                comparison.update({key: metric_delta(meta, baseline, metric)
+                                   for key, metric in comparison_metrics.items()})
+                for side in ("long", "short"):
+                    for metric in ("count", "net_pnl", "win_rate"):
+                        comparison[f"{side}_{metric}_delta"] = metric_delta(
+                            meta[side], baseline[side], metric)
+                comparisons.append(comparison)
     window_consistency = []
     for scenario in scenarios:
         for baseline in (*original, *preregistered_controls):

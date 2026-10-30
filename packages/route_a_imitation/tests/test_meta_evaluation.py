@@ -369,6 +369,28 @@ def test_native_comparison_requires_trade_case_cashflows_to_match_account():
     assert metrics["native_case_cashflow_reconciliation"]["status"] == "RECONCILED"
     assert metrics["native_case_cashflow_reconciliation"]["case_totals"]["net_pnl"] == 8.
 
+    flat = {"strategy_id": "FLAT", "scenario": "base", "window": ("a", "b"),
+            "cases": (), "equity_curve": (1000., 1000.),
+            "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
+            "native_order_verification": {"barriers": 2,
+                "authority": "retained_m22_session_snapshots"}}
+    meta = {**run, "strategy_id": "META_X1"}
+    economic_comparison = compare_preregistered_native_runs(config, (meta, run, flat))
+    meta_vs_flat = next(row for row in economic_comparison["comparisons"]
+                        if row["baseline"] == "FLAT")
+    assert meta_vs_flat["completed_trade_count_delta"] == 1
+    assert meta_vs_flat["completed_trade_fees_delta"] == 2.
+    assert meta_vs_flat["completed_trade_slippage_delta"] == 1.
+    assert meta_vs_flat["completed_trade_net_pnl_delta"] == 8.
+    assert meta_vs_flat["average_holding_minutes_delta"] is None
+    assert meta_vs_flat["long_count_delta"] == 1
+    assert meta_vs_flat["long_net_pnl_delta"] == 8.
+    assert meta_vs_flat["long_win_rate_delta"] is None
+    meta_vs_ema = next(row for row in economic_comparison["comparisons"]
+                       if row["baseline"] == "EMA")
+    assert meta_vs_ema["average_holding_minutes_delta"] == 0.
+    assert meta_vs_ema["long_win_rate_delta"] == 0.
+
     bad_run = {**run, "account_metrics": {**run["account_metrics"], "total_fee": 2.1}}
     with pytest.raises(ValueError, match="do not reconcile"):
         compare_preregistered_native_runs(config, (bad_run,))
