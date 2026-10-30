@@ -70,6 +70,26 @@ def test_incomplete_teacher_coverage_keeps_scores_but_skips_candidate_quality_re
     }
 
 
+def test_candidate_collection_error_is_retained_without_quality_replay(monkeypatch):
+    from types import SimpleNamespace
+
+    expected = tuple(sorted(study.ALL_TEACHER_RECIPE_BY_ID))
+    signals = tuple((teacher_id, "NONE", "NO_SIGNAL") for teacher_id in expected)
+    row = SimpleNamespace(candidates=(), candidate_error="ValueError: collection failed",
+                          teacher_signals=signals, teacher_errors=())
+    teacher = SimpleNamespace(decisions=(row,), policy=SimpleNamespace(margin_bps=5.))
+    monkeypatch.setattr(study, "extract_model_price_path",
+                        lambda *_args, **_kwargs: pytest.fail("failed collection was replayed"))
+
+    result = study._score_diagnostics(teacher, object(), {}, "base", 1, 2)
+
+    assert result["complete_eight_teacher_signal_coverage"] is True
+    assert result["candidate_error_count"] == 1
+    assert result["candidate_error_types"] == {"ValueError": 1}
+    assert result["quality"] is None
+    assert result["quality_status"] == "CANDIDATE_COLLECTION_ERROR"
+
+
 def source_metadata(config):
     start = datetime.fromisoformat(config["source"]["start_utc_inclusive"].replace("Z", "+00:00"))
     end = datetime.fromisoformat(config["source"]["end_utc_exclusive"].replace("Z", "+00:00"))
