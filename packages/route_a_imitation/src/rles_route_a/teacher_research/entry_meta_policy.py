@@ -116,7 +116,7 @@ def fit_entry_meta_policy(
     margin_bps: float, l2: float = 1.0, cost_bps: float | None = None,
     fee_bps_per_leg: float | None = None, slippage_bps_per_leg: float | None = None,
 ) -> FrozenEntryMetaPolicy:
-    """Fit only earlier complete research labels and calibrate on later labels."""
+    """Fit complete labels for executable flat candidates, then calibrate later."""
     names = tuple(feature_names)
     if (not names or len(set(names)) != len(names)
             or not isfinite(margin_bps) or margin_bps < 0 or not isfinite(l2) or l2 <= 0):
@@ -143,6 +143,10 @@ def fit_entry_meta_policy(
            or x.net_return_bps is None or x.label_end_ts_ns is None
            or x.outcome_status != "COMPLETE" or x.censor_ts_ns is not None for x in all_labels):
         raise ValueError("complete scenario-only research labels required")
+    if any(groups[x.event_id].observation.pending_order_ids
+           or abs(groups[x.event_id].observation.account_value("net_exposure")) > 1e-8
+           for x in all_labels):
+        raise ValueError("entry model fit/calibration accepts only executable flat candidates")
     first_cal = min(x.decision_ts_ns for x in calibration)
     if any(x.label_end_ts_ns is None or x.label_end_ts_ns >= first_cal for x in fit):
         raise ValueError("fit labels overlap calibration")

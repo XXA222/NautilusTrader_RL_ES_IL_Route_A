@@ -139,6 +139,23 @@ def test_overlap_and_changed_exit_policy_rejected(observed):
                               feature_names=("market.trend_1h",), margin_bps=0.)
 
 
+def test_fit_rejects_candidates_blocked_by_positions_or_pending_orders(observed):
+    from dataclasses import replace
+
+    fit, calibration, groups = _samples(observed)
+    original = groups[fit[0].event_id]
+    blocked_observation = replace(original.observation, pending_order_ids=("native-order",))
+    blocked_group, = group_teacher_proposals([TeacherProposal(
+        blocked_observation, "EMA", 1, "cross")])
+    groups.pop(original.event_id)
+    groups[blocked_group.event_id] = blocked_group
+    fit[0] = replace(fit[0], event_id=blocked_group.event_id)
+
+    with pytest.raises(ValueError, match="only executable flat candidates"):
+        fit_entry_meta_policy(fit, calibration, groups,
+                              feature_names=("market.trend_1h",), margin_bps=0.)
+
+
 def test_overlap_uniqueness_weights_share_only_the_concurrent_label_time():
     labels = [
         GroupOutcome("a", 0, "source", "fold", "X1", "native", "base", 10, None, 1.),

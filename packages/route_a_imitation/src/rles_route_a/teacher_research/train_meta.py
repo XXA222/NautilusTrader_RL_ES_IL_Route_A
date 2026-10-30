@@ -74,7 +74,11 @@ def train_meta_on_registered_candidates(
     fee_bps_per_leg: float | None = None, slippage_bps_per_leg: float | None = None,
     l2: float = 1.0,
 ) -> MetaTrainingResult:
-    """No market IO: host must verify its registered read before passing snapshots."""
+    """Keep the full label denominator; fit only executable flat candidates.
+
+    No market IO is performed here. The host must verify its registered read
+    before passing snapshots.
+    """
     if not isinstance(grant, HostTrainGrant) or not callable(verify_grant) or verify_grant(grant) is not True:
         raise PermissionError("host-verified Train grant is required")
     if (not isinstance(fit_interval, tuple) or not isinstance(calibration_interval, tuple)
@@ -108,25 +112,43 @@ def train_meta_on_registered_candidates(
     interval_cal = tuple(x for x in calibration_outcomes if x.outcome_status == "COMPLETE"
                          and x.label_end_ts_ns is not None and x.net_return_bps is not None)
     group_by_id = {g.event_id: g for g in (*fit_groups, *calibration_groups)}
+
+    def account_eligible(label):
+        observation = group_by_id[label.event_id].observation
+        return (not observation.pending_order_ids
+                and abs(observation.account_value("net_exposure")) <= 1e-8)
+
+    account_fit = tuple(label for label in interval_fit if account_eligible(label))
+    account_cal = tuple(label for label in interval_cal if account_eligible(label))
+
     def missing(label):
         return missing_candidate_features(group_by_id[label.event_id].observation, feature_names)
-    def ready(label):
-        return not missing(label)
-    eligible_fit = tuple(x for x in interval_fit if ready(x))
-    eligible_cal = tuple(x for x in interval_cal if ready(x))
+
+    eligible_fit = tuple(x for x in account_fit if not missing(x))
+    eligible_cal = tuple(x for x in account_cal if not missing(x))
     diagnostics = {
         "evidence_type": "MODEL_COUNTERFACTUAL",
         "fit_candidates": len(fit_groups), "fit_complete_used": len(eligible_fit),
         "fit_account_coverage": _account_candidate_coverage(fit_groups),
         "fit_status": dict(sorted(Counter(x.outcome_status for x in fit_outcomes).items())),
         "fit_purged_or_incomplete": len(fit_outcomes) - len(interval_fit),
-        "fit_feature_not_ready": len(interval_fit) - len(eligible_fit),
-        "fit_missing_feature_counts": dict(sorted(Counter(name for label in interval_fit for name in missing(label)).items())),
+        "fit_account_ineligible": len(interval_fit) - len(account_fit),
+        "fit_account_eligible_complete": len(account_fit),
+        "fit_feature_not_ready": len(account_fit) - len(eligible_fit),
+        "fit_missing_feature_counts": dict(sorted(Counter(
+            name for label in interval_fit for name in missing(label)).items())),
+        "fit_account_eligible_missing_feature_counts": dict(sorted(Counter(
+            name for label in account_fit for name in missing(label)).items())),
         "calibration_candidates": len(calibration_groups), "calibration_complete_used": len(eligible_cal),
         "calibration_account_coverage": _account_candidate_coverage(calibration_groups),
         "calibration_status": dict(sorted(Counter(x.outcome_status for x in calibration_outcomes).items())),
-        "calibration_feature_not_ready": len(interval_cal) - len(eligible_cal),
-        "calibration_missing_feature_counts": dict(sorted(Counter(name for label in interval_cal for name in missing(label)).items())),
+        "calibration_account_ineligible": len(interval_cal) - len(account_cal),
+        "calibration_account_eligible_complete": len(account_cal),
+        "calibration_feature_not_ready": len(account_cal) - len(eligible_cal),
+        "calibration_missing_feature_counts": dict(sorted(Counter(
+            name for label in interval_cal for name in missing(label)).items())),
+        "calibration_account_eligible_missing_feature_counts": dict(sorted(Counter(
+            name for label in account_cal for name in missing(label)).items())),
         "minimum_complete_fit": minimum_complete_fit,
         "minimum_complete_calibration": minimum_complete_calibration,
         "fit_overlap": _overlap_diagnostics(eligible_fit),
