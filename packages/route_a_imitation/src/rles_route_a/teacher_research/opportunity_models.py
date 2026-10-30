@@ -29,6 +29,81 @@ RETURN_BASIS_IDS = frozenset({
 })
 
 
+def summarize_prediction_calibration(
+    predicted_net_bps: Sequence[float],
+    observed_net_bps: Sequence[float],
+    predicted_probability_positive: Sequence[float],
+    observed_positive: Sequence[int | bool],
+    *,
+    sample_weights: Sequence[float] | np.ndarray | None = None,
+    bin_count: int = 5,
+) -> dict[str, object]:
+    """Compare frozen-model predictions with later calibration outcomes.
+
+    Bins are equal-count, stable-sorted groups. This reports calibration only;
+    it never adjusts model parameters or candidate acceptance thresholds.
+    """
+    predicted = np.asarray(predicted_net_bps, dtype=np.float64)
+    observed = np.asarray(observed_net_bps, dtype=np.float64)
+    probability = np.asarray(predicted_probability_positive, dtype=np.float64)
+    positive = np.asarray(observed_positive, dtype=np.float64)
+    if (predicted.ndim != 1 or not len(predicted)
+            or observed.shape != predicted.shape or probability.shape != predicted.shape
+            or positive.shape != predicted.shape
+            or not all(np.isfinite(x).all() for x in (predicted, observed, probability, positive))
+            or np.any((probability < 0) | (probability > 1))
+            or np.any((positive != 0) & (positive != 1))
+            or type(bin_count) is not int or bin_count < 1):
+        raise ValueError("calibration predictions and outcomes must be finite aligned vectors")
+    weights = _validated_sample_weights(sample_weights, len(predicted))
+    if len(predicted) != len(observed):
+        raise ValueError("calibration prediction and outcome counts differ")
+
+    def weighted_mean(values: np.ndarray, indices: np.ndarray) -> float:
+        selected_weights = weights[indices]
+        return float(np.average(values[indices], weights=selected_weights))
+
+    def bins_by(values: np.ndarray, order_values: np.ndarray) -> list[dict[str, float | int]]:
+        order = np.argsort(order_values, kind="stable")
+        bins = np.array_split(order, min(bin_count, len(order)))
+        result = []
+        for indices in bins:
+            result.append({
+                "samples": int(len(indices)),
+                "weight_sum": float(weights[indices].sum()),
+                "mean_predicted_net_bps": weighted_mean(predicted, indices),
+                "mean_observed_net_bps": weighted_mean(observed, indices),
+                "mean_net_prediction_error_bps": weighted_mean(predicted - observed, indices),
+                "mean_predicted_probability_positive": weighted_mean(probability, indices),
+                "observed_positive_rate": weighted_mean(positive, indices),
+            })
+        return result
+
+    error = predicted - observed
+    clipped = np.clip(probability, 1e-15, 1 - 1e-15)
+    effective_count = float(weights.sum() ** 2 / np.square(weights).sum())
+    return {
+        "samples": int(len(predicted)),
+        "effective_weighted_samples": effective_count,
+        "mean_predicted_net_bps": weighted_mean(predicted, np.arange(len(predicted))),
+        "mean_observed_net_bps": weighted_mean(observed, np.arange(len(observed))),
+        "mean_net_prediction_error_bps": weighted_mean(error, np.arange(len(error))),
+        "net_prediction_mae_bps": float(np.average(np.abs(error), weights=weights)),
+        "net_prediction_rmse_bps": float(np.sqrt(np.average(np.square(error), weights=weights))),
+        "mean_predicted_probability_positive": weighted_mean(probability, np.arange(len(probability))),
+        "observed_positive_rate": weighted_mean(positive, np.arange(len(positive))),
+        "probability_brier_score": float(np.average(np.square(probability - positive), weights=weights)),
+        "probability_log_loss": float(np.average(
+            -(positive * np.log(clipped) + (1 - positive) * np.log(1 - clipped)),
+            weights=weights,
+        )),
+        "net_return_bins": bins_by(predicted, predicted),
+        "probability_bins": bins_by(probability, probability),
+        "binning": "stable_equal_count_weighted_summary_v1",
+        "thresholds_adjusted": False,
+    }
+
+
 @dataclass(frozen=True, slots=True)
 class OpportunityOutcome:
     """One complete candidate outcome under a frozen continuation policy.

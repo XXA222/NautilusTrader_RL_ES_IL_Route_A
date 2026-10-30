@@ -8,7 +8,8 @@ from typing import Callable, Sequence
 from rles_route_a.integration.scope import HostTrainGrant
 from .candidate_event_union import CandidateGroup
 from .conditional_outcome_labels import FrozenReplay, GroupOutcome, label_grouped_candidates, purge_before
-from .entry_meta_policy import (FrozenEntryMetaPolicy, fit_entry_meta_policy,
+from .entry_meta_policy import (FrozenEntryMetaPolicy, entry_meta_calibration_report,
+                                fit_entry_meta_policy,
                                 missing_candidate_features)
 from .opportunity_models import overlap_uniqueness_weights, uniqueness_effective_label_count
 
@@ -170,6 +171,9 @@ def train_meta_on_registered_candidates(
             calibration_outcomes=calibration_outcomes, diagnostics=diagnostics) from exc
     diagnostics.update({"calibration_mae_bps": model.calibration_mae_bps,
                         "calibration_brier": model.calibration_brier,
+                        "calibration_prediction_quality": entry_meta_calibration_report(
+                            model, eligible_cal,
+                            {label.event_id: all_groups[label.event_id] for label in eligible_cal}),
                         "model_available_after_ns": model.available_after_ns})
     return MetaTrainingResult(model, fit_outcomes, calibration_outcomes, diagnostics)
 
