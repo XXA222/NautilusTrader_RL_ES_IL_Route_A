@@ -115,14 +115,14 @@ def test_risk_override_precedes_model_and_unknown_position():
     # Earlier than calibration and no known owner: hard risk still acts.
     action = teacher.advise(observation(1, exposure=.4))
     assert action.intent == "EXIT" and action.expert_id == "recovery"
-    # The override remains executable even if candidate diagnostics fail.
+    # The override remains executable while model-unavailable candidates stay explicit.
     assert teacher.decisions[-1].candidate_error is None
     action = teacher.advise(observation(2, ema_9=101., exposure=.4))
     assert action.intent == "EXIT"
     decision = teacher.decisions[-1]
     assert decision.candidates and decision.candidates[0].score is None
     assert decision.candidates[0].disposition == "REJECTED_HARD_RISK_OVERRIDE"
-    assert "before calibration" in decision.candidate_error
+    assert decision.candidate_error is None
 
 
 def test_feature_schema_change_resets_flat_teacher_state_and_keeps_trace():
@@ -195,6 +195,34 @@ def test_active_scope_change_without_recovery_fails_before_teacher_state_moves()
         teacher.advise(changed_source)
 
     assert probe.calls == 0
+
+
+def test_candidate_from_new_model_scope_is_recorded_as_rejected_not_exception():
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.advise(observation(10))
+    teacher.advise(replace(observation(11), source_id="new-source"))
+    action = teacher.advise(replace(observation(12, ema_9=101.), source_id="new-source"))
+
+    assert action.intent == "FLAT"
+    candidates = teacher.decisions[-1].candidates
+    candidate = next(item for item in candidates
+                     if "T01_EMA_9_21" in {teacher_id for teacher_id, _ in item.group.teachers})
+    assert candidate.score is None
+    assert candidate.disposition == "REJECTED_MODEL_SCOPE_MISMATCH"
+    assert teacher.decisions[-1].candidate_error is None
+
+
+def test_candidate_before_calibration_availability_is_recorded_as_rejected():
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.advise(observation(1))
+    action = teacher.advise(observation(2, ema_9=101.))
+
+    assert action.intent == "FLAT"
+    candidate = next(item for item in teacher.decisions[-1].candidates
+                     if "T01_EMA_9_21" in {teacher_id for teacher_id, _ in item.group.teachers})
+    assert candidate.score is None
+    assert candidate.disposition == "REJECTED_MODEL_NOT_AVAILABLE"
+    assert teacher.decisions[-1].candidate_error is None
 
 
 def test_rejection_diagnostics_identify_out_of_support_feature():
