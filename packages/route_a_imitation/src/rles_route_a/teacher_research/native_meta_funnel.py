@@ -19,6 +19,7 @@ class MetaNativeFunnelAdapter:
             raise TypeError("Meta teacher and complete native case hook are required")
         self.teacher = teacher
         self.native_hook = native_hook
+        self.cases: tuple[NativeTradeCase1m, ...] = ()
 
     def capture_pre_decision(self, observation, action, visible_context, teacher):
         if teacher is not self.teacher or not teacher.decisions:
@@ -71,7 +72,8 @@ class MetaNativeFunnelAdapter:
                 raise ValueError("native case candidate provenance conflicts with Meta selection")
             enriched.append(replace(case, candidate_event_id=group.event_id,
                                     candidate_teacher_ids=teacher_ids))
-        return tuple(enriched)
+        self.cases = tuple(enriched)
+        return self.cases
 
     def commit(self, records, cases):
         return self.native_hook.commit(records, cases)

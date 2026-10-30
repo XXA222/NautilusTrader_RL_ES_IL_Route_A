@@ -61,6 +61,7 @@ def test_meta_native_cases_retain_exact_selected_candidate_provenance():
         economic_status="SCENARIO_ONLY")
     hook.cases = (case,)
     result, = adapter.build_native_cases(())
+    assert adapter.cases == (result,)
     assert result.candidate_event_id == selected.event_id
     assert result.candidate_teacher_ids == ("T01_EMA_9_21",)
 

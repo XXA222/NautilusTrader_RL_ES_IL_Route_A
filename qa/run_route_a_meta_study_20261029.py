@@ -281,7 +281,6 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
             scenario=scenario, seed=seed, rollout_id=episode, episode_steps=_steps(start_ns,end_ns),
             trace_path=output/"candidate-to-native.jsonl",
             reset_options={"rles_episode_index": seed}, teacher_funnel_hook=funnel)
-        diagnostics = _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, hook.cases)
     else:
         barriers, report = provider.rollout_with_m22_trace(
             factory=factory, host_rollout=application.rollout, grant=grant, seed=seed,
@@ -290,6 +289,9 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
         if teacher.risk_diagnostics:
             raise RuntimeError("original teacher failed while a hard-risk action was active")
         diagnostics = None
+    native_cases = funnel.cases if strategy == "META_X1" else tuple(hook.cases)
+    if strategy == "META_X1":
+        diagnostics = _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, native_cases)
     verify = report.get("route_a_native_order_verification")
     if (not isinstance(verify, dict) or verify.get("barriers") != len(barriers)
             or len(barriers) != _steps(start_ns, end_ns)
@@ -302,14 +304,14 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
     if account["terminal_flat"] is not True or not account["account_rows"]:
         raise RuntimeError("native episode lacks settled account evidence")
     record = {"strategy_id": strategy, "scenario": scenario, "window": tuple(window),
-              "cases": tuple(hook.cases),
+              "cases": native_cases,
               # Start at the configured native account capital even if the
               # first sampled barrier already contains an entry and its costs.
               "equity_curve": (float(factory.capital), *(row["equity"] for row in account["account_rows"])),
               "native_order_verification": verify, "account_metrics": _account_costs_including_first_row(account),
               "candidate_summary": ({key: value for key, value in diagnostics.items() if key != "outcomes"}
                                     if diagnostics is not None else None)}
-    serializable = {**record, "cases": [asdict(case) for case in hook.cases],
+    serializable = {**record, "cases": [asdict(case) for case in native_cases],
                     "candidate_diagnostics": diagnostics,
                     "economic_status": "SCENARIO_ONLY"}
     (output/"native-result.json").write_text(json.dumps(serializable, sort_keys=True,
