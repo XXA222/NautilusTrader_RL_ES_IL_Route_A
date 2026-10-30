@@ -26,6 +26,13 @@ def test_gate_diagnostics_count_overlapping_filters_without_changing_threshold()
     assert summarize_entry_scores([], margin_bps=5.)["coverage"] is None
 
 
+def test_unknown_teacher_feature_fails_instead_of_silently_becoming_zero(observed):
+    fit, calibration, groups = _samples(observed)
+    with pytest.raises(ValueError, match="unknown frozen teacher feature"):
+        fit_entry_meta_policy(fit, calibration, groups,
+            feature_names=("teacher.T99_UNKNOWN",), margin_bps=0.)
+
+
 def test_gate_funnel_uses_all_candidates_and_assigns_first_failed_stage():
     scores = [
         EntryScore("LONG", .8, 10., True, "POSITIVE_NET_EDGE"),
