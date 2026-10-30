@@ -87,7 +87,8 @@ def test_rejected_training_retains_candidates_and_all_labels(tmp_path):
     obs = group.observation
     outcome = GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
         "X1", "recipe", "base", None, obs.decision_ts_ns + 1, None,
-        outcome_status="RIGHT_CENSORED")
+        "censored-replay", outcome_status="RIGHT_CENSORED",
+        observed_until_ns=obs.decision_ts_ns + 1)
     failure = MetaTrainingError("too few", fit_outcomes=(outcome,),
                                 calibration_outcomes=(), diagnostics={"fit_candidates": 1})
     path = tmp_path / "rejected"
