@@ -256,6 +256,34 @@ def test_active_scope_change_without_recovery_fails_before_teacher_state_moves()
     assert probe.calls == 0
 
 
+def test_incomplete_eight_teacher_union_fails_closed_but_keeps_candidate_diagnostic(monkeypatch):
+    class PartialCollection:
+        def reset(self, episode_id=""):
+            pass
+
+        def collect(self, obs):
+            group, = group_teacher_proposals([
+                TeacherProposal(obs, "T02_ROC_20_60", 1, "ROC_CONSENSUS_LONG")
+            ])
+            return CandidateCollection((group,), (("T01_EMA_9_21", "ERROR", "RuntimeError"),),
+                (("T01_EMA_9_21", "RuntimeError: signal unavailable"),))
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.collector = PartialCollection()
+    monkeypatch.setattr(type(teacher.policy), "score",
+                        lambda *_args: pytest.fail("partial teacher union must not be scored"))
+
+    action = teacher.advise(observation(10, roc_20=1., roc_60=1.))
+
+    assert action.intent == "FLAT"
+    assert "TEACHER_SIGNAL_INCOMPLETE" in action.reason_codes
+    decision = teacher.decisions[-1]
+    assert decision.teacher_errors == (("T01_EMA_9_21", "RuntimeError: signal unavailable"),)
+    assert len(decision.candidates) == 1
+    assert decision.candidates[0].score is None
+    assert decision.candidates[0].disposition == "REJECTED_TEACHER_SIGNAL_INCOMPLETE"
+
+
 def test_candidate_from_new_model_scope_is_recorded_as_rejected_not_exception():
     teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
     teacher.advise(observation(10))

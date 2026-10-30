@@ -214,6 +214,15 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
             counts[1][reason] += 1
     result["teacher_signal_coverage"] = {name: {"raw_signal_counts": dict(sorted(raw.items())),
         "reason_counts": dict(sorted(reason.items()))} for name, (raw, reason) in sorted(reasons.items())}
+    result["teacher_signal_error_counts"] = dict(sorted(Counter(
+        teacher_id for row in teacher.decisions for teacher_id, _detail in row.teacher_errors
+    ).items()))
+    result["complete_eight_teacher_signal_coverage"] = (
+        len(result["teacher_signal_coverage"]) == 8
+        and not result["teacher_signal_error_counts"]
+        and all(sum(item["raw_signal_counts"].values()) == len(teacher.decisions)
+                for item in result["teacher_signal_coverage"].values())
+    )
     if not decisions:
         return result
     opens, funding = extract_model_price_path(factory, start_ns=start_ns, end_ns=end_ns,

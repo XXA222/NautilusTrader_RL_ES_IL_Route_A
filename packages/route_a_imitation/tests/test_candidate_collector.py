@@ -95,3 +95,22 @@ def test_pullback_history_generates_candidate_during_native_pending():
         result = collector.collect(observation(minute, bar_close_1m=close,
                                                 ema_9=101., pending=("order",)))
     assert any("T08_PULLBACK_1M" in {t for t, _ in g.teachers} for g in result.groups)
+
+
+def test_teacher_failure_isolated_and_other_candidates_survive(monkeypatch):
+    from rles_route_a.teachers_1m.ema import EmaCrossTeacher
+
+    def fail(_self, _observation):
+        raise RuntimeError("synthetic EMA adapter failure")
+
+    monkeypatch.setattr(EmaCrossTeacher, "advise", fail)
+    collector = OneMinuteCandidateCollector()
+    collector.collect(observation(1))
+    result = collector.collect(observation(2, ema_9=101., roc_20=1., roc_60=1., rsi_14=69.))
+
+    signals = {teacher_id: raw for teacher_id, raw, _reason in result.teacher_signals}
+    assert len(signals) == 8
+    assert signals["T01_EMA_9_21"] == "ERROR"
+    assert any("T02_ROC_20_60" in {teacher for teacher, _ in group.teachers}
+               and group.side == 1 for group in result.groups)
+    assert result.teacher_errors == (("T01_EMA_9_21", "RuntimeError: synthetic EMA adapter failure"),)
