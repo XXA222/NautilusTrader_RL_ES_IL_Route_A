@@ -30,7 +30,9 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     for i in range(3):
         obs = observed(ts=(i+1)*1_000_000_000)
         group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
-        decisions.append(CandidateDecision(group, EntryScore("LONG", .7, 5., True, "EDGE"), i == 0))
+        score = (EntryScore("NO_TRADE", .7, 5., False, "OUT_OF_SUPPORT", ("market.foo",)) if i == 1
+                 else EntryScore("LONG", .7, 5., True, "EDGE"))
+        decisions.append(CandidateDecision(group, score, i == 0))
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
              "X1", "native", "base", obs.decision_ts_ns+1 if i != 2 else None,
              obs.decision_ts_ns+2 if i == 2 else None, 5. if i == 0 else (-2. if i == 1 else None),
@@ -38,8 +40,13 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     result = summarize_candidate_quality(tuple(decisions), tuple(labels))
     assert result["accepted"]["mean_net_bps"] == 5.
     assert result["rejected"]["mean_net_bps"] == -2.
-    assert result["rejected"]["without_outcome"] == 1
-    assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["complete"] == 1
+    assert result["accepted"]["candidates"] == 2
+    assert result["accepted"]["without_outcome"] == 1
+    assert result["accepted_not_native_selected"]["candidates"] == 1
+    assert result["accepted_not_native_selected"]["without_outcome"] == 1
+    assert result["native_selected"]["candidates"] == 1
+    assert result["rejected"]["without_outcome"] == 0
+    assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["complete"] == 0
     assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["without_outcome"] == 1
     assert result["prediction_quality"]["paired_complete_scored"] == 2
     assert result["prediction_quality"]["scored_without_complete_outcome"] == 1
