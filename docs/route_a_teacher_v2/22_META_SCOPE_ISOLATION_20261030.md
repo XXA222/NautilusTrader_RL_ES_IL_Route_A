@@ -15,15 +15,17 @@ Status: `D1_DEVELOPMENT_DIAGNOSTIC_ONLY`. This change fixes state isolation in t
 - The standalone eight-teacher `OneMinuteCandidateCollector` now independently binds episode/source/fold/feature-schema and resets all rolling indicator state on any scope transition. This also protects the native candidate recorder and Train collection path when it runs outside `MetaGatedTeacher`.
 - The shared `BaseTeacher1m` state machine also tracks `feature_spec_hash`; direct original-teacher runs now reset rolling/cross/exit state when the observation schema changes, not only when wrapped by Meta or the candidate collector.
 - Clarified types in the ordinary scoring and native-owner branches; this fixes existing Mypy errors in the module without changing runtime selection behavior.
+- The normal Meta path now handles candidate research failures independently from native position management. A per-candidate scoring exception records `REJECTED_SCORING_ERROR` and its exception detail, while other candidates continue through arbitration. If candidate collection fails, a flat account stays flat; an already-owned position still receives its original teacher HOLD/EXIT decision. Hard recovery is still checked first.
 
 ## Validation
 
 - Ubuntu 24.04 / Python 3.14.7 targeted eight-teacher lifecycle/signal/ROC, candidate, label, model, Meta, native recorder, rollout, and Gym suite: `141 passed`.
+- After the candidate error-path change, the same joint lifecycle/candidate/Meta/native rollout suite: `144 passed`.
 - Ruff on the changed source and test modules: passed.
 - Mypy on `meta_gated_teacher.py`: passed (`Success: no issues found in 1 source file`).
-- Regression cases cover direct base-teacher schema reset, independent collector schema reset, flat Meta schema reset with trace retention, hard-risk priority on active scope transition without advancing teacher state or invoking the old owner's native callback, fail-closed behavior when the same transition has no recovery override, explicit rejection of out-of-scope or not-yet-available model scores, fallback to a ready native owner within a grouped consensus candidate, and propagation of that owner into native receipts and the case funnel.
+- Regression cases also cover candidate scoring exceptions, collection failure with an active-position exit, and fail-closed collection failure for a flat account. The complete suite retains coverage for direct base-teacher schema reset, independent collector reset, hard-risk priority on active scope transition, out-of-scope/not-yet-available model rejection, consensus owner fallback and native receipt propagation.
 
-The read-only protocol preflight reported `REGISTERED_FUTURE_SOURCE`, with `completed_screen_windows: 0` and `market_payload_read: false` for protocol `route-a-meta-x1-train-20261201-20261219-v1`.
+The read-only protocol preflight on 2026-10-30 reported `REGISTERED_FUTURE_SOURCE`, with `completed_screen_windows: 0`, `market_payload_read: false`, and the registered interval `2026-12-01T00:00:00Z` to `2026-12-19T00:00:00Z` for protocol `route-a-meta-x1-train-20261201-20261219-v1`. Protocol SHA-256: `b731f1e9f3d0eb7bb62f2fcdf4a76b609ff6452e3e8c146a8538b2fc25cc1845`.
 
 ## Limits
 

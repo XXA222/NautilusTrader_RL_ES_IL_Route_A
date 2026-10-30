@@ -19,6 +19,7 @@ class CandidateDecision:
     selected: bool
     rejection_override: str | None = None
     missing_features: tuple[str, ...] = ()
+    error_detail: str | None = None
 
     @property
     def disposition(self) -> str:
@@ -162,19 +163,40 @@ class MetaGatedTeacher:
             return override
         if abs(current) > 1e-8 and self._owner is None:
             raise ValueError("native position has no verified originating teacher")
-        collection = self.collector.collect(observation)
-        native_advice = {name: teacher.advise(observation)
-                         for name, teacher in self._teachers.items()}
+        collection = None
+        collection_error = None
+        try:
+            collection = self.collector.collect(observation)
+        except Exception as exc:
+            # Candidate generation is required before opening a new position,
+            # but a research-side failure must not suppress an existing exit.
+            collection_error = f"{type(exc).__name__}: {exc}"
+        native_advice = {}
+        owner_errors = {}
+        for name, teacher in self._teachers.items():
+            try:
+                native_advice[name] = teacher.advise(observation)
+            except Exception as exc:
+                owner_errors[name] = f"{type(exc).__name__}: {exc}"
         missing = self._missing_model_features(observation)
         scored: list[tuple[CandidateGroup, EntryScore | None]] = []
         pre_score_rejections: dict[str, str] = {}
-        for group in collection.groups:
+        scoring_errors: dict[str, str] = {}
+        for group in collection.groups if collection is not None else ():
             rejection = self._model_rejection(group, missing)
             if rejection is not None:
                 scored.append((group, None))
                 pre_score_rejections[group.event_id] = rejection
-            else:
-                scored.append((group, self.policy.score(group)))
+                continue
+            try:
+                score = self.policy.score(group)
+            except Exception as exc:
+                # Keep the failed candidate in the denominator, reject it, and
+                # allow unrelated candidates and native exits to proceed.
+                score = None
+                pre_score_rejections[group.event_id] = "SCORING_ERROR"
+                scoring_errors[group.event_id] = f"{type(exc).__name__}: {exc}"
+            scored.append((group, score))
         selected: CandidateGroup | None = None
         owner_not_ready: set[str] = set()
         if observation.pending_order_ids:
@@ -185,6 +207,11 @@ class MetaGatedTeacher:
             owner = self._owner
             if owner is None:
                 raise ValueError("native position has no verified originating teacher")
+            if owner in owner_errors:
+                raise RuntimeError(
+                    f"originating teacher {owner} failed while managing a native position: "
+                    f"{owner_errors[owner]}"
+                )
             action = native_advice[owner]
         else:
             self._owner = None
@@ -195,7 +222,8 @@ class MetaGatedTeacher:
                 expected = "OPEN_LONG" if group.side > 0 else "OPEN_SHORT"
                 ready_owners = tuple(
                     teacher_id for teacher_id, _reason in group.teachers
-                    if native_advice[teacher_id].intent == expected
+                    if (teacher_id in native_advice
+                        and native_advice[teacher_id].intent == expected)
                 )
                 if not ready_owners:
                     owner_not_ready.add(group.event_id)
@@ -205,7 +233,10 @@ class MetaGatedTeacher:
                     executable_owner_by_event[group.event_id] = ready_owners[0]
             eligible = [(group, score) for group, score in eligible
                         if group.event_id not in owner_not_ready]
-            if eligible:
+            if collection is None:
+                action = advice(observation, self.expert_id, "FLAT", 0.,
+                                "CANDIDATE_COLLECTION_FAILED")
+            elif eligible:
                 # Deterministic arbitration selects one group, never both directions.
                 selected, score = max(eligible, key=lambda item:
                     (item[1].expected_net_bps, item[1].probability_positive, item[0].side))
@@ -214,14 +245,31 @@ class MetaGatedTeacher:
                 action = underlying
             else:
                 action = advice(observation, self.expert_id, "FLAT", 0., "NO_ACCEPTED_CANDIDATE")
-        self.decisions.append(MetaDecision(observation, tuple(
-            CandidateDecision(group, score, selected is not None and group.event_id == selected.event_id,
-                              pre_score_rejections.get(group.event_id) or
-                              ("PENDING_ORDER" if observation.pending_order_ids else
-                              "POSITION_OPEN" if abs(current) > 1e-8 else
-                              "OWNER_NOT_READY" if group.event_id in owner_not_ready else
-                              None if score is not None else "FEATURE_NOT_READY"), missing)
-            for group, score in scored), action, self._owner, teacher_signals=collection.teacher_signals))
+        decisions = []
+        for group, score in scored:
+            owner_failures = tuple(
+                f"{teacher_id}: {owner_errors[teacher_id]}"
+                for teacher_id, _reason in group.teachers if teacher_id in owner_errors
+            )
+            rejection = pre_score_rejections.get(group.event_id)
+            if rejection is None and observation.pending_order_ids:
+                rejection = "PENDING_ORDER"
+            elif rejection is None and abs(current) > 1e-8:
+                rejection = "POSITION_OPEN"
+            elif rejection is None and group.event_id in owner_not_ready:
+                rejection = "OWNER_EVALUATION_ERROR" if owner_failures else "OWNER_NOT_READY"
+            elif rejection is None and score is None:
+                rejection = "FEATURE_NOT_READY"
+            decisions.append(CandidateDecision(
+                group, score, selected is not None and group.event_id == selected.event_id,
+                rejection, missing,
+                scoring_errors.get(group.event_id) or "; ".join(owner_failures) or None,
+            ))
+        self.decisions.append(MetaDecision(
+            observation, tuple(decisions), action, self._owner,
+            candidate_error=collection_error,
+            teacher_signals=collection.teacher_signals if collection is not None else (),
+        ))
         return action
 
     def observe_native_action(self, action: ExpertAdvice, trace: NativeActionTrace,

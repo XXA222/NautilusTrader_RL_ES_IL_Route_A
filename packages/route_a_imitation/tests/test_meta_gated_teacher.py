@@ -325,6 +325,55 @@ def test_missing_account_model_feature_rejects_without_fabricating_zero():
     assert teacher.decisions[-1].candidates[0].missing_features == ("account.drawdown",)
 
 
+def test_candidate_scoring_error_is_recorded_and_fails_closed(monkeypatch):
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.advise(observation(10, ema_9=99.))
+    monkeypatch.setattr(type(teacher.policy), "score",
+                        lambda _policy, _group: (_ for _ in ()).throw(ValueError("bad score")))
+
+    action = teacher.advise(observation(11, ema_9=101.))
+
+    assert action.intent == "FLAT"
+    decision = teacher.decisions[-1]
+    assert decision.candidate_error is None
+    assert decision.candidates
+    assert all(candidate.disposition == "REJECTED_SCORING_ERROR"
+               and candidate.error_detail == "ValueError: bad score"
+               for candidate in decision.candidates)
+
+
+def test_candidate_collection_error_does_not_suppress_native_exit(monkeypatch):
+    class ExitTeacher:
+        def advise(self, obs):
+            return ExpertAdvice("T01_EMA_9_21", obs.decision_ts_ns, "EXIT", 0.,
+                                ("EMA_REVERSE_CROSS",))
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher._owner = "T01_EMA_9_21"
+    teacher._scope = ("e", "synthetic", "train", "0" * 64)
+    teacher._teachers["T01_EMA_9_21"] = ExitTeacher()
+    monkeypatch.setattr(teacher.collector, "collect",
+                        lambda _observation: (_ for _ in ()).throw(ValueError("bad features")))
+
+    action = teacher.advise(observation(10, exposure=.3))
+
+    assert action.intent == "EXIT"
+    assert teacher.decisions[-1].candidate_error == "ValueError: bad features"
+    assert teacher.decisions[-1].candidates == ()
+
+
+def test_candidate_collection_error_fails_closed_for_new_entries(monkeypatch):
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    monkeypatch.setattr(teacher.collector, "collect",
+                        lambda _observation: (_ for _ in ()).throw(ValueError("bad features")))
+
+    action = teacher.advise(observation(10))
+
+    assert action.intent == "FLAT"
+    assert "CANDIDATE_COLLECTION_FAILED" in action.reason_codes
+    assert teacher.decisions[-1].candidate_error == "ValueError: bad features"
+
+
 def test_mixed_return_bases_are_rejected():
     # Data validation independent of model fitting.
     model = trained_policy()
