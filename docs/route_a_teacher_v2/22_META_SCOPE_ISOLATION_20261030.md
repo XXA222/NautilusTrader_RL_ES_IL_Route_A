@@ -21,11 +21,14 @@ Status: `D1_DEVELOPMENT_DIAGNOSTIC_ONLY`. This change fixes state isolation in t
 
 - Ubuntu 24.04 / Python 3.14.7 targeted eight-teacher lifecycle/signal/ROC, candidate, label, model, Meta, native recorder, rollout, and Gym suite: `141 passed`.
 - After the candidate error-path change, the same joint lifecycle/candidate/Meta/native rollout suite: `144 passed`.
+- Cross-module candidate, counterfactual-label, limit-entry/censor, model fit/calibration, native case funnel, native engine, study runner and full synthetic end-to-end screen suite: `88 passed`.
 - Ruff on the changed source and test modules: passed.
 - Mypy on `meta_gated_teacher.py`: passed (`Success: no issues found in 1 source file`).
 - Regression cases also cover candidate scoring exceptions, collection failure with an active-position exit, and fail-closed collection failure for a flat account. The complete suite retains coverage for direct base-teacher schema reset, independent collector reset, hard-risk priority on active scope transition, out-of-scope/not-yet-available model rejection, consensus owner fallback and native receipt propagation.
 
 The read-only protocol preflight on 2026-10-30 reported `REGISTERED_FUTURE_SOURCE`, with `completed_screen_windows: 0`, `market_payload_read: false`, and the registered interval `2026-12-01T00:00:00Z` to `2026-12-19T00:00:00Z` for protocol `route-a-meta-x1-train-20261201-20261219-v1`. Protocol SHA-256: `b731f1e9f3d0eb7bb62f2fcdf4a76b609ff6452e3e8c146a8538b2fc25cc1845`.
+
+The retained development artifact `.artifacts/route-a-meta-development-20261029/native-vs-counterfactual.json` identifies the same completed case `native-case-047b9e12-31d2-4dfc-931f-e32b441a5c14`: modeled reference-price net cash `-0.422069582 USDT`, native actual-fill net cash `-0.423483520 USDT`, and reconciled difference `-0.001413938 USDT`. It records the reference/actual fill-price, modeled slippage, fee and funding components separately. The case is consumed historical development evidence with `SCENARIO_ONLY` status; it is an economic-basis reconciliation, not an independent profitability result.
 
 ## Limits
 
