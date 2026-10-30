@@ -242,7 +242,10 @@ class MetaGatedTeacher:
                     and (len(selected) != 1 or selected[0].group.side != opening_side))):
             raise ValueError("native entry receipt must bind its single direction-matched candidate")
         selected_id = selected[0].group.event_id if selected else None
-        selected_teacher = selected[0].group.teachers[0][0] if selected else None
+        selected_teacher = decision.owner_id if selected else None
+        if (selected and (selected_teacher is None
+                or selected_teacher not in {name for name, _reason in selected[0].group.teachers})):
+            raise ValueError("native entry owner must be one of the selected candidate's teachers")
         self.native_receipts.append(NativeDecisionReceipt(trace.decision_ts_ns, action, trace,
             native_order_facts, selected_id, selected_teacher))
         if self._owner is not None:

@@ -101,6 +101,9 @@ def test_consensus_candidate_uses_any_ready_native_teacher_owner(monkeypatch):
         def reset(self, episode_id=""):
             pass
 
+        def observe_native_action(self, action, trace, native_order_facts):
+            pass
+
     class FixedCollection:
         def reset(self, episode_id=""):
             pass
@@ -125,6 +128,11 @@ def test_consensus_candidate_uses_any_ready_native_teacher_owner(monkeypatch):
     assert action.expert_id == "T02_ROC_20_60"
     assert teacher.decisions[-1].owner_id == "T02_ROC_20_60"
     assert teacher.decisions[-1].candidates[0].selected
+    trace = NativeActionTrace(action.decision_ts_ns, .3, .3, .3, .3,
+                              10000., 9999., "SUBMIT")
+    teacher.observe_native_action(action, trace,
+                                  L3OrderFacts(native_evidence_receipt="owner-receipt"))
+    assert teacher.native_receipts[-1].selected_teacher_id == "T02_ROC_20_60"
 
 
 def test_pending_order_candidate_is_not_misreported_as_arbitration():

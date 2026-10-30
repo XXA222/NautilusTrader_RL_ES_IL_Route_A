@@ -10,14 +10,15 @@ Status: `D1_DEVELOPMENT_DIAGNOSTIC_ONLY`. This change fixes state isolation in t
 - If hard recovery is due during an active-state scope transition, the recovery action remains executable; candidate and teacher diagnostics are skipped and the reason is recorded. Rolling state is not advanced with observations from the new scope.
 - Candidates whose source/fold/schema differs from the frozen policy, or whose decision precedes calibration availability, are retained as explicit `REJECTED_MODEL_SCOPE_MISMATCH` / `REJECTED_MODEL_NOT_AVAILABLE` dispositions. They do not raise a model-scoring error or enter arbitration.
 - For a selected consensus candidate, execution ownership is chosen from all contributing teachers whose existing native lifecycle is ready for the candidate direction. A not-ready first-listed teacher no longer blocks another ready contributor from executing the same grouped candidate.
+- Native entry receipts and the existing case funnel now record that actual selected owner and its reason code, while trade cases continue to retain the full contributing teacher set. This keeps execution provenance consistent when a consensus owner is not the first sorted teacher.
 - Clarified types in the ordinary scoring and native-owner branches; this fixes existing Mypy errors in the module without changing runtime selection behavior.
 
 ## Validation
 
-- Ubuntu 24.04 / Python 3.14.7 targeted candidate, label, model, Meta, native recorder, rollout, and Gym suite: `56 passed`.
+- Ubuntu 24.04 / Python 3.14.7 targeted candidate, label, model, Meta, native recorder, rollout, and Gym suite: `57 passed`.
 - Ruff on the changed source and test modules: passed.
 - Mypy on `meta_gated_teacher.py`: passed (`Success: no issues found in 1 source file`).
-- Regression cases cover flat feature-schema reset with trace retention, hard-risk priority on active scope transition without advancing teacher state, fail-closed behavior when the same transition has no recovery override, explicit rejection of out-of-scope or not-yet-available model scores, and fallback to a ready native owner within a grouped consensus candidate.
+- Regression cases cover flat feature-schema reset with trace retention, hard-risk priority on active scope transition without advancing teacher state, fail-closed behavior when the same transition has no recovery override, explicit rejection of out-of-scope or not-yet-available model scores, fallback to a ready native owner within a grouped consensus candidate, and propagation of that owner into native receipts and the case funnel.
 
 The read-only protocol preflight reported `REGISTERED_FUTURE_SOURCE`, with `completed_screen_windows: 0` and `market_payload_read: false` for protocol `route-a-meta-x1-train-20261201-20261219-v1`.
 
