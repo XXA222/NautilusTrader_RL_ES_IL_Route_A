@@ -133,6 +133,11 @@ def test_meta_native_cases_retain_exact_selected_candidate_provenance():
     assert retained["ordinary_complete_cases"] == 0
     assert retained["case_disposition_counts"] == {"NATIVE_CASE_INCOMPLETE": 1}
     assert retained["cases"][0]["native_status"] == "OPEN_CENSORED"
+    censored_unmatched = reconcile_selected_native_cases(decision,
+        (replace(censored_case, candidate_event_id="a" * 64),),
+        lambda *_: pytest.fail("unmatched censored case must not reach price replay"),
+        execution_recipe="native", scenario="base")
+    assert censored_unmatched["cases"][0]["status"] == "UNMATCHED_CANDIDATE"
 
     hook.cases = (replace(case, candidate_event_id="f"*64,
                           candidate_teacher_ids=("T02_ROC_20_60",)),)

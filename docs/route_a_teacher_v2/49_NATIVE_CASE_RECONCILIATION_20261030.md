@@ -6,12 +6,13 @@ The Meta reconciliation adapter previously fell back to `(decision timestamp, si
 
 ## Change
 
-Completed native cases now require an exact selected candidate event ID and exact teacher-source tuple before replay or economic comparison. Cases without a candidate identity are explicitly `UNVERIFIED_CANDIDATE_IDENTITY`. Open and terminal-censored native cases remain in the output as `NATIVE_CASE_INCOMPLETE` with their native status. The summary reports total cases, ordinary completed cases, comparable cases, and disposition counts; duplicate native case IDs fail closed.
+Every native case must first match an exact selected candidate event ID, decision clock, direction, and teacher-source tuple. Missing IDs are `UNVERIFIED_CANDIDATE_IDENTITY`; unmatched IDs remain `UNMATCHED_CANDIDATE`, including for censored cases. Only after identity matches are open and terminal-censored cases recorded as `NATIVE_CASE_INCOMPLETE` with their native status. The summary reports total cases, ordinary completed cases, comparable cases, and disposition counts; duplicate native case IDs fail closed.
 
 ## Verification
 
 - Regression cases verify exact candidate matching, missing-identity rejection, and retention of open-censored cases.
 - Native Meta funnel and integration regressions: **34 passed**. Ruff and `git diff --check` passed.
+- Follow-up after applying candidate identity checks to censored cases: native funnel and end-to-end integration regressions **5 passed**; Ruff and `git diff --check` passed.
 
 ## Evidence boundary
 

@@ -111,11 +111,6 @@ def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recip
     results = []
     for case in cases:
         row = {"trade_case_id": case.trade_case_id}
-        if case.status != "ORDINARY_COMPLETE":
-            results.append({**row, "status": "NATIVE_CASE_INCOMPLETE",
-                            "native_status": case.status,
-                            "candidate_event_id": case.candidate_event_id})
-            continue
         candidate_id = getattr(case, "candidate_event_id", None)
         if candidate_id is None:
             results.append({**row, "status": "UNVERIFIED_CANDIDATE_IDENTITY",
@@ -132,6 +127,10 @@ def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recip
                             "reason": "native case candidate id disagrees with entry clock or side"})
             continue
         row["event_id"] = group.event_id
+        if case.status != "ORDINARY_COMPLETE":
+            results.append({**row, "status": "NATIVE_CASE_INCOMPLETE",
+                            "native_status": case.status})
+            continue
         native = asdict(case)
         native["gross_cash_pnl_before_fees_and_funding"] = (
             case.side * (case.exit_fill_price / case.entry_fill_price - 1) * case.entry_notional)
