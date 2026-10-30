@@ -71,10 +71,19 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["rejected"]["mean_net_bps"] == -2.
     assert result["accepted"]["candidates"] == 2
     assert result["accepted"]["without_outcome"] == 1
+    assert result["accepted"]["complete_coverage"] == .5
+    assert result["accepted"]["outcome_status_counts"] == {
+        "COMPLETE": 1, "RIGHT_CENSORED": 1,
+    }
+    assert result["accepted"]["incomplete_outcome_status_counts"] == {
+        "RIGHT_CENSORED": 1,
+    }
     assert result["accepted_not_native_selected"]["candidates"] == 1
     assert result["accepted_not_native_selected"]["without_outcome"] == 1
     assert result["native_selected"]["candidates"] == 1
     assert result["rejected"]["without_outcome"] == 0
+    assert result["rejected"]["complete_coverage"] == 1.
+    assert result["rejected"]["incomplete_outcome_status_counts"] == {}
     assert result["accepted"]["positive_complete_outcomes"] == 1
     assert result["accepted"]["average_positive_net_bps"] == 5.
     assert result["accepted"]["negative_complete_outcomes"] == 0
@@ -255,3 +264,4 @@ def test_cost_resilience_does_not_treat_flat_or_missing_as_profit():
     report = compare_preregistered_native_runs(config, (base, stress))["cost_resilience"][0]
     assert report["status"] == "NO_COMPLETED_TRADE"
     assert report["both_positive_after_costs"] is None
+
