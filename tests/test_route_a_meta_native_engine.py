@@ -2,6 +2,7 @@
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
+import json
 import sys
 
 import numpy as np
@@ -154,6 +155,17 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
     assert cell["candidate_summary"]["same_candidate_cost_comparison"]["selected_candidates"] >= 1
     assert cell["candidate_summary"]["native_case_reconciliation"]["native_cases"] >= 1
+    native_result = json.loads((cell_dir/"native-result.json").read_text())
+    case_candidate_ids = {case["trade_case_id"]: case["candidate_event_id"]
+                          for case in native_result["cases"]}
+    assert case_candidate_ids and all(len(event_id) == 64 for event_id in case_candidate_ids.values())
+    assert all(native_result_case["candidate_teacher_ids"]
+               for native_result_case in native_result["cases"])
+    reconciled_cases = native_result["candidate_diagnostics"]["native_case_reconciliation"]["cases"]
+    assert any(row.get("event_id") == case_candidate_ids.get(row["trade_case_id"])
+               for row in reconciled_cases)
+    assert all(row.get("event_id") == case_candidate_ids[row["trade_case_id"]]
+               for row in reconciled_cases if row["trade_case_id"] in case_candidate_ids)
     coverage = cell["candidate_summary"]["teacher_signal_coverage"]
     assert len(coverage) == 8
     assert all(sum(row["raw_signal_counts"].values()) == 11 for row in coverage.values())
