@@ -11,16 +11,18 @@ The research-only limit-touch replay previously allowed two inconsistent cases:
 
 The replay now treats a bar starting at the decision boundary as eligible, excludes a bar that straddles the decision from fill inference, and right-censors at the start of any uncovered interval. It validates the entire supplied bar sequence before early returns, so an early censor cannot hide malformed or overlapping later bars. A touched boundary bar is still not counted as a fill if OHLC cannot order touch and cancellation, and non-filled states remain distinct (`UNFILLED`, `CANCELLED`, `MISSED`, `RIGHT_CENSORED`).
 
+If the final eligible bar touches the limit but the assumed fill timestamp (bar end) equals the registered right-open block boundary, the outcome is now `RIGHT_CENSORED`, not `MISSED`: the touch is known, but the configured fill timestamp is outside the permitted block.
+
 ## Validation
 
 Ubuntu 24.04 / WSL2 / Python 3.14.7:
 
 ```text
-.venv/bin/python -m pytest packages/route_a_imitation/tests/test_limit_entry.py packages/route_a_imitation/tests/test_x1_group_replay.py
-9 passed
+.venv/bin/python -m pytest packages/route_a_imitation/tests/test_limit_entry.py packages/route_a_imitation/tests/test_x1_group_replay.py packages/route_a_imitation/tests/test_opportunity_labels.py packages/route_a_imitation/tests/test_group_outcome_economics.py packages/route_a_imitation/tests/test_train_meta.py packages/route_a_imitation/tests/test_native_meta_rollout.py packages/route_a_imitation/tests/test_native_meta_funnel.py tests/test_route_a_meta_native_engine.py tests/test_route_a_meta_native_training_e2e.py
+31 passed
 
-.venv/bin/python -m pytest packages/route_a_imitation/tests/test_opportunity_labels.py packages/route_a_imitation/tests/test_train_meta.py packages/route_a_imitation/tests/test_native_meta_rollout.py packages/route_a_imitation/tests/test_native_meta_funnel.py tests/test_route_a_meta_native_engine.py tests/test_route_a_meta_native_training_e2e.py
-15 passed
+ruff check packages/route_a_imitation/src/rles_route_a/teacher_research/limit_entry.py packages/route_a_imitation/tests/test_limit_entry.py packages/route_a_imitation/tests/test_x1_group_replay.py
+All checks passed
 ```
 
 ## Scope
