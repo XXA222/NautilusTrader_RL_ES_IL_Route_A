@@ -286,24 +286,23 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
         cases = tuple(replace(case, teacher_id=run["strategy_id"]) for case in run["cases"])
         if any(case.scenario_id != run["scenario"] for case in cases):
             raise ValueError("native trade case scenario differs from its matrix cell")
-        metrics = summarize_native_economics(cases, tuple(run["equity_curve"]))
         account = run.get("account_metrics")
-        if account is not None:
-            if not isinstance(account, dict):
-                raise ValueError("native account metrics must be a mapping")
-            try:
-                fee, slip, funding = (account[name] for name in
-                                      ("total_fee", "total_slippage_cost", "total_funding"))
-            except KeyError as exc:
-                raise ValueError("native account costs are incomplete") from exc
-            if (any(isinstance(v, bool) or not isinstance(v, (int, float)) or not isfinite(v)
-                    for v in (fee, slip, funding)) or fee < 0 or slip < 0):
-                raise ValueError("native account costs are invalid")
-            metrics.update({"account_fees": fee, "account_slippage": slip,
-                "account_funding": funding,
-                "account_gross_before_costs_inferred": metrics["account_equity_change"] + fee + slip - funding})
-            metrics["native_case_cashflow_reconciliation"] = _reconcile_native_case_cashflows(
-                cases, account, metrics["account_equity_change"])
+        if not isinstance(account, dict):
+            raise ValueError("native matrix cell requires complete native account costs")
+        try:
+            fee, slip, funding = (account[name] for name in
+                                  ("total_fee", "total_slippage_cost", "total_funding"))
+        except KeyError as exc:
+            raise ValueError("native account costs are incomplete") from exc
+        if (any(isinstance(v, bool) or not isinstance(v, (int, float)) or not isfinite(v)
+                for v in (fee, slip, funding)) or fee < 0 or slip < 0):
+            raise ValueError("native account costs are invalid")
+        metrics = summarize_native_economics(cases, tuple(run["equity_curve"]))
+        metrics.update({"account_fees": fee, "account_slippage": slip,
+            "account_funding": funding,
+            "account_gross_before_costs_inferred": metrics["account_equity_change"] + fee + slip - funding})
+        metrics["native_case_cashflow_reconciliation"] = _reconcile_native_case_cashflows(
+            cases, account, metrics["account_equity_change"])
         if run.get("candidate_summary") is not None:
             metrics["candidate_summary"] = run["candidate_summary"]
         supplied[key] = metrics
