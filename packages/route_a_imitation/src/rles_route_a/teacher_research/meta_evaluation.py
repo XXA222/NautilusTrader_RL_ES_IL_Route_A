@@ -200,6 +200,31 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
             }}
 
 
+def _reconcile_native_case_cashflows(cases, account, account_equity_change: float):
+    """Fail closed if retained native cases disagree with the account ledger."""
+    case_totals = {
+        "net_pnl": fsum(case.realized_pnl for case in cases),
+        "fees": fsum(case.fees for case in cases),
+        "slippage": fsum(case.slippage_cost for case in cases),
+        "funding": fsum(case.funding for case in cases),
+    }
+    account_totals = {
+        "net_pnl": account_equity_change,
+        "fees": float(account["total_fee"]),
+        "slippage": float(account["total_slippage_cost"]),
+        "funding": float(account["total_funding"]),
+    }
+    differences = {name: account_totals[name] - case_totals[name] for name in case_totals}
+    tolerance = max(1e-6, 1e-9 * max(1., *(abs(x) for x in (*case_totals.values(),
+                                                              *account_totals.values()))))
+    if any(abs(value) > tolerance for value in differences.values()):
+        raise ValueError("native trade-case cash flows do not reconcile with account snapshots")
+    return {"status": "RECONCILED", "tolerance_cash": tolerance,
+            "case_totals": case_totals, "account_totals": account_totals,
+            "account_minus_cases": differences,
+            "case_population": "all retained cases including terminal censoring"}
+
+
 def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
     """Compare the same selected candidate paths under two modeled cost schedules."""
     base = {item.event_id: item for item in base_outcomes}
@@ -277,6 +302,8 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
             metrics.update({"account_fees": fee, "account_slippage": slip,
                 "account_funding": funding,
                 "account_gross_before_costs_inferred": metrics["account_equity_change"] + fee + slip - funding})
+            metrics["native_case_cashflow_reconciliation"] = _reconcile_native_case_cashflows(
+                cases, account, metrics["account_equity_change"])
         if run.get("candidate_summary") is not None:
             metrics["candidate_summary"] = run["candidate_summary"]
         supplied[key] = metrics

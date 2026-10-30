@@ -174,6 +174,37 @@ def test_native_comparison_reports_missing_cells_without_model_substitution():
         compare_preregistered_native_runs(config, ({**run, "native_order_verification": {}},))
 
 
+def test_native_comparison_requires_trade_case_cashflows_to_match_account():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+
+    config = {"teachers": ["EMA"], "controls": ["FLAT"],
+              "cost_scenarios": {"base": {}},
+              "intervals": {"native_screen": [["a", "b"]]}}
+    case = NativeTradeCase1m(
+        trade_case_id="native", signal_id="signal", teacher_id="EMA", exit_policy_id="X1",
+        scenario_id="base", block_id="a_b", side=1, status="ORDINARY_COMPLETE",
+        entry_decision_ts_ns=1, entry_signal_price=100., entry_fill_ts_ns=2,
+        entry_fill_price=100., entry_notional=1000., exit_signal_price=101.,
+        exit_fill_ts_ns=4, exit_fill_price=101., fees=2., fee_currency="USDT",
+        equity_currency="USDT", slippage_cost=1., funding=0., realized_pnl=8.,
+        equity_start=1000., equity_end=1008., mfe_bps=100., mae_bps=-10.,
+        holding_minutes=2., exit_reason="X1", economic_status="SCENARIO_ONLY")
+    run = {"strategy_id": "EMA", "scenario": "base", "window": ("a", "b"),
+           "cases": (case,), "equity_curve": (1000., 1008.),
+           "account_metrics": {"total_fee": 2., "total_slippage_cost": 1., "total_funding": 0.},
+           "native_order_verification": {"barriers": 2,
+               "authority": "retained_m22_session_snapshots"}}
+
+    report = compare_preregistered_native_runs(config, (run,))
+    metrics = next(row["metrics"] for row in report["rows"] if row["status"] == "AVAILABLE")
+    assert metrics["native_case_cashflow_reconciliation"]["status"] == "RECONCILED"
+    assert metrics["native_case_cashflow_reconciliation"]["case_totals"]["net_pnl"] == 8.
+
+    bad_run = {**run, "account_metrics": {**run["account_metrics"], "total_fee": 2.1}}
+    with pytest.raises(ValueError, match="do not reconcile"):
+        compare_preregistered_native_runs(config, (bad_run,))
+
+
 def test_window_consistency_does_not_infer_missing_or_tied_improvements():
     from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
     config = {"teachers": ["EMA"], "controls": ["FLAT"], "cost_scenarios": {"base": {}},
