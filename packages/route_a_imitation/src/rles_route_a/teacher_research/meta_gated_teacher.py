@@ -190,17 +190,26 @@ class MetaGatedTeacher:
             self._owner = None
             eligible = [(group, score) for group, score in scored
                         if score is not None and score.action in ("LONG", "SHORT")]
+            executable_owner_by_event: dict[str, str] = {}
             for group, score in eligible:
                 expected = "OPEN_LONG" if group.side > 0 else "OPEN_SHORT"
-                if native_advice[group.teachers[0][0]].intent != expected:
+                ready_owners = tuple(
+                    teacher_id for teacher_id, _reason in group.teachers
+                    if native_advice[teacher_id].intent == expected
+                )
+                if not ready_owners:
                     owner_not_ready.add(group.event_id)
+                else:
+                    # Consensus is a single candidate, but any contributing
+                    # teacher whose native lifecycle is ready may own execution.
+                    executable_owner_by_event[group.event_id] = ready_owners[0]
             eligible = [(group, score) for group, score in eligible
                         if group.event_id not in owner_not_ready]
             if eligible:
                 # Deterministic arbitration selects one group, never both directions.
                 selected, score = max(eligible, key=lambda item:
                     (item[1].expected_net_bps, item[1].probability_positive, item[0].side))
-                self._owner = selected.teachers[0][0]
+                self._owner = executable_owner_by_event[selected.event_id]
                 underlying = native_advice[self._owner]
                 action = underlying
             else:
