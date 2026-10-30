@@ -227,6 +227,14 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
         and all(sum(result["teacher_signal_coverage"][teacher_id]["raw_signal_counts"].values())
                 == len(teacher.decisions) for teacher_id in expected_teacher_ids)
     )
+    if not result["complete_eight_teacher_signal_coverage"]:
+        # A partial teacher union changes the candidate denominator, so its
+        # accepted/rejected counterfactual quality cannot be presented as a
+        # complete eight-teacher comparison. Keep the per-minute signals,
+        # errors and score funnel, but do not replay or summarize outcomes.
+        result["quality_status"] = "INCOMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
+        return result
+    result["quality_status"] = "COMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
     if not decisions:
         return result
     opens, funding = extract_model_price_path(factory, start_ns=start_ns, end_ns=end_ns,
@@ -438,3 +446,4 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
