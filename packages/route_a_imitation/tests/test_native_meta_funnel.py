@@ -2,7 +2,13 @@ from dataclasses import replace
 
 import pytest
 
+from rles_route_a.contracts import ExpertAdvice
 from rles_route_a.evaluation.teacher_case_report_1m import NativeTradeCase1m
+from rles_route_a.teacher_research.candidate_collector import CandidateCollection
+from rles_route_a.teacher_research.candidate_event_union import (
+    TeacherProposal, group_teacher_proposals,
+)
+from rles_route_a.teacher_research.entry_meta_policy import EntryScore
 from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher
 from rles_route_a.teacher_research.native_meta_funnel import MetaNativeFunnelAdapter
 from test_candidate_collector import observation
@@ -38,6 +44,46 @@ def test_meta_funnel_projects_selected_signal_to_native_case_hook():
     assert signal.raw_signal == "EXIT_LONG" and signal.reason_code == "EMA_REVERSE_CROSS"
     with pytest.raises(ValueError, match="corresponding"):
         hook.capture_pre_decision(second, action, {}, MetaGatedTeacher(trained_policy(), recovery=Recovery()))
+
+
+def test_native_funnel_uses_actual_consensus_owner_reason(monkeypatch):
+    class StaticTeacher:
+        def __init__(self, teacher_id, intent):
+            self.teacher_id = teacher_id
+            self.intent = intent
+
+        def advise(self, obs):
+            return ExpertAdvice(self.teacher_id, obs.decision_ts_ns, self.intent,
+                                .3 if self.intent == "OPEN_LONG" else 0., (self.intent,))
+
+        def reset(self, episode_id=""):
+            pass
+
+    class FixedCollection:
+        def reset(self, episode_id=""):
+            pass
+
+        def collect(self, obs):
+            proposals = (
+                TeacherProposal(obs, "T01_EMA_9_21", 1, "EMA_CROSS_LONG"),
+                TeacherProposal(obs, "T02_ROC_20_60", 1, "ROC_CONSENSUS_LONG"),
+            )
+            return CandidateCollection(group_teacher_proposals(proposals), ())
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.collector = FixedCollection()
+    teacher._teachers["T01_EMA_9_21"] = StaticTeacher("T01_EMA_9_21", "FLAT")
+    teacher._teachers["T02_ROC_20_60"] = StaticTeacher("T02_ROC_20_60", "OPEN_LONG")
+    monkeypatch.setattr(type(teacher.policy), "score", lambda _policy, _group:
+                        EntryScore("LONG", .8, 20., True, "POSITIVE_NET_EDGE"))
+    hook = MetaNativeFunnelAdapter(teacher=teacher, native_hook=NativeHook())
+    obs = observation(10, ema_9=101.)
+    action = teacher.advise(obs)
+
+    signal, _recipe = hook.capture_pre_decision(obs, action, {}, teacher)
+
+    assert action.expert_id == "T02_ROC_20_60"
+    assert signal.reason_code == "ROC_CONSENSUS_LONG"
 
 
 def test_meta_native_cases_retain_exact_selected_candidate_provenance():

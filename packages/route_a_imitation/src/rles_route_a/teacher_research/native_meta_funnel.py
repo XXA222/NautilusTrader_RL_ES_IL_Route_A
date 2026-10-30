@@ -38,7 +38,11 @@ class MetaNativeFunnelAdapter:
         if raw in ("LONG_ENTRY", "SHORT_ENTRY"):
             if len(selected) != 1 or selected[0].group.side != side:
                 raise ValueError("Meta native entry must bind its single selected candidate")
-            reason = selected[0].group.teachers[0][1]
+            owner_id = teacher.decisions[-1].owner_id
+            reasons_by_teacher = dict(selected[0].group.teachers)
+            if owner_id is None or owner_id not in reasons_by_teacher:
+                raise ValueError("Meta native entry owner must belong to its selected candidate")
+            reason = reasons_by_teacher[owner_id]
         facade = SimpleNamespace(last_signal=TeacherSignal(raw, side, reason),
                                  required_fields=(),
                                  recipe=SimpleNamespace(indicator_recipe_id="route_a.meta_gated_x1.v1"))
