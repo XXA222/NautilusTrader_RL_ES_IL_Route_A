@@ -10,6 +10,26 @@ from .meta_gated_teacher import CandidateDecision
 from .opportunity_models import overlap_uniqueness_weights, summarize_prediction_calibration
 
 
+ACTIVE_NATIVE_CONTROL_IDS = ("FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3")
+KNOWN_UNIMPLEMENTED_CONTROL_IDS = ("ORIGINAL_8_X1",)
+
+
+def registered_control_scope(config) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Classify frozen controls as executable or explicitly planned-only."""
+    controls = config.get("controls")
+    if (not isinstance(controls, (list, tuple))
+            or any(not isinstance(item, str) or not item for item in controls)
+            or len(controls) != len(set(controls))):
+        raise ValueError("preregistered controls must be unique non-empty IDs")
+    supported = set(ACTIVE_NATIVE_CONTROL_IDS) | set(KNOWN_UNIMPLEMENTED_CONTROL_IDS)
+    unknown = tuple(item for item in controls if item not in supported)
+    if unknown:
+        raise ValueError(f"unrecognized preregistered control IDs: {', '.join(unknown)}")
+    active = tuple(item for item in controls if item in ACTIVE_NATIVE_CONTROL_IDS)
+    planned_only = tuple(item for item in controls if item in KNOWN_UNIMPLEMENTED_CONTROL_IDS)
+    return active, planned_only
+
+
 def summarize_native_economics(cases: tuple[NativeTradeCase1m, ...],
                                equity_curve: tuple[float, ...]) -> dict[str, object]:
     """Summarize one native strategy/window/scenario; censored cases stay separate."""
@@ -381,11 +401,12 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
     from dataclasses import replace
 
     original = tuple(config["teachers"])
+    active_controls, planned_only_controls = registered_control_scope(config)
     preregistered_controls = tuple(config["controls"])
     # The current runner has no implementation for this preregistered
     # aggregate teacher control. Keep it in the planned matrix as MISSING,
     # while separately reporting the executable active matrix.
-    controls = tuple(item for item in preregistered_controls if item != "ORIGINAL_8_X1")
+    controls = active_controls
     strategies = (*original, "META_X1", *controls)
     planned_strategies = (*original, "META_X1", *preregistered_controls)
     scenarios = tuple(config["cost_scenarios"])
@@ -489,6 +510,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
         "status": planned_status,
         "active_controls": list(controls),
         "preregistered_controls": list(preregistered_controls),
+        "preregistered_controls_outside_active_matrix": list(planned_only_controls),
         "preregistered_controls_not_executed": [
             control for control in preregistered_controls
             if not any(key[0] == control for key in supplied)

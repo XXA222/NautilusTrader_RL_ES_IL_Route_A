@@ -35,7 +35,7 @@ from rles_route_a.teacher_research.conditional_outcome_labels import label_group
 from rles_route_a.teacher_research.entry_meta_policy import summarize_entry_scores
 from rles_route_a.teacher_research.execution_binding import validate_native_execution
 from rles_route_a.teacher_research.meta_evaluation import (compare_preregistered_native_runs,
-    summarize_candidate_quality, paired_cost_candidate_quality)
+    registered_control_scope, summarize_candidate_quality, paired_cost_candidate_quality)
 from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher
 from rles_route_a.teacher_research.native_candidate_recorder import NativeCandidateRecorder, run_native_candidate_collection
 from rles_route_a.teacher_research.native_reconciliation import reconcile_selected_native_cases
@@ -421,6 +421,7 @@ def _run_screen_cell(*, factory, source, config, prereg_sha, strategy, scenario,
 
 
 def execute_study(config, prereg_sha, *, source_root, output):
+    active_controls, _planned_only_controls = registered_control_scope(config)
     source, manifest = _load_source(config, prereg_sha, source_root)
     output.mkdir(parents=True, exist_ok=False)
     scaler = _warmup_scaler(source, config, output)
@@ -461,7 +462,7 @@ def execute_study(config, prereg_sha, *, source_root, output):
         except MetaTrainingError as exc:
             failures[scenario] = str(exc)
             policies[scenario] = None
-    strategies = (*config["teachers"], "META_X1", "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3")
+    strategies = (*config["teachers"], "META_X1", *active_controls)
     rows = []
     for window_index, window in enumerate(config["intervals"]["native_screen"], 1):
         start_ns, end_ns = map(preflight.ns, window)
@@ -516,6 +517,8 @@ def main():
                       "active_expected_cells": result["active_expected_cells"],
                       "preregistered_controls_not_executed": result[
                           "preregistered_controls_not_executed"],
+                      "preregistered_controls_outside_active_matrix": result[
+                          "preregistered_controls_outside_active_matrix"],
                       "output": str(output),
                       "qualification": result["qualification"]}, sort_keys=True))
     return 0

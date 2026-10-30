@@ -283,6 +283,25 @@ def test_complete_preregistered_meta_study_matrix_accepts_all_52_cells():
     assert all(row["status"] == "COMPLETE" for row in result["window_consistency"])
     assert all(row["status"] == "NO_COMPLETED_TRADE" for row in result["cost_resilience"])
     assert result["qualification"] == "NOT_ESTABLISHED"
+    assert result["preregistered_controls_outside_active_matrix"] == ["ORIGINAL_8_X1"]
+
+
+def test_unimplemented_control_is_reported_and_unknown_control_fails_closed():
+    from rles_route_a.teacher_research.meta_evaluation import (
+        compare_preregistered_native_runs, registered_control_scope,
+    )
+
+    config = {"teachers": [], "controls": ["ORIGINAL_8_X1", "FLAT"],
+              "cost_scenarios": {"base": {}}, "intervals": {"native_screen": [["a", "b"]]}}
+    active, planned_only = registered_control_scope(config)
+    assert active == ("FLAT",) and planned_only == ("ORIGINAL_8_X1",)
+    report = compare_preregistered_native_runs(config, ())
+    assert report["preregistered_controls_outside_active_matrix"] == ["ORIGINAL_8_X1"]
+
+    with pytest.raises(ValueError, match="unrecognized preregistered control"):
+        registered_control_scope({**config, "controls": ["HIDDEN_CONTROL"]})
+    with pytest.raises(ValueError, match="unique"):
+        registered_control_scope({**config, "controls": ["FLAT", "FLAT"]})
 
 
 def test_native_comparison_requires_trade_case_cashflows_to_match_account():

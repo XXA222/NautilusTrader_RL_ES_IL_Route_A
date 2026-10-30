@@ -236,6 +236,7 @@ def test_runner_dispatches_all_native_cells_or_preserves_missing_model(
     assert result["active_available_cells"] == active_expected
     assert result["active_status"] == ("INCOMPLETE" if reject_stress else "COMPLETE")
     assert result["preregistered_controls_not_executed"] == ["ORIGINAL_8_X1"]
+    assert result["preregistered_controls_outside_active_matrix"] == ["ORIGINAL_8_X1"]
     assert len(calls) == active_expected and (tmp_path/"study"/"comparison.json").is_file()
     assert result["qualification"] == "NOT_ESTABLISHED"
     assert result["status"] == "INCOMPLETE"
