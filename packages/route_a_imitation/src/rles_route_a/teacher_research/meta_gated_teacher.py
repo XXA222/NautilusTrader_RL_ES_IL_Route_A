@@ -97,6 +97,18 @@ class MetaGatedTeacher:
     def _missing_model_features(self, observation: PointInTimeObservation) -> tuple[str, ...]:
         return missing_candidate_features(observation, self.policy.feature_names)
 
+    def _model_rejection(self, group: CandidateGroup,
+                         missing: tuple[str, ...]) -> str | None:
+        observation = group.observation
+        if (observation.source_id, observation.fold_id, observation.feature_spec_hash) != (
+                self.policy.source_id, self.policy.fold_id, self.policy.feature_spec_hash):
+            return "MODEL_SCOPE_MISMATCH"
+        if observation.decision_ts_ns <= self.policy.available_after_ns:
+            return "MODEL_NOT_AVAILABLE"
+        if missing:
+            return "FEATURE_NOT_READY"
+        return None
+
     def advise(self, observation: PointInTimeObservation) -> ExpertAdvice:
         scope = (observation.episode_id, observation.source_id,
                  observation.fold_id, observation.feature_spec_hash)
@@ -139,7 +151,7 @@ class MetaGatedTeacher:
             missing = self._missing_model_features(observation)
             for group in collection.groups if collection is not None else ():
                 try:
-                    score = (None if missing
+                    score = (None if self._model_rejection(group, missing) is not None
                              else self.policy.score(group))
                 except Exception as exc:
                     score = None
@@ -154,10 +166,15 @@ class MetaGatedTeacher:
         native_advice = {name: teacher.advise(observation)
                          for name, teacher in self._teachers.items()}
         missing = self._missing_model_features(observation)
-        scored: list[tuple[CandidateGroup, EntryScore | None]] = [
-            (group, None if missing else self.policy.score(group))
-            for group in collection.groups
-        ]
+        scored: list[tuple[CandidateGroup, EntryScore | None]] = []
+        pre_score_rejections: dict[str, str] = {}
+        for group in collection.groups:
+            rejection = self._model_rejection(group, missing)
+            if rejection is not None:
+                scored.append((group, None))
+                pre_score_rejections[group.event_id] = rejection
+            else:
+                scored.append((group, self.policy.score(group)))
         selected: CandidateGroup | None = None
         owner_not_ready: set[str] = set()
         if observation.pending_order_ids:
@@ -190,10 +207,11 @@ class MetaGatedTeacher:
                 action = advice(observation, self.expert_id, "FLAT", 0., "NO_ACCEPTED_CANDIDATE")
         self.decisions.append(MetaDecision(observation, tuple(
             CandidateDecision(group, score, selected is not None and group.event_id == selected.event_id,
-                              "PENDING_ORDER" if observation.pending_order_ids else
+                              pre_score_rejections.get(group.event_id) or
+                              ("PENDING_ORDER" if observation.pending_order_ids else
                               "POSITION_OPEN" if abs(current) > 1e-8 else
                               "OWNER_NOT_READY" if group.event_id in owner_not_ready else
-                              "FEATURE_NOT_READY" if score is None else None, missing)
+                              None if score is not None else "FEATURE_NOT_READY"), missing)
             for group, score in scored), action, self._owner, teacher_signals=collection.teacher_signals))
         return action
 

@@ -8,14 +8,17 @@ Status: `D1_DEVELOPMENT_DIAGNOSTIC_ONLY`. This change fixes state isolation in t
 - A scope transition while flat with no pending order resets all candidate and owner teacher rolling state, while retaining the current decision/native receipt trace.
 - A scope transition with an active position or pending order fails closed when no recovery intervention is due.
 - If hard recovery is due during an active-state scope transition, the recovery action remains executable; candidate and teacher diagnostics are skipped and the reason is recorded. Rolling state is not advanced with observations from the new scope.
+- Candidates whose source/fold/schema differs from the frozen policy, or whose decision precedes calibration availability, are retained as explicit `REJECTED_MODEL_SCOPE_MISMATCH` / `REJECTED_MODEL_NOT_AVAILABLE` dispositions. They do not raise a model-scoring error or enter arbitration.
 - Clarified types in the ordinary scoring and native-owner branches; this fixes existing Mypy errors in the module without changing runtime selection behavior.
 
 ## Validation
 
-- Ubuntu 24.04 / Python 3.14.7 targeted candidate, label, model, Meta, native recorder, rollout, and Gym suite: `53 passed`.
+- Ubuntu 24.04 / Python 3.14.7 targeted candidate, label, model, Meta, native recorder, rollout, and Gym suite: `55 passed`.
 - Ruff on the changed source and test modules: passed.
 - Mypy on `meta_gated_teacher.py`: passed (`Success: no issues found in 1 source file`).
-- Regression cases cover flat feature-schema reset with trace retention, hard-risk priority on active scope transition without advancing teacher state, and fail-closed behavior when the same transition has no recovery override.
+- Regression cases cover flat feature-schema reset with trace retention, hard-risk priority on active scope transition without advancing teacher state, fail-closed behavior when the same transition has no recovery override, and explicit rejection of out-of-scope or not-yet-available model scores.
+
+The read-only protocol preflight reported `REGISTERED_FUTURE_SOURCE`, with `completed_screen_windows: 0` and `market_payload_read: false` for protocol `route-a-meta-x1-train-20261201-20261219-v1`.
 
 ## Limits
 
