@@ -212,12 +212,17 @@ def fit_entry_meta_policy(
 def summarize_entry_scores(
     scores: Sequence[EntryScore], *, margin_bps: float | None = None,
     unscored_count: int = 0, unscored_reason_counts: Mapping[str, int] | None = None,
+    native_selected_count: int | None = None,
 ) -> dict[str, object]:
     """Report the whole candidate denominator and actual sequential gate funnel."""
     from collections import Counter
     rows = tuple(scores)
     if type(unscored_count) is not int or unscored_count < 0:
         raise ValueError("unscored candidate count must be a nonnegative integer")
+    if (native_selected_count is not None
+            and (type(native_selected_count) is not int or native_selected_count < 0
+                 or native_selected_count > len(rows) + unscored_count)):
+        raise ValueError("native selected count must fit the complete candidate denominator")
     unscored_reasons = dict(unscored_reason_counts or {})
     if (any(not isinstance(name, str) or not name.strip()
             or type(count) is not int or count < 0
@@ -257,16 +262,24 @@ def summarize_entry_scores(
             "account_eligible": len(account_eligible),
             "in_support": len(support_eligible),
             "above_frozen_net_edge_margin": len(edge_eligible),
-            "accepted": accepted,
+            "model_gate_accepted": accepted,
         }
+        if native_selected_count is not None:
+            if native_selected_count > accepted:
+                raise ValueError("native selection cannot exceed model-gate accepted candidates")
+            stages["native_selected_after_arbitration"] = native_selected_count
         funnel = {
-            "gate_order": ("scored", "account", "support", "net_edge"),
+            "gate_order": ("scored", "account", "support", "net_edge", "native_arbitration"),
             "stage_counts": stages,
             "rejected_at_stage": {
                 "unscored": unscored_count,
                 "account": len(rows) - len(account_eligible),
                 "support": len(account_eligible) - len(support_eligible),
                 "net_edge": len(support_eligible) - len(edge_eligible),
+                "native_arbitration_or_owner_readiness": (
+                    accepted - native_selected_count
+                    if native_selected_count is not None else None
+                ),
             },
             "stage_coverage_of_all_candidates": {
                 name: count / total if total else None
@@ -277,11 +290,16 @@ def summarize_entry_scores(
     return {
         "candidate_count": total, "scored_count": len(rows),
         "unscored_count": unscored_count, "accepted_count": accepted,
+        "model_gate_accepted_count": accepted,
+        "native_selected_count": native_selected_count,
         "coverage": accepted / total if total else None,
+        "native_selected_coverage": (native_selected_count / total
+                                     if total and native_selected_count is not None else None),
         "reason_counts": dict(sorted(reasons.items())),
         "unscored_reason_counts": dict(sorted(unscored_reasons.items())),
         "unsupported_feature_counts": dict(sorted(unsupported.items())),
         "expected_net_bps": distribution([row.expected_net_bps for row in rows]),
         "probability_positive": distribution([row.probability_positive for row in rows]),
         "gate_counts": gates, "sequential_gate_funnel": funnel,
+        "coverage_basis": "model gate acceptance before single-position native arbitration",
     }
