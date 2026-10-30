@@ -6,9 +6,11 @@ The one-minute candidate collector previously let one teacher exception abort th
 
 Meta entry is fail-closed on an incomplete teacher union: candidates remain in the trace with `TEACHER_SIGNAL_INCOMPLETE`, are not scored, and cannot be selected for a native order. Existing-position owner and hard-risk paths remain active. Candidate coverage output now states whether all eight teachers supplied one signal row per barrier and lists per-teacher errors.
 
+The study summary checks the exact registered teacher ID set, not only a count of eight, and reports missing and unexpected IDs explicitly.
+
 ## Verification
 
-- WSL targeted suite: `pytest packages/route_a_imitation/tests/test_candidate_collector.py packages/route_a_imitation/tests/test_meta_gated_teacher.py packages/route_a_imitation/tests/test_native_candidate_recorder.py packages/route_a_imitation/tests/test_native_meta_rollout.py` — **33 passed**.
+- WSL targeted suite: `pytest tests/test_route_a_meta_study_runner.py packages/route_a_imitation/tests/test_candidate_collector.py packages/route_a_imitation/tests/test_meta_gated_teacher.py packages/route_a_imitation/tests/test_native_candidate_recorder.py` — **40 passed**.
 - Ruff on changed Python modules/tests — **passed**; study runner checked with its existing dynamic-import `E402` pattern ignored — **passed**.
 - `git diff --check` — **passed**.
 

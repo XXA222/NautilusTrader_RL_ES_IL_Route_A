@@ -30,7 +30,7 @@ from rles_research.native_metrics import native_report
 from rles_route_a.integration.l2_adapter import CAUSAL_1M_INDICATORS_V1_ROUTE_A_FEATURES
 from rles_route_a.integration.scope import HostTrainGrant
 from rles_route_a.teachers.recovery import RecoveryTeacher
-from rles_route_a.teachers_1m.registry import build_teacher_1m
+from rles_route_a.teachers_1m.registry import ALL_TEACHER_RECIPE_BY_ID, build_teacher_1m
 from rles_route_a.teacher_research.conditional_outcome_labels import label_grouped_candidates
 from rles_route_a.teacher_research.entry_meta_policy import summarize_entry_scores
 from rles_route_a.teacher_research.execution_binding import validate_native_execution
@@ -217,11 +217,15 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
     result["teacher_signal_error_counts"] = dict(sorted(Counter(
         teacher_id for row in teacher.decisions for teacher_id, _detail in row.teacher_errors
     ).items()))
+    expected_teacher_ids = set(ALL_TEACHER_RECIPE_BY_ID)
+    observed_teacher_ids = set(result["teacher_signal_coverage"])
+    result["missing_teacher_ids"] = sorted(expected_teacher_ids - observed_teacher_ids)
+    result["unexpected_teacher_ids"] = sorted(observed_teacher_ids - expected_teacher_ids)
     result["complete_eight_teacher_signal_coverage"] = (
-        len(result["teacher_signal_coverage"]) == 8
+        observed_teacher_ids == expected_teacher_ids
         and not result["teacher_signal_error_counts"]
-        and all(sum(item["raw_signal_counts"].values()) == len(teacher.decisions)
-                for item in result["teacher_signal_coverage"].values())
+        and all(sum(result["teacher_signal_coverage"][teacher_id]["raw_signal_counts"].values())
+                == len(teacher.decisions) for teacher_id in expected_teacher_ids)
     )
     if not decisions:
         return result
