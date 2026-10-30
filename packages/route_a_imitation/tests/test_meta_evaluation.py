@@ -86,6 +86,9 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["quality_by_teacher"]["EMA"]["accepted"]["candidates"] == 2
     assert result["quality_by_teacher"]["EMA"]["accepted"]["complete"] == 1
     assert result["quality_by_teacher"]["EMA"]["rejected"]["mean_net_bps"] == -2.
+    assert result["quality_by_teacher"]["EMA"]["rejection_disposition_counts"] == {
+        "REJECTED_BY_ARBITRATION": 1, "REJECTED_OUT_OF_SUPPORT": 1}
+    assert result["quality_by_side"]["long"]["disposition_counts"]["ACCEPTED_SELECTED"] == 1
     assert result["quality_by_consensus_count"]["1"]["all"]["candidates"] == 3
     assert result["slice_interpretation"]["teacher_slices_overlap"] is True
     assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["complete"] == 0

@@ -10,6 +10,8 @@
 
 Every slice uses the same explicit denominator fields as the top-level summary: candidate count, complete outcomes, no-outcome/censored count, positive/negative/breakeven counts, mean positive/negative net bps, overall mean net bps, and win rate. Teacher slices are flagged as overlapping because one consensus event can appear under multiple teachers. These rows remain `MODEL_COUNTERFACTUAL`, never native trade evidence.
 
+Each slice also reports complete disposition and `REJECTED_*` reason counts, separating model rejection such as `OUT_OF_SUPPORT` from downstream arbitration such as `BY_ARBITRATION`.
+
 ## Verification
 
 - `pytest packages/route_a_imitation/tests/test_meta_evaluation.py tests/test_route_a_meta_native_engine.py tests/test_route_a_meta_study_runner.py` — **16 passed**.
