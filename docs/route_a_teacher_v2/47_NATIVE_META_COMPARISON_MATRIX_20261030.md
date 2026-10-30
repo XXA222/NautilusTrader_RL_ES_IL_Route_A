@@ -11,6 +11,7 @@ The comparison report now distinguishes the full preregistered plan (52 cells) f
 ## Verification
 
 - Ubuntu 24.04 / WSL2 / Python 3.14.7: comparison and runner regression tests verify 52 planned cells, 48 active cells, explicit aggregate-control omission, and separate active/full completion states.
+- Native engine, native Train-to-screen synthetic end-to-end, runner, matrix, and temporal-split tests: **25 passed**. Ruff passed for changed Python files; `git diff --check` passed.
 - Ruff passed for the changed evaluation module and its tests; `git diff --check` passed.
 - The live study was not run. Its registered source remains future dated and the last metadata-only preflight reported zero completed screen windows and no market payload read.
 

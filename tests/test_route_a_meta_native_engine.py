@@ -5,7 +5,6 @@ from pathlib import Path
 import json
 import sys
 
-import numpy as np
 import pytest
 
 from rles_data.core import CuratedStore, MINUTE_NS
@@ -106,21 +105,25 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
             teacher_funnel_hook=funnel)
         cell_dir = tmp_path / "study-cell"
         cell_dir.mkdir()
-        experiment = {"teachers":["T01_EMA_9_21"],
+        experiment = {"protocol_id":"synthetic-meta-native", "teachers":["T01_EMA_9_21"],
             "cost_scenarios":{"base":{"fee_bps_per_leg":10., "slippage_bps_per_leg":1.},
                               "stress":{"fee_bps_per_leg":15., "slippage_bps_per_leg":5.}},
             "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
-            "intervals":{"native_screen":[["1970-01-01T02:30:00Z","1970-01-01T02:44:00Z"]]}}
+            "intervals":{"train_fit":["1970-01-01T00:01:00Z","1970-01-01T00:30:00Z"],
+                         "train_calibration":["1970-01-01T00:30:00Z","1970-01-01T02:30:00Z"],
+                         "native_screen":[["1970-01-01T02:30:00Z","1970-01-01T02:44:00Z"]]}}
         window = experiment["intervals"]["native_screen"][0]
-        cell = study._run_screen_cell(factory=factory, source={"marker_sha256":marker_sha},
-            config=experiment, strategy="META_X1", scenario="base", window=window,
+        source_receipt = {"marker_sha256":marker_sha, "snapshot_hash":"synthetic-snapshot",
+                          "import_manifest_sha256":"synthetic-import-manifest"}
+        cell = study._run_screen_cell(factory=factory, source=source_receipt,
+            config=experiment, prereg_sha="a"*64, strategy="META_X1", scenario="base", window=window,
             model=policy, output=cell_dir)
         comparison_rows = [cell]
         for strategy in ("T01_EMA_9_21", "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
             path = tmp_path / ("study-" + strategy)
             path.mkdir()
             comparison_rows.append(study._run_screen_cell(factory=factory,
-                source={"marker_sha256":marker_sha}, config=experiment,
+                source=source_receipt, config=experiment, prereg_sha="a"*64,
                 strategy=strategy, scenario="base", window=window, model=policy, output=path))
         matrix = study.compare_preregistered_native_runs(experiment, comparison_rows)
         for attr in ("snapshots", "teacher_snapshots", "fill_references"):
@@ -170,6 +173,7 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
     assert len(coverage) == 8
     assert all(sum(row["raw_signal_counts"].values()) == 11 for row in coverage.values())
     assert matrix["status"] == "INCOMPLETE" and matrix["available_cells"] == 5
+    assert matrix["preregistered_controls_not_executed"] == ["ORIGINAL_8_X1"]
     assert matrix["qualification"] == "NOT_ESTABLISHED"
     assert len(records) == 11
     assert any(abs(row.observation.account_value("net_exposure")) > 0 for row in records), repr([

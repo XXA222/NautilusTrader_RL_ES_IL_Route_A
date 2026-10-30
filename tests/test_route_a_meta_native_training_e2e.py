@@ -129,32 +129,39 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     stress_environment["mode"] = "stress"
     stress_factory = application.prepare({**config, "environment":stress_environment}, fit_scaler=False,
         scaler=factory.scaler, compact_report_snapshots=False, require_scoped_train_access=True)
-    experiment = {"teachers":sorted(ALL_TEACHER_RECIPE_BY_ID),
+    experiment = {"protocol_id":"synthetic-train-e2e", "teachers":sorted(ALL_TEACHER_RECIPE_BY_ID),
         "cost_scenarios":{"base":{"fee_bps_per_leg":5., "slippage_bps_per_leg":1.},
                           "stress":{"fee_bps_per_leg":10., "slippage_bps_per_leg":5.}},
         "controls":["ORIGINAL_8_X1","FLAT","FIXED_LONG_0.3","FIXED_SHORT_0.3"],
-        "intervals":{"native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"],
+        "intervals":{"train_fit":["1970-01-01T02:30:00Z","1970-01-01T04:00:00Z"],
+                     "train_calibration":["1970-01-01T04:00:00Z","1970-01-01T05:30:00Z"],
+                     "native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"],
                                       ["1970-01-01T06:00:00Z","1970-01-01T06:30:00Z"]]}}
+    source_receipt = {"marker_sha256":marker_sha, "snapshot_hash":"synthetic-snapshot",
+                      "import_manifest_sha256":"synthetic-import-manifest"}
     cell_dir = tmp_path/"synthetic-frozen-model-screen"
     cell_dir.mkdir()
     old_fold = harness.FOLD_ID
     harness.FOLD_ID = "synthetic-train-e2e"
     try:
-        cell = study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
-            config=experiment, strategy="META_X1", scenario="base",
+        cell = study._run_screen_cell(factory=screen_factory, source=source_receipt,
+            config=experiment, prereg_sha=sha256(b"synthetic-study-prereg").hexdigest(),
+            strategy="META_X1", scenario="base",
             window=experiment["intervals"]["native_screen"][0], model=restored, output=cell_dir)
         runs = [cell]
         for strategy in (*experiment["teachers"], "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
             target = tmp_path / ("synthetic-screen-" + strategy)
             target.mkdir()
-            runs.append(study._run_screen_cell(factory=screen_factory, source={"marker_sha256":marker_sha},
-                config=experiment, strategy=strategy, scenario="base",
+            runs.append(study._run_screen_cell(factory=screen_factory, source=source_receipt,
+                config=experiment, prereg_sha=sha256(b"synthetic-study-prereg").hexdigest(),
+                strategy=strategy, scenario="base",
                 window=experiment["intervals"]["native_screen"][0], model=restored, output=target))
         for strategy in ("META_X1", *experiment["teachers"], "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
             target = tmp_path / ("synthetic-stress-" + strategy)
             target.mkdir()
-            runs.append(study._run_screen_cell(factory=stress_factory, source={"marker_sha256":marker_sha},
-                config=experiment, strategy=strategy, scenario="stress",
+            runs.append(study._run_screen_cell(factory=stress_factory, source=source_receipt,
+                config=experiment, prereg_sha=sha256(b"synthetic-study-prereg").hexdigest(),
+                strategy=strategy, scenario="stress",
                 window=experiment["intervals"]["native_screen"][0], model=stress_model, output=target))
         for scenario, model in (("base", restored), ("stress", stress_model)):
             later_environment = deepcopy(screen_environment)
@@ -164,8 +171,9 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
             for strategy in ("META_X1", *experiment["teachers"], "FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3"):
                 target = tmp_path / ("synthetic-later-" + scenario + "-" + strategy)
                 target.mkdir()
-                runs.append(study._run_screen_cell(factory=later_factory, source={"marker_sha256":marker_sha},
-                    config=experiment, strategy=strategy, scenario=scenario,
+                runs.append(study._run_screen_cell(factory=later_factory, source=source_receipt,
+                    config=experiment, prereg_sha=sha256(b"synthetic-study-prereg").hexdigest(),
+                    strategy=strategy, scenario=scenario,
                     window=experiment["intervals"]["native_screen"][1], model=model, output=target))
         comparison = study.compare_preregistered_native_runs(experiment, runs)
     finally:
@@ -173,9 +181,12 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
     assert cell["native_order_verification"]["barriers"] == 27
     assert cell["candidate_summary"]["scores"]["candidate_count"] > 0
     assert (cell_dir/"candidate-to-native.jsonl").is_file()
-    assert comparison["status"] == "COMPLETE" and comparison["available_cells"] == 48
+    assert comparison["status"] == "INCOMPLETE" and comparison["available_cells"] == 48
+    assert comparison["expected_cells"] == 52 and comparison["active_status"] == "COMPLETE"
+    assert comparison["preregistered_controls_not_executed"] == ["ORIGINAL_8_X1"]
     assert len(comparison["comparisons"]) == 44
-    assert all(item["status"] == "COMPLETE" for item in comparison["window_consistency"])
+    assert all(item["status"] == ("INCOMPLETE" if item["baseline"] == "ORIGINAL_8_X1" else "COMPLETE")
+               for item in comparison["window_consistency"])
     assert comparison["qualification"] == "NOT_ESTABLISHED"
 
     # Generate offline exchange-format inputs, then exercise the production
@@ -236,7 +247,9 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
                                    output=tmp_path/"synthetic-full-study")
     finally:
         harness.FOLD_ID = old_fold
-    assert full["status"] == "COMPLETE" and full["available_cells"] == 48
+    assert full["status"] == "INCOMPLETE" and full["available_cells"] == 48
+    assert full["expected_cells"] == 52 and full["active_status"] == "COMPLETE"
+    assert full["preregistered_controls_not_executed"] == ["ORIGINAL_8_X1"]
     assert full["training_failures"] == {}
     assert full["qualification"] == "NOT_ESTABLISHED"
     for scenario in ("base", "stress"):

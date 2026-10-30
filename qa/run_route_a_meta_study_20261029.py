@@ -127,7 +127,11 @@ def _load_source(config: dict, prereg_sha: str, source_root: str):
         "end_utc_exclusive": config["source"]["end_utc_exclusive"]}}
     authority = {"import_invocation": {"development_protocol_sha256": prereg_sha,
                                         "development_access_key": "access:" + config["protocol_id"]}}
-    return legacy._verified_source(parent, authority, prereg_sha, spec)
+    source, imported_manifest = legacy._verified_source(parent, authority, prereg_sha, spec)
+    # Bind the small provenance manifest into each run receipt. The market
+    # payload remains governed by the verified native Train source path.
+    source["import_manifest_sha256"] = sha256(manifest_path.read_bytes()).hexdigest()
+    return source, imported_manifest
 
 
 def _verify_factory_grant(factory: Any, grant: HostTrainGrant) -> bool:
