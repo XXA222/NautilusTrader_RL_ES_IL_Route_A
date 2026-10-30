@@ -86,6 +86,13 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                 raise ValueError("complete outcome is missing valid economic facts")
         elif outcome.net_return_bps is not None:
             raise ValueError("incomplete outcome cannot supply a net return")
+    def model_accepted(decision):
+        return (decision.rejection_override is None and decision.score is not None
+                and decision.score.action in ("LONG", "SHORT"))
+
+    if any(decision.selected and not model_accepted(decision) for decision in decisions):
+        raise ValueError("native-selected candidates must first pass the model gate")
+
     def segment(items):
         labels = [by_id[d.group.event_id] for d in items]
         values = [o.net_return_bps for o in labels if o.outcome_status == "COMPLETE"
@@ -126,8 +133,12 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
     return {"evidence_type": "MODEL_COUNTERFACTUAL",
             "label_recipe": next(iter(recipes)) if recipes else None,
             "prediction_quality": prediction,
-            "accepted": segment(d for d in decisions if d.selected),
-            "rejected": segment(d for d in decisions if not d.selected),
+            "accepted": segment(d for d in decisions if model_accepted(d)),
+            "rejected": segment(d for d in decisions if not model_accepted(d)),
+            "accepted_not_native_selected": segment(
+                d for d in decisions if model_accepted(d) and not d.selected),
+            "native_selected": segment(d for d in decisions if d.selected),
+            "acceptance_basis": "entry model gate before single-position native arbitration",
             "dispositions": dict(sorted(Counter(d.disposition for d in decisions).items())),
             "quality_by_disposition": {reason: segment(d for d in decisions if d.disposition == reason)
                                        for reason in sorted({d.disposition for d in decisions})}}
