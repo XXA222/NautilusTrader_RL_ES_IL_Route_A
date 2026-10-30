@@ -227,6 +227,7 @@ def test_runner_dispatches_all_native_cells_or_preserves_missing_model(
         calls.append((kwargs["strategy"], kwargs["scenario"], tuple(kwargs["window"])))
         return {"strategy_id":kwargs["strategy"], "scenario":kwargs["scenario"],
                 "window":kwargs["window"], "cases":(), "equity_curve":(1000.,1000.),
+                "account_metrics":{"total_fee":0.,"total_slippage_cost":0.,"total_funding":0.},
                 "native_order_verification":{"barriers":10,"authority":"retained_m22_session_snapshots"}}
     monkeypatch.setattr(study, "_run_screen_cell", cell)
     result = study.execute_study(config, "b"*64, source_root="unused", output=tmp_path/"study")
