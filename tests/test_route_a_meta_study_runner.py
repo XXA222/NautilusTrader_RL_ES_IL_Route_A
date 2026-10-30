@@ -32,6 +32,7 @@ def test_signal_coverage_requires_exact_registered_eight_teacher_set():
     teacher = SimpleNamespace(decisions=(row,), policy=SimpleNamespace(margin_bps=5.))
     complete = study._score_diagnostics(teacher, None, {}, "base", 1, 2)
     assert complete["complete_eight_teacher_signal_coverage"] is True
+    assert complete["quality_status"] == "COMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
     assert complete["missing_teacher_ids"] == []
     assert complete["unexpected_teacher_ids"] == []
 
@@ -41,8 +42,32 @@ def test_signal_coverage_requires_exact_registered_eight_teacher_set():
         teacher_signals=wrong, teacher_errors=()),)
     incomplete = study._score_diagnostics(teacher, None, {}, "base", 1, 2)
     assert incomplete["complete_eight_teacher_signal_coverage"] is False
+    assert incomplete["quality_status"] == "INCOMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
     assert incomplete["missing_teacher_ids"] == [expected[0]]
     assert incomplete["unexpected_teacher_ids"] == ["NOT_REGISTERED"]
+
+
+def test_incomplete_teacher_coverage_keeps_scores_but_skips_candidate_quality_replay(monkeypatch):
+    from types import SimpleNamespace
+
+    expected = tuple(sorted(study.ALL_TEACHER_RECIPE_BY_ID))
+    signals = tuple((teacher_id, "NONE", "NO_SIGNAL") for teacher_id in expected[:-1])
+    candidate = SimpleNamespace(score=None, disposition="REJECTED_TEACHER_SIGNAL_INCOMPLETE",
+                                rejection_override=None, selected=False, missing_features=())
+    row = SimpleNamespace(candidates=(candidate,), candidate_error=None,
+                          teacher_signals=signals, teacher_errors=((expected[-1], "failed"),))
+    teacher = SimpleNamespace(decisions=(row,), policy=SimpleNamespace(margin_bps=5.))
+    monkeypatch.setattr(study, "extract_model_price_path",
+                        lambda *_args, **_kwargs: pytest.fail("incomplete candidate union was replayed"))
+
+    result = study._score_diagnostics(teacher, object(), {}, "base", 1, 2)
+
+    assert result["complete_eight_teacher_signal_coverage"] is False
+    assert result["quality"] is None
+    assert result["quality_status"] == "INCOMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
+    assert result["candidate_disposition_counts"] == {
+        "REJECTED_TEACHER_SIGNAL_INCOMPLETE": 1,
+    }
 
 
 def source_metadata(config):
@@ -187,3 +212,4 @@ def test_runner_dispatches_all_native_cells_or_preserves_missing_model(
     assert result["qualification"] == "NOT_ESTABLISHED"
     assert result["status"] == ("INCOMPLETE" if reject_stress else "COMPLETE")
     assert ("stress" in result["training_failures"]) == reject_stress
+
