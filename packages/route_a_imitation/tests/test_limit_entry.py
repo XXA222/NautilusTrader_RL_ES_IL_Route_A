@@ -55,7 +55,8 @@ def test_complete_no_touch_and_expiry_preserve_distinct_no_entry_states():
                            LimitBar(30, 50, 80., 110.))
     result = replay_limit_entry(decision_ts_ns=20, side=1, limit_price=90.,
                                 bars=touched_at_boundary, block_end_ns=50)
-    assert (result.status, result.observed_until_ns, result.fill_price) == ("MISSED", 50, None)
+    assert (result.status, result.observed_until_ns, result.fill_price) == (
+        "RIGHT_CENSORED", 50, None)
 
 
 def test_limit_entry_allows_next_bar_at_decision_and_censors_an_initial_gap():

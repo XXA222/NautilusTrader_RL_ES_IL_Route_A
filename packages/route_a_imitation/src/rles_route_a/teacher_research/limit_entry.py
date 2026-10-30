@@ -87,8 +87,12 @@ def replay_limit_entry(*, decision_ts_ns: int, side: int, limit_price: float,
         if touched and cancel_at_bar_end:
             # Touch and cancel share the bar boundary; OHLC cannot order them.
             return LimitEntryResult("RIGHT_CENSORED", cancel_at_ns)
-        if touched and bar.end_ns < block_end_ns:
-            return LimitEntryResult("FILLED", bar.end_ns, bar.end_ns, float(limit_price))
+        if touched:
+            if bar.end_ns < block_end_ns:
+                return LimitEntryResult("FILLED", bar.end_ns, bar.end_ns, float(limit_price))
+            # The modeled fill time is the bar end, which is outside the
+            # registered right-open block when both boundaries are equal.
+            return LimitEntryResult("RIGHT_CENSORED", block_end_ns)
         last_observed = bar.end_ns
         if cancel_at_bar_end:
             return LimitEntryResult(cancel_status, cancel_at_ns)
