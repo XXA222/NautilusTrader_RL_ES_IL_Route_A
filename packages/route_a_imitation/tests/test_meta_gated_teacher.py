@@ -125,6 +125,78 @@ def test_risk_override_precedes_model_and_unknown_position():
     assert "before calibration" in decision.candidate_error
 
 
+def test_feature_schema_change_resets_flat_teacher_state_and_keeps_trace():
+    class ResetProbe:
+        def __init__(self):
+            self.resets = 0
+
+        def reset(self, episode_id=""):
+            self.resets += 1
+
+        def advise(self, obs):
+            return ExpertAdvice("T01_EMA_9_21", obs.decision_ts_ns, "FLAT", 0., ("PROBE",))
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    probe = ResetProbe()
+    teacher._teachers["T01_EMA_9_21"] = probe
+    teacher.advise(observation(10))
+    changed_schema = replace(observation(11), feature_spec_hash="1" * 64)
+    teacher.advise(changed_schema)
+
+    assert probe.resets == 1
+    assert teacher._scope == ("e", "synthetic", "train", "1" * 64)
+    assert len(teacher.decisions) == 2
+
+
+def test_active_scope_change_keeps_hard_risk_action_without_advancing_state():
+    class CallProbe:
+        def __init__(self):
+            self.calls = 0
+
+        def advise(self, obs):
+            self.calls += 1
+            return ExpertAdvice("T01_EMA_9_21", obs.decision_ts_ns, "FLAT", 0., ("PROBE",))
+
+        def reset(self, episode_id=""):
+            pass
+
+    recovery = Recovery()
+    recovery.active = True
+    teacher = MetaGatedTeacher(trained_policy(), recovery=recovery)
+    probe = CallProbe()
+    teacher._teachers["T01_EMA_9_21"] = probe
+    teacher._scope = ("e", "synthetic", "train", "0" * 64)
+    changed_source = replace(observation(10, exposure=.4), source_id="other-source")
+
+    action = teacher.advise(changed_source)
+
+    assert action.intent == "EXIT" and action.expert_id == "recovery"
+    assert probe.calls == 0
+    assert teacher.decisions[-1].candidates == ()
+    assert "diagnostics skipped" in teacher.decisions[-1].candidate_error
+
+
+def test_active_scope_change_without_recovery_fails_before_teacher_state_moves():
+    class CallProbe:
+        def __init__(self):
+            self.calls = 0
+
+        def advise(self, obs):
+            self.calls += 1
+            return ExpertAdvice("T01_EMA_9_21", obs.decision_ts_ns, "FLAT", 0., ("PROBE",))
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    probe = CallProbe()
+    teacher._teachers["T01_EMA_9_21"] = probe
+    teacher._scope = ("e", "synthetic", "train", "0" * 64)
+    changed_source = replace(observation(10, exposure=.4), source_id="other-source")
+
+    with pytest.raises(ValueError, match="episode/source/fold/schema"):
+        teacher.advise(changed_source)
+
+    assert probe.calls == 0
+
+
 def test_rejection_diagnostics_identify_out_of_support_feature():
     model = trained_policy()
     obs = observation(10, ema_9=200.)
