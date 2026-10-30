@@ -217,6 +217,7 @@ def summarize_entry_scores(
     scores: Sequence[EntryScore], *, margin_bps: float | None = None,
     unscored_count: int = 0, unscored_reason_counts: Mapping[str, int] | None = None,
     native_selected_count: int | None = None,
+    post_gate_override_counts: Mapping[str, int] | None = None,
 ) -> dict[str, object]:
     """Report the whole candidate denominator and actual sequential gate funnel."""
     from collections import Counter
@@ -233,9 +234,19 @@ def summarize_entry_scores(
             for name, count in unscored_reasons.items())
             or (unscored_reasons and sum(unscored_reasons.values()) != unscored_count)):
         raise ValueError("unscored rejection reasons must cover the unscored candidate count")
+    override_reasons = dict(post_gate_override_counts or {})
+    accepted = sum(row.action in ("LONG", "SHORT") for row in rows)
+    if (any(not isinstance(name, str) or not name.strip()
+            or type(count) is not int or count < 0
+            for name, count in override_reasons.items())
+            or sum(override_reasons.values()) > accepted):
+        raise ValueError("post-gate override counts must fit model-accepted candidates")
+    post_gate_overrides = sum(override_reasons.values())
+    native_eligible = accepted - post_gate_overrides
+    if native_selected_count is not None and native_selected_count > native_eligible:
+        raise ValueError("native selection cannot exceed post-override model accepts")
     reasons = Counter(row.reason for row in rows)
     unsupported = Counter(name for row in rows for name in row.unsupported_features)
-    accepted = sum(row.action in ("LONG", "SHORT") for row in rows)
     total = len(rows) + unscored_count
     def distribution(values):
         if not values:
@@ -267,21 +278,22 @@ def summarize_entry_scores(
             "in_support": len(support_eligible),
             "above_frozen_net_edge_margin": len(edge_eligible),
             "model_gate_accepted": accepted,
+            "native_eligible_after_overrides": native_eligible,
         }
         if native_selected_count is not None:
-            if native_selected_count > accepted:
-                raise ValueError("native selection cannot exceed model-gate accepted candidates")
             stages["native_selected_after_arbitration"] = native_selected_count
         funnel = {
-            "gate_order": ("scored", "account", "support", "net_edge", "native_arbitration"),
+            "gate_order": ("scored", "account", "support", "net_edge", "model_gate",
+                           "native_constraints", "native_arbitration"),
             "stage_counts": stages,
             "rejected_at_stage": {
                 "unscored": unscored_count,
                 "account": len(rows) - len(account_eligible),
                 "support": len(account_eligible) - len(support_eligible),
                 "net_edge": len(support_eligible) - len(edge_eligible),
+                "post_gate_native_constraints": post_gate_overrides,
                 "native_arbitration_or_owner_readiness": (
-                    accepted - native_selected_count
+                    native_eligible - native_selected_count
                     if native_selected_count is not None else None
                 ),
             },
@@ -296,6 +308,8 @@ def summarize_entry_scores(
         "unscored_count": unscored_count, "accepted_count": accepted,
         "model_gate_accepted_count": accepted,
         "native_selected_count": native_selected_count,
+        "post_gate_override_count": post_gate_overrides,
+        "post_gate_override_reason_counts": dict(sorted(override_reasons.items())),
         "coverage": accepted / total if total else None,
         "native_selected_coverage": (native_selected_count / total
                                      if total and native_selected_count is not None else None),

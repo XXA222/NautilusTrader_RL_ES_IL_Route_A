@@ -82,6 +82,23 @@ def test_quality_reports_selected_rejected_and_censor(observed):
             (labels[0], replace(labels[1], source_identity="different"), labels[2]))
 
 
+def test_quality_keeps_hard_risk_override_out_of_model_rejection(observed):
+    obs = observed(ts=10_000_000_000)
+    group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
+    decision = CandidateDecision(
+        group, EntryScore("LONG", .8, 8., True, "POSITIVE_NET_EDGE"), False,
+        "HARD_RISK_OVERRIDE")
+    outcome = GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
+        "X1", "native", "base", obs.decision_ts_ns + 1, None, 8.)
+
+    result = summarize_candidate_quality((decision,), (outcome,))
+
+    assert result["accepted"]["candidates"] == 1
+    assert result["rejected"]["candidates"] == 0
+    assert result["accepted_blocked_by_override"]["mean_net_bps"] == 8.
+    assert result["native_selected"]["candidates"] == 0
+
+
 
 def test_native_comparison_reports_missing_cells_without_model_substitution():
     from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs

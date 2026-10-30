@@ -191,11 +191,16 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
     scores = tuple(item.score for item in decisions if item.score is not None)
     unscored = tuple(item for item in decisions if item.score is None)
     unscored_reasons = Counter(item.disposition for item in unscored)
+    post_gate_overrides = Counter(
+        item.rejection_override for item in decisions
+        if item.rejection_override is not None and item.score is not None
+        and item.score.action in ("LONG", "SHORT"))
     result = {"scores": summarize_entry_scores(
                   scores, margin_bps=teacher.policy.margin_bps,
                   unscored_count=len(unscored),
                   unscored_reason_counts=unscored_reasons,
-                  native_selected_count=sum(item.selected for item in decisions)),
+                  native_selected_count=sum(item.selected for item in decisions),
+                  post_gate_override_counts=post_gate_overrides),
               "unscored": len(unscored), "quality": None,
               "candidate_disposition_counts": dict(sorted(
                   Counter(item.disposition for item in decisions).items())),

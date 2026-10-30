@@ -87,11 +87,13 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         elif outcome.net_return_bps is not None:
             raise ValueError("incomplete outcome cannot supply a net return")
     def model_accepted(decision):
-        return (decision.rejection_override is None and decision.score is not None
+        return (decision.score is not None
                 and decision.score.action in ("LONG", "SHORT"))
 
-    if any(decision.selected and not model_accepted(decision) for decision in decisions):
-        raise ValueError("native-selected candidates must first pass the model gate")
+    if any(decision.selected and (not model_accepted(decision)
+                                  or decision.rejection_override is not None)
+           for decision in decisions):
+        raise ValueError("native-selected candidates must pass the model gate and native constraints")
 
     def segment(items):
         labels = [by_id[d.group.event_id] for d in items]
@@ -137,6 +139,8 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
             "rejected": segment(d for d in decisions if not model_accepted(d)),
             "accepted_not_native_selected": segment(
                 d for d in decisions if model_accepted(d) and not d.selected),
+            "accepted_blocked_by_override": segment(
+                d for d in decisions if model_accepted(d) and d.rejection_override is not None),
             "native_selected": segment(d for d in decisions if d.selected),
             "acceptance_basis": "entry model gate before single-position native arbitration",
             "dispositions": dict(sorted(Counter(d.disposition for d in decisions).items())),

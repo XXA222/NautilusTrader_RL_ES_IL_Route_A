@@ -43,9 +43,11 @@ def test_gate_funnel_uses_all_candidates_and_assigns_first_failed_stage():
     assert funnel["stage_counts"] == {
         "total_candidates": 5, "scored_candidates": 3, "account_eligible": 2,
         "in_support": 1, "above_frozen_net_edge_margin": 1, "model_gate_accepted": 1,
+        "native_eligible_after_overrides": 1,
     }
     assert funnel["rejected_at_stage"] == {
         "unscored": 2, "account": 1, "support": 1, "net_edge": 0,
+        "post_gate_native_constraints": 0,
         "native_arbitration_or_owner_readiness": None,
     }
     assert result["unscored_reason_counts"] == {
@@ -65,8 +67,26 @@ def test_model_acceptance_is_separate_from_single_direction_native_selection():
     assert result["native_selected_coverage"] == .5
     funnel = result["sequential_gate_funnel"]
     assert funnel["stage_counts"]["model_gate_accepted"] == 2
+    assert funnel["stage_counts"]["native_eligible_after_overrides"] == 2
     assert funnel["stage_counts"]["native_selected_after_arbitration"] == 1
+    assert funnel["rejected_at_stage"]["post_gate_native_constraints"] == 0
     assert funnel["rejected_at_stage"]["native_arbitration_or_owner_readiness"] == 1
+
+
+def test_post_gate_native_override_is_separate_from_model_rejection():
+    scores = [EntryScore("LONG", .8, 8., True, "POSITIVE_NET_EDGE"),
+              EntryScore("SHORT", .7, 7., True, "POSITIVE_NET_EDGE")]
+    result = summarize_entry_scores(scores, margin_bps=5., native_selected_count=1,
+                                    post_gate_override_counts={"HARD_RISK_OVERRIDE": 1})
+    funnel = result["sequential_gate_funnel"]
+    assert result["model_gate_accepted_count"] == 2
+    assert result["post_gate_override_reason_counts"] == {"HARD_RISK_OVERRIDE": 1}
+    assert funnel["stage_counts"]["native_eligible_after_overrides"] == 1
+    assert funnel["rejected_at_stage"]["post_gate_native_constraints"] == 1
+    assert funnel["rejected_at_stage"]["native_arbitration_or_owner_readiness"] == 0
+    with pytest.raises(ValueError, match="post-override"):
+        summarize_entry_scores(scores, margin_bps=5., native_selected_count=2,
+                               post_gate_override_counts={"HARD_RISK_OVERRIDE": 1})
 
 
 def test_unscored_reason_counts_must_match_denominator():
