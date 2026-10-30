@@ -118,7 +118,7 @@ class NetValueEstimate:
     outcome_method: str
     feature_spec_hash: str
     expected_net_increment_bps: float
-    q10_increment_bps: float
+    global_residual_floor_proxy_bps: float
     epistemic_uncertainty_bps: float
     probability_positive: float
     fold_calibration_id: str
@@ -140,7 +140,7 @@ class FrozenOpportunityModel:
     logistic_weights: np.ndarray
     calibrator: tuple[float, float]
     value_weights: np.ndarray
-    residual_q10_bps: float
+    calibration_residual_p10_offset_bps: float
     residual_variance: float
     value_covariance: np.ndarray
     fit_sample_count: int
@@ -203,7 +203,10 @@ class FrozenOpportunityModel:
             outcome_method=self.outcome_method,
             feature_spec_hash=self.feature_spec_hash,
             expected_net_increment_bps=expected,
-            q10_increment_bps=expected + self.residual_q10_bps,
+            # This is a mean plus one global residual offset, not a conditional q10.
+            global_residual_floor_proxy_bps=(
+                expected + self.calibration_residual_p10_offset_bps
+            ),
             epistemic_uncertainty_bps=uncertainty,
             probability_positive=calibrated_probability,
             fold_calibration_id=self.calibration_id,
@@ -373,7 +376,9 @@ def fit_opportunity_model(
         logistic_weights=_readonly(logistic),
         calibrator=calibrator,
         value_weights=_readonly(value_weights),
-        residual_q10_bps=_weighted_quantile(calibration_residual, calibration_weights, 0.10),
+        calibration_residual_p10_offset_bps=_weighted_quantile(
+            calibration_residual, calibration_weights, 0.10,
+        ),
         residual_variance=residual_variance,
         value_covariance=_readonly(value_covariance),
         fit_sample_count=len(purged),

@@ -9,7 +9,7 @@ from rles_route_a.teacher_research.opportunity_models import NetValueEstimate
 
 
 def _estimate(event_id: str, passed: tuple[bool, bool, bool, bool]) -> NetValueEstimate:
-    support, probability, expected, q10 = passed
+    support, probability, expected, floor_proxy = passed
     return NetValueEstimate(
         event_id=event_id,
         feature_vector_sha256=sha256(f"features-{event_id}".encode()).hexdigest(),
@@ -23,7 +23,7 @@ def _estimate(event_id: str, passed: tuple[bool, bool, bool, bool]) -> NetValueE
         outcome_method="synthetic-test-v1",
         feature_spec_hash=sha256(b"feature-spec").hexdigest(),
         expected_net_increment_bps=1.0 if expected else 0.0,
-        q10_increment_bps=1.0 if q10 else 0.0,
+        global_residual_floor_proxy_bps=1.0 if floor_proxy else 0.0,
         epistemic_uncertainty_bps=0.0,
         probability_positive=0.6 if probability else 0.5,
         fold_calibration_id="calibration-v1",
@@ -73,7 +73,7 @@ def test_frozen_funnel_preserves_first_failed_gate_reason():
 def test_frozen_funnel_rejects_nonfinite_score_and_missing_group():
     event_id = sha256(b"candidate").hexdigest()
     estimate = _estimate(event_id, (True, True, True, True))
-    invalid = replace(estimate, q10_increment_bps=float("nan"))
+    invalid = replace(estimate, global_residual_floor_proxy_bps=float("nan"))
     group = {event_id: ("block-1", "breakout", 1)}
     with pytest.raises(ValueError, match="nonfinite"):
         summarize_frozen_gate_funnel({event_id: invalid}, group)

@@ -19,7 +19,7 @@ GateName = Literal[
     "in_fit_support",
     "calibrated_probability_gt_0_5",
     "expected_net_increment_gt_0",
-    "q10_increment_gt_0",
+    "global_residual_floor_proxy_gt_0",
 ]
 
 
@@ -63,7 +63,7 @@ _GATE_NAMES: tuple[GateName, ...] = (
     "in_fit_support",
     "calibrated_probability_gt_0_5",
     "expected_net_increment_gt_0",
-    "q10_increment_gt_0",
+    "global_residual_floor_proxy_gt_0",
 )
 
 
@@ -74,7 +74,8 @@ def summarize_frozen_gate_funnel(
     """Count all four-gate combinations and descriptive groups.
 
     Gate order and comparisons are frozen to the Route A E1/E2 recipe:
-    support, calibrated probability > 0.5, expected increment > 0, q10 > 0.
+    support, calibrated probability > 0.5, expected increment > 0, and the
+    global residual floor proxy > 0. The last value is not a conditional q10.
     The reason code is the first failed gate, preserving runner diagnostics.
     """
     event_ids = set(estimates)
@@ -95,14 +96,14 @@ def summarize_frozen_gate_funnel(
         if estimate.event_id != event_id or type(estimate.in_support) is not bool:
             raise ValueError("gate estimate identity/support is malformed")
         values = (estimate.probability_positive, estimate.expected_net_increment_bps,
-                  estimate.q10_increment_bps)
+                  estimate.global_residual_floor_proxy_bps)
         if any(not math.isfinite(value) for value in values):
             raise ValueError("gate estimate contains a nonfinite score")
         passed = (
             estimate.in_support,
             estimate.probability_positive > 0.5,
             estimate.expected_net_increment_bps > 0.0,
-            estimate.q10_increment_bps > 0.0,
+            estimate.global_residual_floor_proxy_bps > 0.0,
         )
         bits = "".join("1" if value else "0" for value in passed)
         combinations[bits] += 1
@@ -121,7 +122,7 @@ def summarize_frozen_gate_funnel(
                 "OUT_OF_FIT_SUPPORT",
                 "CALIBRATED_PROBABILITY_NOT_ABOVE_0_5",
                 "EXPECTED_NET_INCREMENT_NOT_POSITIVE",
-                "Q10_INCREMENT_NOT_POSITIVE",
+                "GLOBAL_RESIDUAL_FLOOR_PROXY_NOT_POSITIVE",
             )[first_failed]
             reasons[event_id] = reason
         grouped.setdefault(group_by_id[event_id], []).append((bits, reason))

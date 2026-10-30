@@ -19,7 +19,7 @@ SplitName = Literal["train_fit", "train_calibration", "train_inner_screen"]
 MetricName = Literal[
     "probability_positive",
     "expected_net_increment_bps",
-    "q10_increment_bps",
+    "global_residual_floor_proxy_bps",
     "epistemic_uncertainty_bps",
 ]
 
@@ -36,11 +36,11 @@ class CandidatePredictionDiagnostic:
     in_fit_support: bool | None
     probability_positive: float | None
     expected_net_increment_bps: float | None
-    q10_increment_bps: float | None
+    global_residual_floor_proxy_bps: float | None
     epistemic_uncertainty_bps: float | None
     pass_probability: bool | None
     pass_expected_net: bool | None
-    pass_q10: bool | None
+    pass_global_residual_floor_proxy: bool | None
     pass_all_four: bool | None
     first_rejection_code: str
 
@@ -108,9 +108,9 @@ class ScreenOutcomeAudit:
     brier_score: float | None
     log_loss: float | None
     calibration_bins: tuple[CalibrationBin, ...]
-    residual_q10_bps: float | None
-    q10_identity_max_abs_error_bps: float | None
-    actual_tail_miss_rate: float | None
+    calibration_residual_p10_offset_bps: float | None
+    global_residual_floor_proxy_identity_max_abs_error_bps: float | None
+    actual_below_global_residual_floor_proxy_rate: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,7 +145,7 @@ class DiagnosticAblationOutcomeAudit:
 _METRICS: tuple[MetricName, ...] = (
     "probability_positive",
     "expected_net_increment_bps",
-    "q10_increment_bps",
+    "global_residual_floor_proxy_bps",
     "epistemic_uncertainty_bps",
 )
 
@@ -293,11 +293,11 @@ def build_opportunity_prediction_report(
                 in_fit_support=None,
                 probability_positive=None,
                 expected_net_increment_bps=None,
-                q10_increment_bps=None,
+                global_residual_floor_proxy_bps=None,
                 epistemic_uncertainty_bps=None,
                 pass_probability=None,
                 pass_expected_net=None,
-                pass_q10=None,
+                pass_global_residual_floor_proxy=None,
                 pass_all_four=None,
                 first_rejection_code="PREDICTION_MISSING",
             ))
@@ -305,18 +305,20 @@ def build_opportunity_prediction_report(
         values = {
             "probability_positive": float(estimate.probability_positive),
             "expected_net_increment_bps": float(estimate.expected_net_increment_bps),
-            "q10_increment_bps": float(estimate.q10_increment_bps),
+            "global_residual_floor_proxy_bps": float(
+                estimate.global_residual_floor_proxy_bps
+            ),
             "epistemic_uncertainty_bps": float(estimate.epistemic_uncertainty_bps),
         }
         pass_probability = values["probability_positive"] > 0.5
         pass_mean = values["expected_net_increment_bps"] > 0.0
-        pass_q10 = values["q10_increment_bps"] > 0.0
-        passed = (estimate.in_support, pass_probability, pass_mean, pass_q10)
+        pass_floor_proxy = values["global_residual_floor_proxy_bps"] > 0.0
+        passed = (estimate.in_support, pass_probability, pass_mean, pass_floor_proxy)
         first_rejection = next((code for code, passed_gate in zip((
             "OUT_OF_FIT_SUPPORT",
             "CALIBRATED_PROBABILITY_NOT_ABOVE_0_5",
             "EXPECTED_NET_INCREMENT_NOT_POSITIVE",
-            "Q10_INCREMENT_NOT_POSITIVE",
+            "GLOBAL_RESIDUAL_FLOOR_PROXY_NOT_POSITIVE",
         ), passed, strict=True) if not passed_gate), "SELECTED")
         scenario = estimate.cost_scenario_id
         diagnostic_rows.append(CandidatePredictionDiagnostic(
@@ -330,11 +332,11 @@ def build_opportunity_prediction_report(
             in_fit_support=estimate.in_support,
             probability_positive=values["probability_positive"],
             expected_net_increment_bps=values["expected_net_increment_bps"],
-            q10_increment_bps=values["q10_increment_bps"],
+            global_residual_floor_proxy_bps=values["global_residual_floor_proxy_bps"],
             epistemic_uncertainty_bps=values["epistemic_uncertainty_bps"],
             pass_probability=pass_probability,
             pass_expected_net=pass_mean,
-            pass_q10=pass_q10,
+            pass_global_residual_floor_proxy=pass_floor_proxy,
             pass_all_four=all(passed),
             first_rejection_code=first_rejection,
         ))
@@ -364,12 +366,20 @@ def audit_screen_outcomes_after_prediction(
     report: OpportunityPredictionReport,
     outcomes_by_id: Mapping[str, object],
     *,
-    residual_q10_bps: float,
+    calibration_residual_p10_offset_bps: float,
 ) -> ScreenOutcomeAudit:
-    """Compute post-prediction screen diagnostics; never feeds back to gates."""
+    """Audit the global residual floor proxy after prediction; never feeds gates.
+
+    The proxy is expected value plus the calibration residual's marginal P10
+    offset. Its below-rate is descriptive on this reused Train-inner screen;
+    it is not conditional-quantile coverage or independent qualification evidence.
+    """
     from .opportunity_models import OpportunityOutcome
 
-    residual = _finite(residual_q10_bps, "residual_q10_bps")
+    residual = _finite(
+        calibration_residual_p10_offset_bps,
+        "calibration_residual_p10_offset_bps",
+    )
     row_by_id = {row.event_id: row for row in report.rows}
     if any(row.split != "train_inner_screen" for row in report.rows):
         raise PermissionError("outcome calibration audit requires an exclusively Train-inner screen report")
@@ -402,7 +412,7 @@ def audit_screen_outcomes_after_prediction(
               if row.probability_positive is not None]
     brier: float | None
     logloss: float | None
-    tail_miss: float | None
+    below_proxy_rate: float | None
     max_identity_error: float | None
     calibration_bins: tuple[CalibrationBin, ...]
     if scored:
@@ -435,22 +445,23 @@ def audit_screen_outcomes_after_prediction(
                 ),
             ))
         calibration_bins = tuple(bins)
-        q10_errors = [
+        proxy_errors = [
             actual - (float(row.expected_net_increment_bps) + residual)
             for row, actual, _probability in scored
             if row.expected_net_increment_bps is not None
         ]
-        q10_identity_errors = [
-            abs(float(row.q10_increment_bps) -
+        proxy_identity_errors = [
+            abs(float(row.global_residual_floor_proxy_bps) -
                 (float(row.expected_net_increment_bps) + residual))
             for row, _actual, _probability in scored
-            if row.q10_increment_bps is not None and row.expected_net_increment_bps is not None
+            if (row.global_residual_floor_proxy_bps is not None
+                and row.expected_net_increment_bps is not None)
         ]
-        tail_miss = (sum(error < 0 for error in q10_errors) / len(q10_errors)
-                     if q10_errors else None)
-        max_identity_error = max(q10_identity_errors) if q10_identity_errors else None
+        below_proxy_rate = (sum(error < 0 for error in proxy_errors) / len(proxy_errors)
+                            if proxy_errors else None)
+        max_identity_error = max(proxy_identity_errors) if proxy_identity_errors else None
     else:
-        brier = logloss = tail_miss = max_identity_error = None
+        brier = logloss = below_proxy_rate = max_identity_error = None
         calibration_bins = tuple(CalibrationBin(index, 0, None, None) for index in range(10))
 
     selected_values = tuple(actual for row, actual in complete if row.pass_all_four is True)
@@ -468,9 +479,9 @@ def audit_screen_outcomes_after_prediction(
         brier_score=brier,
         log_loss=logloss,
         calibration_bins=calibration_bins,
-        residual_q10_bps=residual if scored else None,
-        q10_identity_max_abs_error_bps=max_identity_error,
-        actual_tail_miss_rate=tail_miss,
+        calibration_residual_p10_offset_bps=residual if scored else None,
+        global_residual_floor_proxy_identity_max_abs_error_bps=max_identity_error,
+        actual_below_global_residual_floor_proxy_rate=below_proxy_rate,
     )
 
 
@@ -598,7 +609,8 @@ def build_diagnostic_ablation_sets(
     f1 = tuple(f1_ids)
     f2 = tuple(event_id for event_id in f1
                if by_id[event_id].pass_probability is True)
-    f3 = tuple(event_id for event_id in f1 if by_id[event_id].pass_q10 is True)
+    f3 = tuple(event_id for event_id in f1
+               if by_id[event_id].pass_global_residual_floor_proxy is True)
     randomized = list(ids)
     random.Random(frozen_seed).shuffle(randomized)
     f5 = tuple(randomized[:negative_control_count])

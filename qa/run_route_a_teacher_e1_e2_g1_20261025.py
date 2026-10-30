@@ -546,7 +546,9 @@ def main() -> int:
     screen_outcome_audits = {
         scenario: audit_screen_outcomes_after_prediction(
             prediction_diagnostics[scenario], screen_outcomes_by_scenario[scenario],
-            residual_q10_bps=models[scenario].residual_q10_bps,
+            calibration_residual_p10_offset_bps=(
+                models[scenario].calibration_residual_p10_offset_bps
+            ),
         )
         for scenario in ("base", "stress")
     }
@@ -764,7 +766,9 @@ def main() -> int:
                 "fit_blocks": model.fit_independent_blocks,
                 "calibration_blocks": model.calibration_independent_blocks,
                 "calibration_id": model.calibration_id,
-                "residual_q10_bps": model.residual_q10_bps,
+                "calibration_residual_p10_offset_bps": (
+                    model.calibration_residual_p10_offset_bps
+                ),
                 "economic_status": model.economic_status,
                 "evidence_type": model.evidence_type,
             }

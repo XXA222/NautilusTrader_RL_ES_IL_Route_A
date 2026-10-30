@@ -135,7 +135,7 @@ def test_logistic_value_model_uses_later_calibration_and_fit_only_support():
 
     assert long_estimate.probability_positive > short_estimate.probability_positive
     assert long_estimate.expected_net_increment_bps > short_estimate.expected_net_increment_bps
-    assert long_estimate.q10_increment_bps < long_estimate.expected_net_increment_bps
+    assert long_estimate.global_residual_floor_proxy_bps < long_estimate.expected_net_increment_bps
     assert long_estimate.in_support
     assert not model.predict(long_event, (2.0, 2.0)).in_support
     assert long_estimate.economic_status == "SCENARIO_ONLY"

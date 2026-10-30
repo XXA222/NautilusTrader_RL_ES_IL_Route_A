@@ -45,7 +45,7 @@ def _estimate(event: OpportunityEvent, *, probability: float = 0.8,
         outcome_method="synthetic-test-v1",
         feature_spec_hash=event.feature_spec_hash,
         expected_net_increment_bps=expected,
-        q10_increment_bps=expected + residual,
+        global_residual_floor_proxy_bps=expected + residual,
         epistemic_uncertainty_bps=1.5,
         probability_positive=probability,
         fold_calibration_id="calibration-v1",
@@ -148,7 +148,7 @@ def test_outcome_audit_is_separate_and_preserves_complete_censor_and_calibration
             events[2].event_id: _outcome(events[2], net=None,
                                          censor=events[2].decision_ts_ns + 5),
         },
-        residual_q10_bps=-2.0,
+        calibration_residual_p10_offset_bps=-2.0,
     )
     assert (audit.complete_count, audit.censored_count, audit.missing_outcome_count) == (2, 1, 0)
     assert audit.selected_complete_net_bps == (2.0,)
@@ -158,8 +158,8 @@ def test_outcome_audit_is_separate_and_preserves_complete_censor_and_calibration
     assert sum(row.count for row in audit.calibration_bins) == 2
     assert audit.calibration_bins[4].count == 1
     assert audit.calibration_bins[8].count == 1
-    assert audit.q10_identity_max_abs_error_bps == 0.0
-    assert audit.actual_tail_miss_rate == pytest.approx(0.5)
+    assert audit.global_residual_floor_proxy_identity_max_abs_error_bps == 0.0
+    assert audit.actual_below_global_residual_floor_proxy_rate == pytest.approx(0.5)
 
 
 def test_frozen_f0_to_f5_ablation_sets_are_deterministic_and_diagnostic_only():
