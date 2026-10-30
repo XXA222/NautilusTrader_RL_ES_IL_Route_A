@@ -194,8 +194,11 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
     result = {"scores": summarize_entry_scores(
                   scores, margin_bps=teacher.policy.margin_bps,
                   unscored_count=len(unscored),
-                  unscored_reason_counts=unscored_reasons),
+                  unscored_reason_counts=unscored_reasons,
+                  native_selected_count=sum(item.selected for item in decisions)),
               "unscored": len(unscored), "quality": None,
+              "candidate_disposition_counts": dict(sorted(
+                  Counter(item.disposition for item in decisions).items())),
               "missing_feature_counts": dict(sorted(Counter(
                   name for item in decisions for name in item.missing_features).items()))}
     reasons = {}

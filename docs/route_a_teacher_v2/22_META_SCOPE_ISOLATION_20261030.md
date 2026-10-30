@@ -16,7 +16,8 @@ Status: `D1_DEVELOPMENT_DIAGNOSTIC_ONLY`. This change fixes state isolation in t
 - The shared `BaseTeacher1m` state machine also tracks `feature_spec_hash`; direct original-teacher runs now reset rolling/cross/exit state when the observation schema changes, not only when wrapped by Meta or the candidate collector.
 - Clarified types in the ordinary scoring and native-owner branches; this fixes existing Mypy errors in the module without changing runtime selection behavior.
 - The normal Meta path now handles candidate research failures independently from native position management. A per-candidate scoring exception records `REJECTED_SCORING_ERROR` and its exception detail, while other candidates continue through arbitration. If candidate collection fails, a flat account stays flat; an already-owned position still receives its original teacher HOLD/EXIT decision. Hard recovery is still checked first.
-- Entry-score diagnostics now include unscored candidates in the total denominator and overall coverage. In addition to retaining the existing overlapping gate counts, they report the ordered `scored → account-eligible → in-support → above-frozen-margin → accepted` funnel, first failed-stage counts, stage coverage, and explicit unscored rejection dispositions. The policy margin and support rule are unchanged.
+- Entry-score diagnostics now include unscored candidates in the total denominator and overall coverage. In addition to retaining the existing overlapping gate counts, they report the ordered `scored → account-eligible → in-support → above-frozen-margin → model-gate-accepted → native-selected` funnel, first failed-stage counts, stage coverage, and explicit unscored rejection dispositions. The policy margin and support rule are unchanged.
+- The diagnostics distinguish model-gate acceptance from the final single-position native selection. Opposing directions or multiple candidates may pass the model gate, but only the selected candidate counts toward native-selected coverage; arbitration and owner-readiness losses are reported separately with per-candidate dispositions.
 
 ## Validation
 
@@ -24,6 +25,7 @@ Status: `D1_DEVELOPMENT_DIAGNOSTIC_ONLY`. This change fixes state isolation in t
 - After the candidate error-path change, the same joint lifecycle/candidate/Meta/native rollout suite: `144 passed`.
 - Cross-module candidate, counterfactual-label, limit-entry/censor, model fit/calibration, native case funnel, native engine, study runner and full synthetic end-to-end screen suite: `88 passed`.
 - After adding the ordered gate-funnel diagnostic and runner integration, focused policy, Meta, evaluation, study-runner and synthetic native end-to-end tests: `40 passed`.
+- After separating model-gate passes from the final native-selected candidate, the same focused policy/Meta/evaluation/runner/end-to-end suite: `41 passed`.
 - Ruff on the changed source and test modules: passed.
 - Mypy on `meta_gated_teacher.py`: passed (`Success: no issues found in 1 source file`).
 - For this gate-funnel change, Ruff and Mypy pass on `entry_meta_policy.py` and its tests; Ruff passes on the QA runner with its existing `E402` path-setup imports ignored. Standalone Mypy on the runner reports existing external dependencies without `py.typed` metadata (`rles_orchestrator` / `rles_research`).

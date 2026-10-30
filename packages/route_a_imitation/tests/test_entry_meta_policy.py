@@ -42,14 +42,31 @@ def test_gate_funnel_uses_all_candidates_and_assigns_first_failed_stage():
     funnel = result["sequential_gate_funnel"]
     assert funnel["stage_counts"] == {
         "total_candidates": 5, "scored_candidates": 3, "account_eligible": 2,
-        "in_support": 1, "above_frozen_net_edge_margin": 1, "accepted": 1,
+        "in_support": 1, "above_frozen_net_edge_margin": 1, "model_gate_accepted": 1,
     }
     assert funnel["rejected_at_stage"] == {
         "unscored": 2, "account": 1, "support": 1, "net_edge": 0,
+        "native_arbitration_or_owner_readiness": None,
     }
     assert result["unscored_reason_counts"] == {
         "REJECTED_FEATURE_NOT_READY": 1, "REJECTED_SCORING_ERROR": 1,
     }
+
+
+def test_model_acceptance_is_separate_from_single_direction_native_selection():
+    scores = [EntryScore("LONG", .8, 8., True, "POSITIVE_NET_EDGE"),
+              EntryScore("SHORT", .7, 7., True, "POSITIVE_NET_EDGE")]
+
+    result = summarize_entry_scores(scores, margin_bps=5., native_selected_count=1)
+
+    assert result["model_gate_accepted_count"] == 2
+    assert result["native_selected_count"] == 1
+    assert result["coverage"] == 1.
+    assert result["native_selected_coverage"] == .5
+    funnel = result["sequential_gate_funnel"]
+    assert funnel["stage_counts"]["model_gate_accepted"] == 2
+    assert funnel["stage_counts"]["native_selected_after_arbitration"] == 1
+    assert funnel["rejected_at_stage"]["native_arbitration_or_owner_readiness"] == 1
 
 
 def test_unscored_reason_counts_must_match_denominator():
