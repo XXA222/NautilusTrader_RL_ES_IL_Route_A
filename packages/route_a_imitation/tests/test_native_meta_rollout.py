@@ -49,3 +49,10 @@ def test_meta_runner_requires_scope_cost_and_complete_m22_trace(tmp_path):
     barriers, native = run_registered_meta_rollout(**kwargs)
     assert len(barriers) == 1 and (tmp_path / "trace.jsonl").exists()
     assert native["route_a_native_order_verification"]["barriers"] == 1
+
+    shifted = NativeActionTrace(obs.decision_ts_ns + 1, 0., 0., 0., 0., 10000., 10000., "NOOP")
+    provider.rollout_with_m22_trace = lambda **_: ((SimpleNamespace(trace=shifted),),
+        {"route_a_native_order_verification": {"barriers": 1,
+                                               "authority": "retained_m22_session_snapshots"}})
+    with pytest.raises(ValueError, match="every native barrier"):
+        run_registered_meta_rollout(**kwargs)
