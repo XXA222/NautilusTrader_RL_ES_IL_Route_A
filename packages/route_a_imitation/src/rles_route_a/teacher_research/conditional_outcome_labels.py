@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite, log
+import re
 from typing import Callable, Literal, Sequence
 
 from .candidate_event_union import CandidateGroup
@@ -57,6 +58,10 @@ class GroupOutcome:
     observed_until_ns: int | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.event_id, str) or not re.fullmatch(r"[0-9a-f]{64}", self.event_id):
+            raise ValueError("group outcome event_id must bind a lowercase SHA-256 candidate")
+        if type(self.decision_ts_ns) is not int or self.decision_ts_ns <= 0:
+            raise ValueError("group outcome decision clock must be a positive integer timestamp")
         if any(not isinstance(value, str) or not value.strip() for value in (
                 self.source_identity, self.fold_id, self.exit_policy_id,
                 self.execution_recipe, self.cost_scenario_id, self.simulation_receipt_id)):

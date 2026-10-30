@@ -51,6 +51,15 @@ def test_group_outcome_rejects_ambiguous_return_basis():
                      2, None, 1., "replay", return_basis_id="entry-notional-bps-v1")
 
 
+def test_group_outcome_requires_candidate_identity_and_positive_decision_clock():
+    with pytest.raises(ValueError, match="lowercase SHA-256 candidate"):
+        GroupOutcome("short", 1, "source", "fold", "X1", "execution", "base",
+                     2, None, 1., "receipt")
+    with pytest.raises(ValueError, match="positive integer timestamp"):
+        GroupOutcome("a" * 64, 0, "source", "fold", "X1", "execution", "base",
+                     2, None, 1., "receipt")
+
+
 def test_group_outcome_rejects_native_evidence_and_status_return_conflicts():
     common = ("a" * 64, 1, "source", "fold", "X1", "execution", "base", 2, None, 1., "receipt")
     with pytest.raises(ValueError, match="scenario-only model counterfactuals"):
