@@ -104,6 +104,7 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         raise ValueError("native-selected candidates must pass the model gate and native constraints")
 
     def segment(items):
+        items = tuple(items)
         labels = [by_id[d.group.event_id] for d in items]
         values = [o.net_return_bps for o in labels if o.outcome_status == "COMPLETE"
                   and o.net_return_bps is not None]
@@ -119,6 +120,29 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                 "average_negative_net_bps": fsum(negative) / len(negative) if negative else None,
                 "mean_net_bps": fsum(values) / len(values) if values else None,
                 "win_rate": sum(v > 0 for v in values) / len(values) if values else None}
+
+    def acceptance_slices(items):
+        rows = tuple(items)
+        return {"all": segment(rows),
+                "accepted": segment(d for d in rows if model_accepted(d)),
+                "rejected": segment(d for d in rows if not model_accepted(d))}
+
+    quality_by_side = {
+        "long": acceptance_slices(d for d in decisions if d.group.side == 1),
+        "short": acceptance_slices(d for d in decisions if d.group.side == -1),
+    }
+    teacher_ids = sorted({teacher_id for d in decisions for teacher_id, _ in d.group.teachers})
+    quality_by_teacher = {
+        teacher_id: acceptance_slices(
+            d for d in decisions if teacher_id in {source for source, _ in d.group.teachers}
+        )
+        for teacher_id in teacher_ids
+    }
+    consensus_counts = sorted({len(d.group.teachers) for d in decisions})
+    quality_by_consensus = {
+        str(count): acceptance_slices(d for d in decisions if len(d.group.teachers) == count)
+        for count in consensus_counts
+    }
     paired = [(d.score, by_id[d.group.event_id].net_return_bps) for d in decisions
               if d.score is not None and by_id[d.group.event_id].outcome_status == "COMPLETE"]
     for score, actual in paired:
@@ -161,7 +185,15 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
             "acceptance_basis": "entry model gate before single-position native arbitration",
             "dispositions": dict(sorted(Counter(d.disposition for d in decisions).items())),
             "quality_by_disposition": {reason: segment(d for d in decisions if d.disposition == reason)
-                                       for reason in sorted({d.disposition for d in decisions})}}
+                                       for reason in sorted({d.disposition for d in decisions})},
+            "quality_by_side": quality_by_side,
+            "quality_by_teacher": quality_by_teacher,
+            "quality_by_consensus_count": quality_by_consensus,
+            "slice_interpretation": {
+                "teacher_slices_overlap": True,
+                "consensus_slices_overlap": False,
+                "basis": "complete MODEL_COUNTERFACTUAL outcomes; slices are descriptive, not independent trials",
+            }}
 
 
 def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
