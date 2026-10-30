@@ -33,7 +33,7 @@ def trained_policy():
         groups[group.event_id] = group
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id,
             obs.fold_id, "X1", "native", "base", obs.decision_ts_ns + 1, None,
-            20. if minute % 2 == 0 else -20.))
+            20. if minute % 2 == 0 else -20., f"replay-{minute}"))
     return fit_entry_meta_policy(labels[:4], labels[4:], groups,
                                  feature_names=("market.ema_9", "teacher.T01_EMA_9_21",
                                                 "consensus.count", "cost.round_trip_bps"),
