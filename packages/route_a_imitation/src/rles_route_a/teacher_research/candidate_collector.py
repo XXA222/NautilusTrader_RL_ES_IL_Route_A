@@ -26,6 +26,7 @@ class OneMinuteCandidateCollector:
         self._teachers = tuple(
             build_teacher_1m(teacher_id) for teacher_id in sorted(ALL_TEACHER_RECIPE_BY_ID)
         )
+        self._scope: tuple[str, str, str, str] | None = None
 
     @property
     def teacher_ids(self) -> tuple[str, ...]:
@@ -34,6 +35,7 @@ class OneMinuteCandidateCollector:
     def reset(self, episode_id: str = "") -> None:
         for teacher in self._teachers:
             teacher.reset(episode_id)
+        self._scope = None
 
     def collect(self, observation: PointInTimeObservation) -> CandidateCollection:
         if not isinstance(observation, PointInTimeObservation):
@@ -41,6 +43,11 @@ class OneMinuteCandidateCollector:
         if not all((observation.fold_id, observation.source_id, observation.snapshot_id,
                     observation.feature_spec_hash)):
             raise ValueError("candidate source/fold/snapshot/schema identities required")
+        scope = (observation.episode_id, observation.source_id, observation.fold_id,
+                 observation.feature_spec_hash)
+        if self._scope is not None and self._scope != scope:
+            self.reset(observation.episode_id)
+        self._scope = scope
         observation.account_value("net_exposure")
         # Flat is a signal-evaluation convention only; the proposal is bound to
         # observation, never this derived view, so blocked opportunities remain visible.
