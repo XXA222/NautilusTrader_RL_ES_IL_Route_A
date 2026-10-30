@@ -304,6 +304,45 @@ def test_unimplemented_control_is_reported_and_unknown_control_fails_closed():
         registered_control_scope({**config, "controls": ["FLAT", "FLAT"]})
 
 
+def test_native_comparison_rejects_mixed_registered_source_receipts():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+
+    window = ("1970-01-01T00:01:00Z", "1970-01-01T00:02:00Z")
+    config = {"protocol_id": "synthetic-protocol", "teachers": [], "controls": ["FLAT"],
+              "cost_scenarios": {"base": {}}, "intervals": {"native_screen": [list(window)]}}
+
+    def run(strategy, *, source_marker="b"*64, with_receipt=True):
+        row = {"strategy_id": strategy, "scenario": "base", "window": window,
+               "cases": (), "equity_curve": (1000., 1000.),
+               "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
+               "native_order_verification": {"barriers": 1,
+                   "authority": "retained_m22_session_snapshots"}}
+        if with_receipt:
+            start = 60_000_000_000
+            row["registered_screen_split"] = {
+                "status": "PASS_REGISTERED_TEMPORAL_SEPARATION",
+                "independent_trials_claimed": False,
+                "protocol_id": "synthetic-protocol",
+                "preregistration_sha256": "a"*64,
+                "source_marker_sha256": source_marker,
+                "market_snapshot_sha256": "c"*64,
+                "import_manifest_sha256": "d"*64,
+                "strategy_id": strategy, "scenario": "base", "seed": 7,
+                "screen_interval_ns": [start, start + 60_000_000_000],
+                "model_available_after_ns": start if strategy == "META_X1" else None,
+            }
+        return row
+
+    verified = compare_preregistered_native_runs(config, (run("META_X1"), run("FLAT")))
+    assert verified["run_receipt_status"] == "VERIFIED_SHARED_PROTOCOL_SOURCE_AND_SEED"
+    with pytest.raises(ValueError, match="mixes preregistrations, sources, or seeds"):
+        compare_preregistered_native_runs(
+            config, (run("META_X1"), run("FLAT", source_marker="e"*64))
+        )
+    with pytest.raises(ValueError, match="mix runs with and without"):
+        compare_preregistered_native_runs(config, (run("META_X1"), run("FLAT", with_receipt=False)))
+
+
 def test_native_comparison_requires_trade_case_cashflows_to_match_account():
     from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
 

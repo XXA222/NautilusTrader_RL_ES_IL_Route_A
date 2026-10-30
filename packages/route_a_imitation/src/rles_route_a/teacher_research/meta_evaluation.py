@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime, timezone
 from math import fsum, isfinite
+import re
 
 from rles_route_a.evaluation.teacher_case_report_1m import NativeTradeCase1m
 from .conditional_outcome_labels import GroupOutcome
@@ -28,6 +30,64 @@ def registered_control_scope(config) -> tuple[tuple[str, ...], tuple[str, ...]]:
     active = tuple(item for item in controls if item in ACTIVE_NATIVE_CONTROL_IDS)
     planned_only = tuple(item for item in controls if item in KNOWN_UNIMPLEMENTED_CONTROL_IDS)
     return active, planned_only
+
+
+def _screen_window_ns(window):
+    if not isinstance(window, (tuple, list)) or len(window) != 2:
+        raise ValueError("native matrix window must have two UTC timestamps")
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    result = []
+    for value in window:
+        if not isinstance(value, str):
+            raise ValueError("native matrix window timestamps must be strings")
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            raise ValueError("native matrix window timestamps must include a timezone")
+        delta = parsed.astimezone(timezone.utc) - epoch
+        result.append((delta.days * 86400 + delta.seconds) * 1_000_000_000
+                      + delta.microseconds * 1_000)
+    if result[0] >= result[1]:
+        raise ValueError("native matrix window must have positive duration")
+    return result
+
+
+def _verify_comparison_run_receipts(config, runs):
+    receipts = [run.get("registered_screen_split") for run in runs]
+    present = [receipt is not None for receipt in receipts]
+    if any(present) and not all(present):
+        raise ValueError("native comparison cannot mix runs with and without registered receipts")
+    if not any(present):
+        return "UNVERIFIED_NO_REGISTERED_RECEIPTS"
+    shared = None
+    digest_fields = ("preregistration_sha256", "source_marker_sha256",
+                     "market_snapshot_sha256", "import_manifest_sha256")
+    for run, receipt in zip(runs, receipts):
+        if not isinstance(receipt, dict):
+            raise ValueError("registered native run receipt must be an object")
+        if (receipt.get("status") != "PASS_REGISTERED_TEMPORAL_SEPARATION"
+                or receipt.get("independent_trials_claimed") is not False
+                or receipt.get("protocol_id") != config.get("protocol_id")
+                or receipt.get("strategy_id") != run["strategy_id"]
+                or receipt.get("scenario") != run["scenario"]
+                or receipt.get("screen_interval_ns") != _screen_window_ns(run["window"])
+                or type(receipt.get("seed")) is not int or receipt["seed"] < 0):
+            raise ValueError("registered native run receipt does not match its matrix cell")
+        for name in digest_fields:
+            if not isinstance(receipt.get(name), str) or not re.fullmatch(
+                    r"[0-9a-f]{64}", receipt[name]):
+                raise ValueError(f"registered native run receipt has invalid {name}")
+        if run["strategy_id"] == "META_X1":
+            available_after = receipt.get("model_available_after_ns")
+            if (type(available_after) is not int
+                    or available_after > receipt["screen_interval_ns"][0]):
+                raise ValueError("Meta model receipt is not available before the screen window")
+        identity = (receipt["protocol_id"], *(receipt[name] for name in digest_fields),
+                    receipt["seed"])
+        if shared is None:
+            shared = identity
+        elif identity != shared:
+            raise ValueError("native comparison mixes preregistrations, sources, or seeds")
+    return "VERIFIED_SHARED_PROTOCOL_SOURCE_AND_SEED"
 
 
 def summarize_native_economics(cases: tuple[NativeTradeCase1m, ...],
@@ -400,6 +460,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
     """
     from dataclasses import replace
 
+    runs = tuple(runs)
     original = tuple(config["teachers"])
     active_controls, planned_only_controls = registered_control_scope(config)
     preregistered_controls = tuple(config["controls"])
@@ -451,6 +512,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
         if run.get("candidate_summary") is not None:
             metrics["candidate_summary"] = run["candidate_summary"]
         supplied[key] = metrics
+    run_receipt_status = _verify_comparison_run_receipts(config, runs)
     rows = []
     for strategy, scenario, window in sorted(expected):
         metrics = supplied.get((strategy, scenario, window))
@@ -507,6 +569,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
         "active_expected_cells": len(active_expected),
         "active_available_cells": active_available,
         "active_status": active_status,
+        "run_receipt_status": run_receipt_status,
         "status": planned_status,
         "active_controls": list(controls),
         "preregistered_controls": list(preregistered_controls),

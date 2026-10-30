@@ -8,10 +8,12 @@ The frozen preregistration lists `ORIGINAL_8_X1`, but the study runner dispatche
 
 The comparison report now distinguishes the full preregistered plan (52 cells) from the executable active matrix (48 cells). A shared control-scope validator drives the runner and comparator: it runs supported controls from the frozen config, records `ORIGINAL_8_X1` as a preregistered control outside the active matrix, keeps its planned rows as `MISSING`, and rejects unknown or duplicate control IDs before source loading. Reports expose `status`, `active_status`, and `preregistered_controls_outside_active_matrix`. They do not invent an aggregate teacher or treat active-matrix completion as full preregistration completion. Missing Meta cells also remain explicit.
 
+The native comparison also verifies the per-cell provenance receipts before aggregation. It rejects mixed receipt/no-receipt matrices and rejects protocol, market-source, seed, strategy, scenario, or time-window mismatches. The result states `run_receipt_status`; pure synthetic/legacy matrix inputs without receipts are marked `UNVERIFIED_NO_REGISTERED_RECEIPTS` and cannot be mistaken for a registered source run.
+
 ## Verification
 
 - Ubuntu 24.04 / WSL2 / Python 3.14.7: comparison and runner regression tests verify 52 planned cells, 48 active cells, explicit aggregate-control omission, and separate active/full completion states.
-- Native engine, native Train-to-screen synthetic end-to-end, runner, matrix, control-scope, and temporal-split tests: **26 passed**. Ruff passed for changed Python files; `git diff --check` passed.
+- Native engine, native Train-to-screen synthetic end-to-end, runner, matrix, control-scope, temporal-split, and mixed-receipt rejection tests: **27 passed**. Ruff passed for changed Python files; `git diff --check` passed.
 - Ruff passed for the changed evaluation module and its tests; `git diff --check` passed.
 - The live study was not run. Its registered source remains future dated and the last metadata-only preflight reported zero completed screen windows and no market payload read.
 

@@ -113,8 +113,9 @@ def test_meta_teacher_actual_native_engine_with_synthetic_market(tmp_path):
                          "train_calibration":["1970-01-01T00:30:00Z","1970-01-01T02:30:00Z"],
                          "native_screen":[["1970-01-01T02:30:00Z","1970-01-01T02:44:00Z"]]}}
         window = experiment["intervals"]["native_screen"][0]
-        source_receipt = {"marker_sha256":marker_sha, "snapshot_hash":"synthetic-snapshot",
-                          "import_manifest_sha256":"synthetic-import-manifest"}
+        source_receipt = {"marker_sha256":marker_sha,
+                          "snapshot_hash":sha256(b"synthetic-snapshot").hexdigest(),
+                          "import_manifest_sha256":sha256(b"synthetic-import-manifest").hexdigest()}
         cell = study._run_screen_cell(factory=factory, source=source_receipt,
             config=experiment, prereg_sha="a"*64, strategy="META_X1", scenario="base", window=window,
             model=policy, output=cell_dir)

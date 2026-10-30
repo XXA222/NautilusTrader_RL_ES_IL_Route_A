@@ -137,8 +137,9 @@ def test_actual_native_candidate_collection_trains_synthetic_model(tmp_path, mon
                      "train_calibration":["1970-01-01T04:00:00Z","1970-01-01T05:30:00Z"],
                      "native_screen":[["1970-01-01T05:30:00Z","1970-01-01T06:00:00Z"],
                                       ["1970-01-01T06:00:00Z","1970-01-01T06:30:00Z"]]}}
-    source_receipt = {"marker_sha256":marker_sha, "snapshot_hash":"synthetic-snapshot",
-                      "import_manifest_sha256":"synthetic-import-manifest"}
+    source_receipt = {"marker_sha256":marker_sha,
+                      "snapshot_hash":sha256(b"synthetic-snapshot").hexdigest(),
+                      "import_manifest_sha256":sha256(b"synthetic-import-manifest").hexdigest()}
     cell_dir = tmp_path/"synthetic-frozen-model-screen"
     cell_dir.mkdir()
     old_fold = harness.FOLD_ID
