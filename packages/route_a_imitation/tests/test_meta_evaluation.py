@@ -74,6 +74,13 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["accepted_not_native_selected"]["without_outcome"] == 1
     assert result["native_selected"]["candidates"] == 1
     assert result["rejected"]["without_outcome"] == 0
+    assert result["accepted"]["positive_complete_outcomes"] == 1
+    assert result["accepted"]["average_positive_net_bps"] == 5.
+    assert result["accepted"]["negative_complete_outcomes"] == 0
+    assert result["accepted"]["average_negative_net_bps"] is None
+    assert result["rejected"]["negative_complete_outcomes"] == 1
+    assert result["rejected"]["average_negative_net_bps"] == -2.
+    assert result["rejected"]["positive_complete_outcomes"] == 0
     assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["complete"] == 0
     assert result["quality_by_disposition"]["REJECTED_BY_ARBITRATION"]["without_outcome"] == 1
     assert result["prediction_quality"]["paired_complete_scored"] == 2
@@ -86,6 +93,17 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert bins[3]["mean_predicted_probability"] == pytest.approx(.7)
     assert bins[3]["observed_positive_fraction"] == pytest.approx(.5)
     assert result["evidence_type"] == "MODEL_COUNTERFACTUAL"
+    flat_obs = observed(ts=4_000_000_000)
+    flat_group, = group_teacher_proposals([TeacherProposal(flat_obs, "EMA", 1, "cross")])
+    flat_decision = CandidateDecision(flat_group,
+        EntryScore("NO_TRADE", .5, 0., True, "NET_EDGE_TOO_SMALL"), False)
+    flat_label = GroupOutcome(flat_group.event_id, flat_obs.decision_ts_ns, flat_obs.source_id,
+        flat_obs.fold_id, "X1", "native", "base", flat_obs.decision_ts_ns + 1, None, 0.)
+    with_breakeven = summarize_candidate_quality(
+        (*decisions, flat_decision), (*labels, flat_label))
+    assert with_breakeven["rejected"]["breakeven_complete_outcomes"] == 1
+    assert with_breakeven["rejected"]["negative_complete_outcomes"] == 1
+    assert with_breakeven["rejected"]["average_negative_net_bps"] == -2.
     from dataclasses import replace
     from rles_route_a.teacher_research.meta_evaluation import paired_cost_candidate_quality
     pair = paired_cost_candidate_quality(tuple(decisions), (labels[0],),

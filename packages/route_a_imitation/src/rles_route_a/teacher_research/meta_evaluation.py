@@ -107,8 +107,16 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         labels = [by_id[d.group.event_id] for d in items]
         values = [o.net_return_bps for o in labels if o.outcome_status == "COMPLETE"
                   and o.net_return_bps is not None]
+        positive = [value for value in values if value > 0]
+        negative = [value for value in values if value < 0]
+        breakeven = sum(value == 0 for value in values)
         return {"candidates": len(labels), "complete": len(values),
                 "without_outcome": len(labels) - len(values),
+                "positive_complete_outcomes": len(positive),
+                "negative_complete_outcomes": len(negative),
+                "breakeven_complete_outcomes": breakeven,
+                "average_positive_net_bps": fsum(positive) / len(positive) if positive else None,
+                "average_negative_net_bps": fsum(negative) / len(negative) if negative else None,
                 "mean_net_bps": fsum(values) / len(values) if values else None,
                 "win_rate": sum(v > 0 for v in values) / len(values) if values else None}
     paired = [(d.score, by_id[d.group.event_id].net_return_bps) for d in decisions
