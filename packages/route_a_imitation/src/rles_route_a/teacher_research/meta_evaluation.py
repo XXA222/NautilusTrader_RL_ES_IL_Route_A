@@ -125,7 +125,11 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         rows = tuple(items)
         return {"all": segment(rows),
                 "accepted": segment(d for d in rows if model_accepted(d)),
-                "rejected": segment(d for d in rows if not model_accepted(d))}
+                "rejected": segment(d for d in rows if not model_accepted(d)),
+                "disposition_counts": dict(sorted(Counter(d.disposition for d in rows).items())),
+                "rejection_disposition_counts": dict(sorted(Counter(
+                    d.disposition for d in rows if d.disposition.startswith("REJECTED_")
+                ).items()))}
 
     quality_by_side = {
         "long": acceptance_slices(d for d in decisions if d.group.side == 1),
