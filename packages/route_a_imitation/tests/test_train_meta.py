@@ -51,13 +51,15 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
 
 
 def test_label_overlap_reports_dependencies_and_endpoint_boundary():
-    from types import SimpleNamespace
+    from rles_route_a.teacher_research.conditional_outcome_labels import GroupOutcome
     from rles_route_a.teacher_research.train_meta import _overlap_diagnostics
-    labels = [SimpleNamespace(event_id=name, decision_ts_ns=start, label_end_ts_ns=end)
+    labels = [GroupOutcome(name, start, "source", "fold", "X1", "native", "base",
+                           end, None, 1.)
               for name, start, end in (("a", 1, 5), ("b", 2, 4), ("c", 5, 6))]
     report = _overlap_diagnostics(labels)
     assert report["labels_starting_during_another"] == 1
     assert report["max_concurrent_labels"] == 2
+    assert report["uniqueness_effective_label_count"] < report["labels"]
 
 
 def test_account_candidate_denominator_preserves_held_and_pending(observed):

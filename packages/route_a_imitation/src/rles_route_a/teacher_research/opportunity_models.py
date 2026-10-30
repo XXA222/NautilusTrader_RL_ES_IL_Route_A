@@ -158,6 +158,9 @@ class FrozenOpportunityModel:
     return_basis_id: str
     evidence_type: str
     economic_status: str
+    fit_effective_label_count: float
+    calibration_effective_label_count: float
+    fit_weighting_id: str
 
     def predict(
         self, event: OpportunityEvent, features: Sequence[float] | np.ndarray,
@@ -304,31 +307,39 @@ def fit_opportunity_model(
     cal_x = _matrix(calibration, feature_rows, names)
     fit_y = np.asarray([_complete_return(row) for row in purged], dtype=np.float64)
     cal_y = np.asarray([_complete_return(row) for row in calibration], dtype=np.float64)
+    fit_weights = overlap_uniqueness_weights(purged)
+    calibration_weights = overlap_uniqueness_weights(calibration)
     fit_positive = (fit_y > 0).astype(np.float64)
     cal_positive = (cal_y > 0).astype(np.float64)
     if len(np.unique(fit_positive)) != 2 or len(np.unique(cal_positive)) != 2:
         raise ValueError("Logistic fit and later calibration each require wins and losses")
 
-    mean = fit_x.mean(axis=0)
-    scale = fit_x.std(axis=0)
+    mean = np.average(fit_x, axis=0, weights=fit_weights)
+    scale = np.sqrt(np.average((fit_x - mean) ** 2, axis=0, weights=fit_weights))
     scale[scale < 1e-12] = 1.0
     fit_z = (fit_x - mean) / scale
     cal_z = (cal_x - mean) / scale
     fit_design = np.column_stack((np.ones(len(fit_z)), fit_z))
     cal_design = np.column_stack((np.ones(len(cal_z)), cal_z))
 
-    logistic = _fit_logistic(fit_design, fit_positive, l2, learning_rate, iterations)
+    logistic = _fit_logistic(fit_design, fit_positive, l2, learning_rate, iterations,
+                             sample_weights=fit_weights)
     cal_logits = cal_design @ logistic
-    calibrator = _fit_platt(cal_logits, cal_positive, learning_rate, iterations)
+    calibrator = _fit_platt(cal_logits, cal_positive, learning_rate, iterations,
+                            sample_weights=calibration_weights)
 
     penalty = np.eye(fit_design.shape[1], dtype=np.float64) * l2
     penalty[0, 0] = 0.0
-    gram = fit_design.T @ fit_design + penalty
-    value_weights = np.linalg.solve(gram, fit_design.T @ fit_y)
+    ridge_weights = fit_weights
+    weighted_design = fit_design * ridge_weights[:, None]
+    gram = fit_design.T @ weighted_design + penalty
+    value_weights = np.linalg.solve(gram, fit_design.T @ (ridge_weights * fit_y))
     residual = fit_y - fit_design @ value_weights
     calibration_residual = cal_y - cal_design @ value_weights
-    degrees = max(1, len(fit_y) - fit_design.shape[1])
-    residual_variance = max(float(residual @ residual) / degrees, 1e-12)
+    effective_n = uniqueness_effective_label_count(fit_weights)
+    degrees = max(1.0, effective_n - fit_design.shape[1])
+    residual_mse = float(np.dot(ridge_weights, residual ** 2)) / float(ridge_weights.sum())
+    residual_variance = max(residual_mse * effective_n / degrees, 1e-12)
     value_covariance = np.linalg.solve(gram, np.eye(gram.shape[0]))
     calibration_material = json.dumps({
         "records": sorted((
@@ -349,6 +360,7 @@ def fit_opportunity_model(
         "l2": l2,
         "learning_rate": learning_rate,
         "iterations": iterations,
+        "overlap_weighting": "average_inverse_concurrency_v1",
     }, sort_keys=True, separators=(",", ":"))
     calibration_id = sha256(calibration_material.encode("utf-8")).hexdigest()
     return FrozenOpportunityModel(
@@ -361,7 +373,7 @@ def fit_opportunity_model(
         logistic_weights=_readonly(logistic),
         calibrator=calibrator,
         value_weights=_readonly(value_weights),
-        residual_q10_bps=float(np.quantile(calibration_residual, 0.10)),
+        residual_q10_bps=_weighted_quantile(calibration_residual, calibration_weights, 0.10),
         residual_variance=residual_variance,
         value_covariance=_readonly(value_covariance),
         fit_sample_count=len(purged),
@@ -381,6 +393,9 @@ def fit_opportunity_model(
         return_basis_id=purged[0].return_basis_id,
         evidence_type=purged[0].evidence_type,
         economic_status=purged[0].economic_status,
+        fit_effective_label_count=uniqueness_effective_label_count(fit_weights),
+        calibration_effective_label_count=uniqueness_effective_label_count(calibration_weights),
+        fit_weighting_id="AVERAGE_INVERSE_LABEL_CONCURRENCY_V1",
     )
 
 
@@ -389,6 +404,73 @@ def _feature_row(values: Sequence[float] | np.ndarray, width: int) -> np.ndarray
     if row.shape != (width,) or not np.all(np.isfinite(row)):
         raise ValueError("feature row has wrong shape or non-finite values")
     return row
+
+
+def overlap_uniqueness_weights(outcomes: Sequence[object]) -> np.ndarray:
+    """Share model influence across complete labels covering the same time."""
+    rows = tuple(outcomes)
+    if not rows:
+        return np.zeros(0, dtype=np.float64)
+    if len({getattr(row, "event_id", None) for row in rows}) != len(rows):
+        raise ValueError("uniqueness weights require distinct complete future labels")
+    events: list[tuple[int, int, int]] = []
+    durations = []
+    for i, row in enumerate(rows):
+        start = getattr(row, "decision_ts_ns", None)
+        end = getattr(row, "label_end_ts_ns", None)
+        value = getattr(row, "net_return_bps", None)
+        status = getattr(row, "outcome_status", "COMPLETE")
+        if (status != "COMPLETE" or value is None or type(start) is not int
+                or type(end) is not int or end <= start):
+            raise ValueError("uniqueness weights require distinct complete future labels")
+        durations.append(end - start)
+        events.extend(((start, 1, i), (end, 0, i)))
+    events.sort()
+    active: set[int] = set()
+    covered = np.zeros(len(rows), dtype=np.float64)
+    cursor = events[0][0]
+    position = 0
+    while position < len(events):
+        timestamp = events[position][0]
+        if timestamp > cursor and active:
+            duration_per_label = (timestamp - cursor) / len(active)
+            for i in active:
+                covered[i] += duration_per_label
+        while position < len(events) and events[position][0] == timestamp:
+            _, kind, i = events[position]
+            if kind == 0:
+                active.remove(i)
+            else:
+                active.add(i)
+            position += 1
+        cursor = timestamp
+    weights = covered / np.asarray(durations, dtype=np.float64)
+    if not np.isfinite(weights).all() or np.any(weights <= 0) or np.any(weights > 1 + 1e-12):
+        raise ValueError("overlap uniqueness weights are invalid")
+    return weights
+
+
+def uniqueness_effective_label_count(weights: Sequence[float] | np.ndarray) -> float:
+    """Sum average-uniqueness weights; this is a time-coverage count, not Kish ESS."""
+    values = np.asarray(weights, dtype=np.float64)
+    if not len(values):
+        return 0.0
+    if not np.isfinite(values).all() or np.any(values <= 0):
+        raise ValueError("effective unique-label count requires positive finite weights")
+    return float(values.sum())
+
+
+def _weighted_quantile(values: np.ndarray, weights: np.ndarray, quantile: float) -> float:
+    if (values.shape != weights.shape or not np.isfinite(values).all()
+            or not np.isfinite(weights).all() or np.any(weights <= 0)
+            or not 0 <= quantile <= 1):
+        raise ValueError("weighted quantile requires finite aligned values and positive weights")
+    order = np.argsort(values, kind="stable")
+    sorted_values, sorted_weights = values[order], weights[order]
+    threshold = quantile * sorted_weights.sum()
+    index = min(int(np.searchsorted(np.cumsum(sorted_weights), threshold, side="left")),
+                len(values) - 1)
+    return float(sorted_values[index])
 
 
 def _validate_independent_block_intervals(
@@ -476,13 +558,16 @@ def _design_features(row: np.ndarray, side: int, family: str) -> np.ndarray:
 def _fit_logistic(
     design: np.ndarray, target: np.ndarray, l2: float,
     learning_rate: float, iterations: int,
+    sample_weights: Sequence[float] | np.ndarray | None = None,
 ) -> np.ndarray:
+    observation_weights = _validated_sample_weights(sample_weights, len(target))
+    observation_weights /= observation_weights.sum()
     weights = np.zeros(design.shape[1], dtype=np.float64)
     penalty = np.ones_like(weights)
     penalty[0] = 0.0
     for _ in range(iterations):
         probability = np.asarray([_sigmoid(float(x)) for x in design @ weights])
-        gradient = design.T @ (probability - target) / len(target) + l2 * penalty * weights
+        gradient = design.T @ (observation_weights * (probability - target)) + l2 * penalty * weights
         weights -= learning_rate * gradient
         if not np.all(np.isfinite(weights)):
             raise ValueError("Logistic fit diverged; reject this frozen recipe")
@@ -491,16 +576,31 @@ def _fit_logistic(
 
 def _fit_platt(
     logits: np.ndarray, target: np.ndarray, learning_rate: float, iterations: int,
+    sample_weights: Sequence[float] | np.ndarray | None = None,
 ) -> tuple[float, float]:
     design = np.column_stack((logits, np.ones(len(logits))))
     params = np.array([1.0, 0.0], dtype=np.float64)
+    observation_weights = _validated_sample_weights(sample_weights, len(target))
+    observation_weights /= observation_weights.sum()
     for _ in range(iterations):
         probability = np.asarray([_sigmoid(float(x)) for x in design @ params])
-        gradient = design.T @ (probability - target) / len(target)
+        gradient = design.T @ (observation_weights * (probability - target))
         params -= learning_rate * gradient
         if not np.all(np.isfinite(params)):
             raise ValueError("Platt calibration diverged; reject this calibration block")
     return float(params[0]), float(params[1])
+
+
+def _validated_sample_weights(
+    sample_weights: Sequence[float] | np.ndarray | None, count: int,
+) -> np.ndarray:
+    if sample_weights is None:
+        return np.ones(count, dtype=np.float64)
+    result = np.asarray(sample_weights, dtype=np.float64)
+    if (result.shape != (count,) or not np.isfinite(result).all()
+            or np.any(result <= 0)):
+        raise ValueError("sample weights must be finite, positive, and row-aligned")
+    return result.copy()
 
 
 def _sigmoid(value: float) -> float:
