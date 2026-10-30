@@ -506,7 +506,13 @@ def main():
     result = execute_study(config, sha256(PREREG.read_bytes()).hexdigest(),
                            source_root=args.source_root, output=output)
     print(json.dumps({"status": result["status"], "available_cells": result["available_cells"],
-                      "expected_cells": result["expected_cells"], "output": str(output),
+                      "expected_cells": result["expected_cells"],
+                      "active_status": result["active_status"],
+                      "active_available_cells": result["active_available_cells"],
+                      "active_expected_cells": result["active_expected_cells"],
+                      "preregistered_controls_not_executed": result[
+                          "preregistered_controls_not_executed"],
+                      "output": str(output),
                       "qualification": result["qualification"]}, sort_keys=True))
     return 0
 

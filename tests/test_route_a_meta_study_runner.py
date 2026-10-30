@@ -199,9 +199,9 @@ def test_candidate_collector_rejects_different_registered_teacher_set(tmp_path, 
 
 
 
-@pytest.mark.parametrize("reject_stress,expected", [(False, 48), (True, 46)])
+@pytest.mark.parametrize("reject_stress,active_expected", [(False, 48), (True, 46)])
 def test_runner_dispatches_all_native_cells_or_preserves_missing_model(
-        tmp_path, monkeypatch, reject_stress, expected):
+        tmp_path, monkeypatch, reject_stress, active_expected):
     import json
     from types import SimpleNamespace
     from rles_route_a.teacher_research.train_meta import MetaTrainingError
@@ -231,8 +231,12 @@ def test_runner_dispatches_all_native_cells_or_preserves_missing_model(
                 "native_order_verification":{"barriers":10,"authority":"retained_m22_session_snapshots"}}
     monkeypatch.setattr(study, "_run_screen_cell", cell)
     result = study.execute_study(config, "b"*64, source_root="unused", output=tmp_path/"study")
-    assert result["expected_cells"] == 48 and result["available_cells"] == expected
-    assert len(calls) == expected and (tmp_path/"study"/"comparison.json").is_file()
+    assert result["expected_cells"] == 52 and result["available_cells"] == active_expected
+    assert result["active_expected_cells"] == 48
+    assert result["active_available_cells"] == active_expected
+    assert result["active_status"] == ("INCOMPLETE" if reject_stress else "COMPLETE")
+    assert result["preregistered_controls_not_executed"] == ["ORIGINAL_8_X1"]
+    assert len(calls) == active_expected and (tmp_path/"study"/"comparison.json").is_file()
     assert result["qualification"] == "NOT_ESTABLISHED"
-    assert result["status"] == ("INCOMPLETE" if reject_stress else "COMPLETE")
+    assert result["status"] == "INCOMPLETE"
     assert ("stress" in result["training_failures"]) == reject_stress

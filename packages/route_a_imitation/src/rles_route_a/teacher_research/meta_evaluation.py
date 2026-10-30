@@ -381,11 +381,18 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
     from dataclasses import replace
 
     original = tuple(config["teachers"])
-    controls = tuple(config["controls"])
+    preregistered_controls = tuple(config["controls"])
+    # The current runner has no implementation for this preregistered
+    # aggregate teacher control. Keep it in the planned matrix as MISSING,
+    # while separately reporting the executable active matrix.
+    controls = tuple(item for item in preregistered_controls if item != "ORIGINAL_8_X1")
     strategies = (*original, "META_X1", *controls)
+    planned_strategies = (*original, "META_X1", *preregistered_controls)
     scenarios = tuple(config["cost_scenarios"])
     windows = tuple(tuple(window) for window in config["intervals"]["native_screen"])
-    expected = {(strategy, scenario, window) for strategy in strategies
+    active_expected = {(strategy, scenario, window) for strategy in strategies
+                       for scenario in scenarios for window in windows}
+    expected = {(strategy, scenario, window) for strategy in planned_strategies
                 for scenario in scenarios for window in windows}
     supplied = {}
     for run in runs:
@@ -435,7 +442,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
             meta = supplied.get(("META_X1", scenario, window))
             if meta is None:
                 continue
-            for other in (*original, *controls):
+            for other in (*original, *preregistered_controls):
                 baseline = supplied.get((other, scenario, window))
                 if baseline is None:
                     continue
@@ -444,7 +451,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
                     "drawdown_change": meta["max_drawdown"] - baseline["max_drawdown"]})
     window_consistency = []
     for scenario in scenarios:
-        for baseline in (*original, *controls):
+        for baseline in (*original, *preregistered_controls):
             pairs = [row for row in comparisons if row["scenario"] == scenario and row["baseline"] == baseline]
             complete = len(pairs) == len(windows)
             window_consistency.append({"scenario": scenario, "baseline": baseline,
@@ -470,10 +477,22 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
                                               and stress["account_equity_change"] > 0)
                                              if traded else None,
                 "interpretation": "scenario accounts can select different candidates; not a paired-trade test"})
+    active_available = sum(key in supplied for key in active_expected)
+    planned_status = "COMPLETE" if len(supplied) == len(expected) else "INCOMPLETE"
+    active_status = "COMPLETE" if active_available == len(active_expected) else "INCOMPLETE"
     return {
         "evidence_type": "SCENARIO_ONLY_NATIVE",
         "expected_cells": len(expected), "available_cells": len(supplied),
-        "status": "COMPLETE" if len(supplied) == len(expected) else "INCOMPLETE",
+        "active_expected_cells": len(active_expected),
+        "active_available_cells": active_available,
+        "active_status": active_status,
+        "status": planned_status,
+        "active_controls": list(controls),
+        "preregistered_controls": list(preregistered_controls),
+        "preregistered_controls_not_executed": [
+            control for control in preregistered_controls
+            if not any(key[0] == control for key in supplied)
+        ],
         "rows": rows, "comparisons": comparisons, "window_consistency": window_consistency,
         "cost_resilience": cost_resilience,
         "qualification": "NOT_ESTABLISHED",

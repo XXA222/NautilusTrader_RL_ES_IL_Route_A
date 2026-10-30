@@ -256,6 +256,35 @@ def test_native_comparison_includes_the_executed_original_eight_teacher_control(
     assert original["status"] == "AVAILABLE"
 
 
+def test_complete_preregistered_meta_study_matrix_accepts_all_52_cells():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+
+    teachers = [f"T{i:02d}" for i in range(1, 9)]
+    controls = ["FLAT", "FIXED_LONG_0.3", "FIXED_SHORT_0.3", "ORIGINAL_8_X1"]
+    scenarios = ("base", "stress")
+    windows = (("a", "b"), ("b", "c"))
+    config = {"teachers": teachers, "controls": controls,
+              "cost_scenarios": {name: {} for name in scenarios},
+              "intervals": {"native_screen": [list(window) for window in windows]}}
+    strategies = (*teachers, "META_X1", *controls)
+    runs = tuple({"strategy_id": strategy, "scenario": scenario, "window": window,
+                  "cases": (), "equity_curve": (1000., 1000.),
+                  "account_metrics": {"total_fee": 0., "total_slippage_cost": 0.,
+                                      "total_funding": 0.},
+                  "native_order_verification": {"barriers": 2,
+                      "authority": "retained_m22_session_snapshots"}}
+                 for strategy in strategies for scenario in scenarios for window in windows)
+
+    result = compare_preregistered_native_runs(config, runs)
+
+    assert result["expected_cells"] == result["available_cells"] == 52
+    assert result["status"] == "COMPLETE"
+    assert len(result["comparisons"]) == 48
+    assert all(row["status"] == "COMPLETE" for row in result["window_consistency"])
+    assert all(row["status"] == "NO_COMPLETED_TRADE" for row in result["cost_resilience"])
+    assert result["qualification"] == "NOT_ESTABLISHED"
+
+
 def test_native_comparison_requires_trade_case_cashflows_to_match_account():
     from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
 
