@@ -70,7 +70,8 @@ def test_same_native_case_and_research_label_discrepancy_are_accounted():
         entry_decision_ts_ns=1706745780001000000, side=1,
         entry_fill_ts_ns=1706745840001000000, exit_fill_ts_ns=1706747160001000000,
         entry_fill_price=2285.97, exit_fill_price=2284.37, entry_notional=249.17073,
-        fees=.24908352, funding=0., gross_cash_pnl_before_fees_and_funding=-.1744,
+        fees=.24908352, funding=0., slippage_cost=.05014,
+        gross_cash_pnl_before_fees_and_funding=-.1744,
         realized_pnl=-.42348352, economic_status="SCENARIO_ONLY")
     entry, exit_price = 2285.73, 2284.60
     ratio = exit_price / entry
@@ -81,6 +82,11 @@ def test_same_native_case_and_research_label_discrepancy_are_accounted():
     result = reconcile_counterfactual_to_native(replay=replay, native_case=case,
         decision_ts_ns=case["entry_decision_ts_ns"], side=1)
     assert result["native_net_cash"] == pytest.approx(case["realized_pnl"])
+    assert result["native_net_cash"] == pytest.approx(-.42348352)
+    assert result["native_reported_slippage_cash"] == pytest.approx(.05014)
+    assert result["native_slippage_treatment"] == "included_in_actual_fill_prices_not_subtracted_again"
+    assert result["modeled_net_cash"] == pytest.approx(-.422069582)
+    assert result["native_minus_modeled_cash"] == pytest.approx(-.001413938)
     assert result["native_minus_modeled_cash"] == pytest.approx(
         result["native_fill_vs_reference_gross_cash"] + result["modeled_fee_minus_native_fee_cash"]
         + result["native_minus_modeled_funding_cash"] + result["modeled_slippage_cash"])
@@ -88,3 +94,4 @@ def test_same_native_case_and_research_label_discrepancy_are_accounted():
     with pytest.raises(ValueError, match="same trade"):
         reconcile_counterfactual_to_native(replay=replay, native_case=case,
             decision_ts_ns=case["entry_decision_ts_ns"]+1, side=1)
+
