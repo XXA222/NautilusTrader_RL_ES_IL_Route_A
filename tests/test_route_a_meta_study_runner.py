@@ -33,6 +33,9 @@ def test_signal_coverage_requires_exact_registered_eight_teacher_set():
     complete = study._score_diagnostics(teacher, None, {}, "base", 1, 2)
     assert complete["complete_eight_teacher_signal_coverage"] is True
     assert complete["quality_status"] == "COMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
+    assert complete["candidate_quality_status"] == "NO_CANDIDATES"
+    assert complete["outcomes"] == []
+    assert complete["same_candidate_cost_comparison"] is None
     assert complete["missing_teacher_ids"] == []
     assert complete["unexpected_teacher_ids"] == []
 

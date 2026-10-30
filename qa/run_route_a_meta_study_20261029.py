@@ -200,6 +200,7 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
                   native_selected_count=sum(item.selected for item in decisions),
                   post_gate_override_counts=post_gate_overrides),
               "unscored": len(unscored), "quality": None,
+              "candidate_quality_status": "NOT_COMPUTED",
               "candidate_error_count": len(errors),
               "candidate_error_types": dict(sorted(Counter(
                   str(error).split(":", 1)[0] for error in errors).items())),
@@ -234,15 +235,21 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
         # complete eight-teacher comparison. Keep the per-minute signals,
         # errors and score funnel, but do not replay or summarize outcomes.
         result["quality_status"] = "INCOMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
+        result["candidate_quality_status"] = "INCOMPLETE_TEACHER_COVERAGE"
         return result
     if errors:
         # Preserve completed native account evidence and the score funnel even
         # if the research candidate sidecar reported an error. Such a run is
         # still ineligible for candidate quality replay.
         result["quality_status"] = "CANDIDATE_COLLECTION_ERROR"
+        result["candidate_quality_status"] = "COLLECTION_ERROR"
         return result
     result["quality_status"] = "COMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
     if not decisions:
+        result["candidate_quality_status"] = "NO_CANDIDATES"
+        result["outcomes"] = []
+        result["same_candidate_cost_comparison"] = None
+        result["native_case_reconciliation"] = None
         return result
     opens, funding = extract_model_price_path(factory, start_ns=start_ns, end_ns=end_ns,
                                                funding_after_ns=teacher.decisions[0].observation.decision_ts_ns)
@@ -257,6 +264,7 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
         execution_recipe=teacher.policy.label_recipe[1], cost_scenario_id=scenario,
         block_end_ns=end_ns, gross_return_method="simple")
     result["quality"] = summarize_candidate_quality(decisions, labels)
+    result["candidate_quality_status"] = "AVAILABLE"
     result["outcomes"] = [asdict(label) for label in labels]
     result["native_case_reconciliation"] = reconcile_selected_native_cases(
         decisions, native_cases, replay, execution_recipe=teacher.policy.label_recipe[1], scenario=scenario)
