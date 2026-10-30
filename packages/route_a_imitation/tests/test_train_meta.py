@@ -50,6 +50,48 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
         result.policy.score(groups[-1])
 
 
+def test_registered_training_keeps_but_excludes_blocked_candidates(observed):
+    groups = []
+    for i in range(1, 9):
+        obs = observed(
+            ts=i * 1_000_000_000,
+            hourly=.01 if i % 2 else -.01,
+            pos=.3 if i in (1, 5) else 0.,
+            pending=("native-order",) if i == 2 else (),
+        )
+        group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
+        groups.append(group)
+
+    def replay(group, policy, execution, scenario):
+        obs = group.observation
+        end = 101. if obs.market["trend_1h"] > 0 else 99.
+        fact = CounterfactualTradeReplay(group.event_id, obs.decision_ts_ns + 1, 100.,
+            obs.decision_ts_ns + 2, end, 1., 1., 1., 1., 0., None, "synthetic")
+        return FrozenReplay(fact, policy, execution, scenario)
+
+    grant = HostTrainGrant("f1", "owner", "reservation", "fixture-source", "train", True)
+    with pytest.raises(ValueError, match="insufficient complete") as rejected:
+        train_meta_on_registered_candidates(
+            grant=grant, verify_grant=lambda _grant: True,
+            fit_groups=groups[:4], calibration_groups=groups[4:],
+            fit_interval=(1, 4_500_000_000),
+            calibration_interval=(4_500_000_000, 9_000_000_000),
+            replay=replay, execution_recipe="native", scenario="base",
+            feature_names=("market.trend_1h", "teacher.EMA", "consensus.count",
+                           "cost.round_trip_bps"), margin_bps=1., cost_bps=4.,
+        )
+
+    diagnostics = rejected.value.diagnostics
+    assert diagnostics["fit_account_ineligible"] == 2
+    assert diagnostics["fit_account_eligible_complete"] == 2
+    assert diagnostics["fit_complete_used"] == 2
+    assert diagnostics["calibration_account_ineligible"] == 1
+    assert diagnostics["calibration_account_eligible_complete"] == 3
+    assert diagnostics["calibration_complete_used"] == 3
+    assert len(rejected.value.fit_outcomes) == 4
+    assert len(rejected.value.calibration_outcomes) == 4
+
+
 def test_label_overlap_reports_dependencies_and_endpoint_boundary():
     from rles_route_a.teacher_research.conditional_outcome_labels import GroupOutcome
     from rles_route_a.teacher_research.train_meta import _overlap_diagnostics
