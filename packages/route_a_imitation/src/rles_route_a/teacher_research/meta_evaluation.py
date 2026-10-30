@@ -398,15 +398,21 @@ def _reconcile_native_case_cashflows(cases, account, account_equity_change: floa
 
 
 def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
-    """Compare the same selected candidate paths under two modeled cost schedules."""
+    """Compare every model-accepted path and its native-selected subset under both costs."""
     base = {item.event_id: item for item in base_outcomes}
     stress = {item.event_id: item for item in stress_outcomes}
+    accepted = tuple(decision for decision in decisions
+                     if decision.score is not None
+                     and decision.score.action == ("LONG" if decision.group.side > 0 else "SHORT")
+                     and decision.rejection_override != "MODEL_DIRECTION_MISMATCH")
     selected = tuple(item for item in decisions if item.selected)
     if (len(base) != len(base_outcomes) or len(stress) != len(stress_outcomes)
-            or set(base) != set(stress) or set(base) != {d.group.event_id for d in selected}):
-        raise ValueError("paired costs must cover exactly the selected candidates")
+            or set(base) != set(stress) or set(base) != {d.group.event_id for d in accepted}
+            or not {d.group.event_id for d in selected}.issubset(base)):
+        raise ValueError("paired costs must cover exactly model-accepted candidates")
     rows = []
-    for decision in selected:
+    selected_ids = {decision.group.event_id for decision in selected}
+    for decision in accepted:
         a, b = base[decision.group.event_id], stress[decision.group.event_id]
         if (a.cost_scenario_id, b.cost_scenario_id) != ("base", "stress"):
             raise ValueError("paired costs require base and stress labels")
@@ -415,6 +421,7 @@ def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
                 or a.return_basis_id != b.return_basis_id):
             raise ValueError("paired cost labels must share the same modeled path")
         rows.append({"event_id": a.event_id, "status": a.outcome_status,
+                     "native_selected": a.event_id in selected_ids,
                      "base_gross_bps": a.gross_return_bps,
                      "base_fees_bps": a.fees_bps,
                      "base_slippage_bps": a.slippage_bps,
@@ -425,29 +432,56 @@ def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
                      "stress_slippage_bps": b.slippage_bps,
                      "stress_funding_bps": b.funding_cashflow_bps,
                      "stress_net_bps": b.net_return_bps})
-    complete = [row for row in rows if row["status"] == "COMPLETE"]
-    return {"evidence_type": "MODEL_COUNTERFACTUAL", "selected_candidates": len(rows),
-            "paired_complete": len(complete), "without_complete_outcome": len(rows)-len(complete),
-            "base_mean_net_bps": fsum(row["base_net_bps"] for row in complete)/len(complete) if complete else None,
-            "stress_mean_net_bps": fsum(row["stress_net_bps"] for row in complete)/len(complete) if complete else None,
-            "base_mean_gross_bps": fsum(row["base_gross_bps"] for row in complete)/len(complete)
-                                   if complete and all(row["base_gross_bps"] is not None for row in complete) else None,
-            "base_mean_fees_bps": fsum(row["base_fees_bps"] for row in complete)/len(complete)
-                                  if complete and all(row["base_fees_bps"] is not None for row in complete) else None,
-            "base_mean_slippage_bps": fsum(row["base_slippage_bps"] for row in complete)/len(complete)
-                                      if complete and all(row["base_slippage_bps"] is not None for row in complete) else None,
-            "base_mean_funding_bps": fsum(row["base_funding_bps"] for row in complete)/len(complete)
-                                     if complete and all(row["base_funding_bps"] is not None for row in complete) else None,
-            "stress_mean_gross_bps": fsum(row["stress_gross_bps"] for row in complete)/len(complete)
-                                     if complete and all(row["stress_gross_bps"] is not None for row in complete) else None,
-            "stress_mean_fees_bps": fsum(row["stress_fees_bps"] for row in complete)/len(complete)
-                                    if complete and all(row["stress_fees_bps"] is not None for row in complete) else None,
-            "stress_mean_slippage_bps": fsum(row["stress_slippage_bps"] for row in complete)/len(complete)
-                                        if complete and all(row["stress_slippage_bps"] is not None for row in complete) else None,
-            "stress_mean_funding_bps": fsum(row["stress_funding_bps"] for row in complete)/len(complete)
-                                       if complete and all(row["stress_funding_bps"] is not None for row in complete) else None,
-            "positive_under_both": sum(row["base_net_bps"] > 0 and row["stress_net_bps"] > 0 for row in complete),
-            "outcomes": rows}
+    def metrics(selected_only):
+        scope = [row for row in rows if not selected_only or row["native_selected"]]
+        complete = [row for row in scope if row["status"] == "COMPLETE"]
+        result = {
+            "candidates": len(scope), "paired_complete": len(complete),
+            "without_complete_outcome": len(scope) - len(complete),
+            "base_mean_net_bps": (fsum(row["base_net_bps"] for row in complete) / len(complete)
+                                  if complete else None),
+            "stress_mean_net_bps": (fsum(row["stress_net_bps"] for row in complete) / len(complete)
+                                    if complete else None),
+            "positive_under_both": sum(row["base_net_bps"] > 0 and row["stress_net_bps"] > 0
+                                        for row in complete),
+        }
+        for scenario in ("base", "stress"):
+            for metric, key in (("gross", "gross_bps"), ("fees", "fees_bps"),
+                                ("slippage", "slippage_bps"),
+                                ("funding", "funding_bps")):
+                values = [row[f"{scenario}_{key}"] for row in complete]
+                result[f"{scenario}_mean_{metric}_bps"] = (
+                    fsum(values) / len(values)
+                    if complete and all(value is not None for value in values) else None
+                )
+        return result
+
+    accepted_metrics = metrics(selected_only=False)
+    selected_metrics = metrics(selected_only=True)
+    return {
+        "evidence_type": "MODEL_COUNTERFACTUAL",
+        "model_accepted_candidates": accepted_metrics["candidates"],
+        "model_accepted_paired_complete": accepted_metrics["paired_complete"],
+        "model_accepted_without_complete_outcome": accepted_metrics["without_complete_outcome"],
+        "model_accepted_base_mean_net_bps": accepted_metrics["base_mean_net_bps"],
+        "model_accepted_stress_mean_net_bps": accepted_metrics["stress_mean_net_bps"],
+        "model_accepted_positive_under_both": accepted_metrics["positive_under_both"],
+        "native_selected_candidates": selected_metrics["candidates"],
+        "native_selected_paired_complete": selected_metrics["paired_complete"],
+        "native_selected_base_mean_net_bps": selected_metrics["base_mean_net_bps"],
+        "native_selected_stress_mean_net_bps": selected_metrics["stress_mean_net_bps"],
+        # Backward-compatible aliases describe the actually selected subset.
+        "selected_candidates": selected_metrics["candidates"],
+        "paired_complete": selected_metrics["paired_complete"],
+        "without_complete_outcome": selected_metrics["without_complete_outcome"],
+        "base_mean_net_bps": selected_metrics["base_mean_net_bps"],
+        "stress_mean_net_bps": selected_metrics["stress_mean_net_bps"],
+        "positive_under_both": selected_metrics["positive_under_both"],
+        **{key: value for key, value in selected_metrics.items()
+           if key.startswith(("base_mean_", "stress_mean_"))},
+        "overlapping_candidate_labels_are_not_independent_trials": True,
+        "outcomes": rows,
+    }
 
 
 

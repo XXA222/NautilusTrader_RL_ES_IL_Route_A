@@ -304,17 +304,20 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
     result["outcomes"] = [asdict(label) for label in labels]
     result["native_case_reconciliation"] = reconcile_selected_native_cases(
         decisions, native_cases, replay, execution_recipe=teacher.policy.label_recipe[1], scenario=scenario)
-    selected = tuple(d.group for d in decisions if d.selected)
-    if selected and {"base", "stress"}.issubset(config["cost_scenarios"]):
+    accepted = tuple(d.group for d in decisions
+                     if d.score is not None
+                     and d.score.action == ("LONG" if d.group.side > 0 else "SHORT")
+                     and d.rejection_override != "MODEL_DIRECTION_MISMATCH")
+    if accepted and {"base", "stress"}.issubset(config["cost_scenarios"]):
         paired = {}
         for cost_scenario in ("base", "stress"):
             scenario_cost = config["cost_scenarios"][cost_scenario]
             other_replay = make_x1_group_replay(
                 observations=tuple(row.observation for row in teacher.decisions), opens=opens, funding=funding,
-                block_ends={g.event_id: end_ns for g in selected},
+                block_ends={g.event_id: end_ns for g in accepted},
                 fee_bps=scenario_cost["fee_bps_per_leg"], slippage_bps=scenario_cost["slippage_bps_per_leg"],
                 execution_recipe=teacher.policy.label_recipe[1], scenario=cost_scenario)
-            paired[cost_scenario] = label_grouped_candidates(selected, other_replay, exit_policy_id="X1",
+            paired[cost_scenario] = label_grouped_candidates(accepted, other_replay, exit_policy_id="X1",
                 execution_recipe=teacher.policy.label_recipe[1], cost_scenario_id=cost_scenario,
                 block_end_ns=end_ns, gross_return_method="simple")
         result["same_candidate_cost_comparison"] = paired_cost_candidate_quality(

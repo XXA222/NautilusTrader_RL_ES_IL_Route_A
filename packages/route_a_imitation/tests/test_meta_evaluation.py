@@ -59,7 +59,7 @@ def test_quality_reports_selected_rejected_and_censor(observed):
         obs = observed(ts=(i+1)*1_000_000_000)
         group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
         score = (EntryScore("NO_TRADE", .7, 5., False, "OUT_OF_SUPPORT", ("market.foo",)) if i == 1
-                 else EntryScore("LONG", .7, 5., True, "EDGE"))
+                 else EntryScore("LONG", .7, 5., True, "POSITIVE_NET_EDGE"))
         decisions.append(CandidateDecision(group, score, i == 0))
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
              "X1", "native", "base", obs.decision_ts_ns+1 if i != 2 else None,
@@ -136,19 +136,27 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert with_breakeven["rejected"]["average_negative_net_bps"] == -2.
     from dataclasses import replace
     from rles_route_a.teacher_research.meta_evaluation import paired_cost_candidate_quality
-    pair = paired_cost_candidate_quality(tuple(decisions), (labels[0],),
-        (replace(labels[0], cost_scenario_id="stress", net_return_bps=-3.,
-                 fees_bps=5., slippage_bps=8., funding_cashflow_bps=0.),))
+    stress_complete = replace(labels[0], cost_scenario_id="stress", net_return_bps=-3.,
+                               fees_bps=5., slippage_bps=8., funding_cashflow_bps=0.)
+    stress_censored = replace(labels[2], cost_scenario_id="stress")
+    pair = paired_cost_candidate_quality(tuple(decisions), (labels[0], labels[2]),
+                                         (stress_complete, stress_censored))
     assert pair["paired_complete"] == 1 and pair["positive_under_both"] == 0
     assert pair["base_mean_net_bps"] == 5. and pair["stress_mean_net_bps"] == -3.
+    assert pair["model_accepted_candidates"] == 2
+    assert pair["model_accepted_paired_complete"] == 1
+    assert pair["model_accepted_without_complete_outcome"] == 1
+    assert pair["native_selected_candidates"] == 1
+    assert pair["native_selected_base_mean_net_bps"] == 5.
+    assert pair["outcomes"][1]["native_selected"] is False
     assert pair["base_mean_gross_bps"] == pair["stress_mean_gross_bps"] == 10.
     assert pair["base_mean_fees_bps"] == 2. and pair["stress_mean_fees_bps"] == 5.
     assert pair["base_mean_slippage_bps"] == 1. and pair["stress_mean_slippage_bps"] == 8.
     assert pair["base_mean_funding_bps"] == -2. and pair["stress_mean_funding_bps"] == 0.
     with pytest.raises(ValueError, match="same modeled path"):
-        paired_cost_candidate_quality(tuple(decisions), (labels[0],),
-            (replace(labels[0], cost_scenario_id="stress",
-                     label_end_ts_ns=labels[0].label_end_ts_ns + 1),))
+        paired_cost_candidate_quality(tuple(decisions), (labels[0], labels[2]),
+            (replace(stress_complete, label_end_ts_ns=labels[0].label_end_ts_ns + 1),
+             stress_censored))
     no_pairs = summarize_candidate_quality(
         (replace(decisions[0], score=None, selected=False), decisions[2]), (labels[0], labels[2]))
     assert no_pairs["prediction_quality"]["paired_complete_scored"] == 0
