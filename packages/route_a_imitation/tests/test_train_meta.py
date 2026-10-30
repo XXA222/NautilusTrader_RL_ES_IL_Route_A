@@ -13,7 +13,7 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
     groups = []
     for i in range(1, 9):
         obs = observed(ts=i*1_000_000_000, hourly=.01 if i % 2 else -.01)
-        group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
+        group, = group_teacher_proposals([TeacherProposal(obs, "T01_EMA_9_21", 1, "cross")])
         groups.append(group)
     def replay(group, policy, execution, scenario):
         obs = group.observation
@@ -26,7 +26,7 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
                   fit_interval=(1, 4_500_000_000),
                   calibration_interval=(4_500_000_000, 9_000_000_000),
                   replay=replay, execution_recipe="native", scenario="base",
-                  feature_names=("market.trend_1h", "teacher.EMA", "consensus.count",
+                  feature_names=("market.trend_1h", "teacher.T01_EMA_9_21", "consensus.count",
                                  "cost.round_trip_bps"), margin_bps=1., cost_bps=4.)
     with pytest.raises(PermissionError):
         train_meta_on_registered_candidates(**kwargs, verify_grant=lambda grant: False)
@@ -61,7 +61,7 @@ def test_registered_training_keeps_but_excludes_blocked_candidates(observed):
             pos=.3 if i in (1, 5) else 0.,
             pending=("native-order",) if i == 2 else (),
         )
-        group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
+        group, = group_teacher_proposals([TeacherProposal(obs, "T01_EMA_9_21", 1, "cross")])
         groups.append(group)
 
     def replay(group, policy, execution, scenario):
@@ -79,7 +79,7 @@ def test_registered_training_keeps_but_excludes_blocked_candidates(observed):
             fit_interval=(1, 4_500_000_000),
             calibration_interval=(4_500_000_000, 9_000_000_000),
             replay=replay, execution_recipe="native", scenario="base",
-            feature_names=("market.trend_1h", "teacher.EMA", "consensus.count",
+            feature_names=("market.trend_1h", "teacher.T01_EMA_9_21", "consensus.count",
                            "cost.round_trip_bps"), margin_bps=1., cost_bps=4.,
         )
 

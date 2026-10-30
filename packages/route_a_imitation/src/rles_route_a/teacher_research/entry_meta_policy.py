@@ -12,15 +12,37 @@ from .conditional_outcome_labels import GroupOutcome
 from .opportunity_models import (_fit_logistic, _fit_platt, _sigmoid,
                                 overlap_uniqueness_weights,
                                 uniqueness_effective_label_count)
+from rles_route_a.teachers_1m.registry import ALL_TEACHER_RECIPE_BY_ID
+
+
+def _validate_feature_names(names: Sequence[str]) -> tuple[str, ...]:
+    frozen = tuple(names)
+    if (not frozen or len(set(frozen)) != len(frozen)
+            or any(not isinstance(name, str) or not name.strip() for name in frozen)):
+        raise ValueError("unique nonempty frozen feature names are required")
+    for name in frozen:
+        if name.startswith(("market.", "account.")) and name.split(".", 1)[1].strip():
+            continue
+        if name.startswith("teacher."):
+            teacher_id = name.removeprefix("teacher.")
+            if teacher_id in ALL_TEACHER_RECIPE_BY_ID:
+                continue
+            raise ValueError(f"unknown frozen teacher feature: {name}")
+        if name in {"consensus.count", "cost.round_trip_bps"}:
+            continue
+        raise ValueError(f"unsupported frozen opportunity feature: {name}")
+    return frozen
 
 
 def missing_candidate_features(observation, names: Sequence[str]) -> tuple[str, ...]:
+    names = _validate_feature_names(names)
     return tuple(name for name in names
                  if (name.startswith("market.") and name[7:] not in observation.market)
                  or (name.startswith("account.") and name[8:] not in observation.account))
 
 
 def _features(group: CandidateGroup, names: Sequence[str], cost_bps: float | None = None) -> np.ndarray:
+    names = _validate_feature_names(names)
     obs = group.observation
     values = []
     for name in names:
@@ -127,9 +149,8 @@ def fit_entry_meta_policy(
     fee_bps_per_leg: float | None = None, slippage_bps_per_leg: float | None = None,
 ) -> FrozenEntryMetaPolicy:
     """Fit complete labels for executable flat candidates, then calibrate later."""
-    names = tuple(feature_names)
-    if (not names or len(set(names)) != len(names)
-            or not isfinite(margin_bps) or margin_bps < 0 or not isfinite(l2) or l2 <= 0):
+    names = _validate_feature_names(feature_names)
+    if (not isfinite(margin_bps) or margin_bps < 0 or not isfinite(l2) or l2 <= 0):
         raise ValueError("fixed features, nonnegative margin and positive regularization required")
     if cost_bps is not None and (isinstance(cost_bps, bool) or not isinstance(cost_bps, (int, float))
                                  or not isfinite(cost_bps) or cost_bps < 0):
