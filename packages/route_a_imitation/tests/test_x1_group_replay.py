@@ -48,7 +48,8 @@ def test_limit_touch_integrates_with_x1_exit_and_censor():
     common = dict(observations=rows, opens=tuple((i*M, 100.+i) for i in range(1, 8)),
                   funding=(), block_ends={group.event_id: 7*M}, fee_bps=5.,
                   slippage_bps=1., execution_recipe="limit", scenario="base")
-    entry = make_limit_entry_provider(bars=(LimitBar(3*M, 4*M, 100., 105.),),
+    entry = make_limit_entry_provider(bars=(LimitBar(2*M, 3*M, 103., 105.),
+                                          LimitBar(3*M, 4*M, 100., 105.)),
                                       price_for_group=lambda group: 102.)
     replay = make_x1_group_replay(**common, limit_entry=entry)
     result, = label_grouped_candidates([group], replay, exit_policy_id="X1",
@@ -64,7 +65,8 @@ def test_limit_touch_integrates_with_x1_exit_and_censor():
     assert censored.outcome_status == "RIGHT_CENSORED" and censored.net_return_bps is None
 
     complete_no_touch = make_limit_entry_provider(
-        bars=(LimitBar(3*M, 4*M, 100., 105.), LimitBar(4*M, 7*M, 100., 105.)),
+        bars=(LimitBar(2*M, 3*M, 100., 105.), LimitBar(3*M, 4*M, 100., 105.),
+              LimitBar(4*M, 7*M, 100., 105.)),
         price_for_group=lambda group: 90.)
     missed, = label_grouped_candidates([group],
         make_x1_group_replay(**common, limit_entry=complete_no_touch), exit_policy_id="X1",

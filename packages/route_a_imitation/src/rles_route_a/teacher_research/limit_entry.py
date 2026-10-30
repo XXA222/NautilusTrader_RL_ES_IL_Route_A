@@ -28,9 +28,12 @@ def replay_limit_entry(*, decision_ts_ns: int, side: int, limit_price: float,
                        cancel_status: Literal["UNFILLED", "CANCELLED"] = "CANCELLED") -> LimitEntryResult:
     """A touched limit fills fully at its limit, reported at bar end.
 
-    The order activates at the first bar starting strictly after the decision;
-    earlier bars are excluded. A cancellation within an active bar makes that
-    bar unusable because OHLC cannot establish touch ordering.
+    The order activates on the first bar starting at or after the decision.
+    A bar that straddles the decision is unusable for fill inference, but its
+    end can establish continuous coverage for the following bar. Missing
+    coverage between the decision and the first eligible bar is right-censored.
+    A cancellation within an active bar makes that bar unusable because OHLC
+    cannot establish touch ordering.
     """
     if (type(decision_ts_ns) is not int or type(block_end_ns) is not int
             or block_end_ns <= decision_ts_ns or type(side) is not int or side not in (-1, 1)
@@ -40,8 +43,8 @@ def replay_limit_entry(*, decision_ts_ns: int, side: int, limit_price: float,
                 or not decision_ts_ns < cancel_at_ns <= block_end_ns))
             or cancel_status not in ("UNFILLED", "CANCELLED")):
         raise ValueError("invalid limit entry parameters")
+    bars = tuple(bars)
     previous_end = None
-    last_observed = None
     for bar in bars:
         if (not isinstance(bar, LimitBar) or type(bar.start_ns) is not int
                 or type(bar.end_ns) is not int or bar.start_ns >= bar.end_ns
@@ -50,20 +53,27 @@ def replay_limit_entry(*, decision_ts_ns: int, side: int, limit_price: float,
                 or (previous_end is not None and bar.start_ns < previous_end)):
             raise ValueError("invalid or overlapping limit bars")
         previous_end = bar.end_ns
-        if bar.start_ns <= decision_ts_ns:
+
+    last_observed = None
+    for bar in bars:
+        if bar.start_ns < decision_ts_ns:
             # This bar cannot produce a fill, but still establishes observed
             # coverage through its end when it straddles the decision.
             if bar.end_ns > decision_ts_ns:
                 last_observed = bar.end_ns
             continue
+        if bar.start_ns >= block_end_ns:
+            break
+        if last_observed is None and bar.start_ns > decision_ts_ns:
+            # A later bar cannot establish whether the order filled during the
+            # missing interval immediately after the decision.
+            return LimitEntryResult("RIGHT_CENSORED", bar.start_ns)
         if last_observed is not None and bar.start_ns > last_observed:
             return LimitEntryResult("RIGHT_CENSORED", last_observed)
         if cancel_at_ns is not None and cancel_at_ns <= bar.start_ns:
             if last_observed is not None and last_observed >= cancel_at_ns:
                 return LimitEntryResult(cancel_status, cancel_at_ns)
             return LimitEntryResult("RIGHT_CENSORED", last_observed or decision_ts_ns + 1)
-        if bar.start_ns >= block_end_ns:
-            break
         if bar.end_ns > block_end_ns:
             return LimitEntryResult("RIGHT_CENSORED", bar.start_ns)
         cancel_inside_bar = cancel_at_ns is not None and bar.start_ns < cancel_at_ns < bar.end_ns
