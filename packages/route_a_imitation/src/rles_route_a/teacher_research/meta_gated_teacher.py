@@ -207,6 +207,11 @@ class MetaGatedTeacher:
             scored.append((group, score))
         selected: CandidateGroup | None = None
         owner_not_ready: set[str] = set()
+        for group, score in scored:
+            expected_score = "LONG" if group.side > 0 else "SHORT"
+            if (score is not None and score.action in ("LONG", "SHORT")
+                    and score.action != expected_score):
+                pre_score_rejections[group.event_id] = "MODEL_DIRECTION_MISMATCH"
         if observation.pending_order_ids:
             action = advice(observation, self.expert_id,
                             "HOLD" if abs(current) > 1e-8 else "FLAT",
@@ -224,7 +229,8 @@ class MetaGatedTeacher:
         else:
             self._owner = None
             eligible = [(group, score) for group, score in scored
-                        if score is not None and score.action in ("LONG", "SHORT")]
+                        if score is not None
+                        and score.action == ("LONG" if group.side > 0 else "SHORT")]
             executable_owner_by_event: dict[str, str] = {}
             for group, score in eligible:
                 expected = "OPEN_LONG" if group.side > 0 else "OPEN_SHORT"

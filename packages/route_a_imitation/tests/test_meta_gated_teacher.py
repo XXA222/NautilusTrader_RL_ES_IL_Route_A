@@ -137,6 +137,40 @@ def test_consensus_candidate_uses_any_ready_native_teacher_owner(monkeypatch):
     assert teacher.native_receipts[-1].selected_teacher_id == "T02_ROC_20_60"
 
 
+def test_model_direction_mismatch_fails_closed_before_native_selection(monkeypatch):
+    class StaticTeacher:
+        def advise(self, obs):
+            return ExpertAdvice("T06_RSI_14", obs.decision_ts_ns, "OPEN_SHORT", -.3,
+                                ("RSI_SHORT",))
+
+        def reset(self, episode_id=""):
+            pass
+
+        def observe_native_action(self, action, trace, native_order_facts):
+            pass
+
+    class FixedShortCollection:
+        def reset(self, episode_id=""):
+            pass
+
+        def collect(self, obs):
+            group, = group_teacher_proposals((TeacherProposal(
+                obs, "T06_RSI_14", -1, "RSI_REENTRY_SHORT"),))
+            return CandidateCollection((group,), ())
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.collector = FixedShortCollection()
+    teacher._teachers["T06_RSI_14"] = StaticTeacher()
+    monkeypatch.setattr(type(teacher.policy), "score", lambda _policy, _group:
+                        EntryScore("LONG", .8, 20., True, "POSITIVE_NET_EDGE"))
+
+    action = teacher.advise(observation(10))
+
+    assert action.intent == "FLAT"
+    assert not any(candidate.selected for candidate in teacher.decisions[-1].candidates)
+    assert teacher.decisions[-1].candidates[0].disposition == "REJECTED_MODEL_DIRECTION_MISMATCH"
+
+
 def test_pending_order_candidate_is_not_misreported_as_arbitration():
     teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
     teacher.advise(observation(10, ema_9=99.))
