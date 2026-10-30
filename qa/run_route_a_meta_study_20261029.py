@@ -185,9 +185,7 @@ def _steps(start_ns, end_ns):
 def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, native_cases=()):
     from collections import Counter
     decisions = tuple(candidate for row in teacher.decisions for candidate in row.candidates)
-    errors = [row.candidate_error for row in teacher.decisions if row.candidate_error]
-    if errors:
-        raise RuntimeError("Meta candidate scoring failed in native episode: " + errors[0])
+    errors = tuple(row.candidate_error for row in teacher.decisions if row.candidate_error)
     scores = tuple(item.score for item in decisions if item.score is not None)
     unscored = tuple(item for item in decisions if item.score is None)
     unscored_reasons = Counter(item.disposition for item in unscored)
@@ -202,6 +200,9 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
                   native_selected_count=sum(item.selected for item in decisions),
                   post_gate_override_counts=post_gate_overrides),
               "unscored": len(unscored), "quality": None,
+              "candidate_error_count": len(errors),
+              "candidate_error_types": dict(sorted(Counter(
+                  str(error).split(":", 1)[0] for error in errors).items())),
               "candidate_disposition_counts": dict(sorted(
                   Counter(item.disposition for item in decisions).items())),
               "missing_feature_counts": dict(sorted(Counter(
@@ -233,6 +234,12 @@ def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, nat
         # complete eight-teacher comparison. Keep the per-minute signals,
         # errors and score funnel, but do not replay or summarize outcomes.
         result["quality_status"] = "INCOMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
+        return result
+    if errors:
+        # Preserve completed native account evidence and the score funnel even
+        # if the research candidate sidecar reported an error. Such a run is
+        # still ineligible for candidate quality replay.
+        result["quality_status"] = "CANDIDATE_COLLECTION_ERROR"
         return result
     result["quality_status"] = "COMPLETE_EIGHT_TEACHER_SIGNAL_COVERAGE"
     if not decisions:
