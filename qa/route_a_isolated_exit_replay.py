@@ -262,11 +262,12 @@ def _load_run(run_dir: Path) -> dict[str, Any]:
     }
 
 
-def _case_identity(case: dict[str, Any]) -> tuple[int, int, float]:
+def _case_identity(case: dict[str, Any]) -> tuple[int, int, float, float]:
     return (
         int(case["entry_fill_ts_ns"]),
         int(case["side"]),
         round(float(case["entry_notional"]), 6),
+        round(float(case["entry_fill_price"]), 8),
     )
 
 
@@ -303,6 +304,7 @@ def _pair_slot(slot: dict[str, Any], x1: dict[str, Any], x2: dict[str, Any]) -> 
         "entry_fill_ts_ns": case1["entry_fill_ts_ns"],
         "side": case1["side"],
         "entry_notional_rounded_1e6": round(float(case1["entry_notional"]), 6),
+        "entry_fill_price_rounded_1e8": round(float(case1["entry_fill_price"]), 8),
     }
     row["x2_minus_x1"] = {
         key: x2["trade_diagnostics"][key] - x1["trade_diagnostics"][key]

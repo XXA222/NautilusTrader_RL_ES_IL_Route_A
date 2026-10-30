@@ -203,8 +203,9 @@ def test_trade_path_metrics_reconcile_cash_and_peak_giveback():
 
 
 def test_case_pairing_requires_same_timestamp_side_and_rounded_notional():
-    case = {"entry_fill_ts_ns": 100, "side": 1, "entry_notional": 100.0000004}
-    assert _case_identity(case) == (100, 1, 100.0)
+    case = {"entry_fill_ts_ns": 100, "side": 1, "entry_notional": 100.0000004,
+            "entry_fill_price": 2500.0}
+    assert _case_identity(case) == (100, 1, 100.0, 2500.0)
 
     incomplete = {"case": None, "trade_diagnostics": None}
     paired = _pair_slot({"teacher": "T01"}, incomplete, incomplete)
@@ -218,6 +219,7 @@ def test_case_pairing_accepts_same_native_entry_and_reports_cash_delta():
         "entry_fill_ts_ns": 100,
         "side": 1,
         "entry_notional": 100.0,
+        "entry_fill_price": 2500.0,
     }
     case2 = dict(case1)
     metrics1 = {
@@ -236,3 +238,26 @@ def test_case_pairing_accepts_same_native_entry_and_reports_cash_delta():
     assert row["pairing_status"] == "PAIRED_SAME_NATIVE_ENTRY"
     assert row["x2_minus_x1"]["gross_cash_pnl"] == 1.0
     assert row["x2_minus_x1"]["net_realized_pnl"] == 1.0
+
+
+def test_case_pairing_rejects_different_fill_price_at_same_clock_side_and_notional():
+    case1 = {
+        "status": "ORDINARY_COMPLETE", "entry_fill_ts_ns": 100, "side": 1,
+        "entry_notional": 100.0, "entry_fill_price": 2500.0,
+    }
+    case2 = {**case1, "entry_fill_price": 2500.01}
+    metrics = {
+        "gross_cash_pnl": 4.0, "net_realized_pnl": 2.0, "fees": 2.0,
+        "slippage_attribution": 0.5, "funding": 0.0, "mfe_bps": 80.0,
+        "mae_bps": 20.0, "holding_minutes": 3.0,
+        "max_closed_bar_peak_giveback_usdt": 1.0,
+    }
+
+    row = _pair_slot(
+        {"teacher": "T01"},
+        {"case": case1, "trade_diagnostics": metrics},
+        {"case": case2, "trade_diagnostics": metrics},
+    )
+
+    assert row["pairing_status"] == "UNPAIRED"
+    assert row["unpaired_reason"] == "FIRST_ENTRY_FILL_IDENTITY_MISMATCH"
