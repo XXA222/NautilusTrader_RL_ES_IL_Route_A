@@ -63,6 +63,10 @@ def reconcile_counterfactual_to_native(*, replay, decision_ts_ns: int, side: int
     assert replay.exit_price is not None
     native_entry = float(native_case["entry_fill_price"])
     native_notional = float(native_case["entry_notional"])
+    native_slippage = native_case.get("slippage_cost")
+    if (isinstance(native_slippage, bool) or not isinstance(native_slippage, (int, float))
+            or not isfinite(native_slippage) or native_slippage < 0):
+        raise ValueError("native case requires finite nonnegative reported slippage")
     quantity = native_notional / native_entry
     modeled_notional = quantity * replay.entry_price
     gross = side * quantity * (replay.exit_price - replay.entry_price)
@@ -87,6 +91,8 @@ def reconcile_counterfactual_to_native(*, replay, decision_ts_ns: int, side: int
         "modeled_reference_exit": replay.exit_price,
         "modeled_net_cash": model_net, "modeled_net_bps": model_net / modeled_notional * 10000,
         "native_net_cash": native_net, "native_net_bps": float(native["net_bps"]),
+        "native_reported_slippage_cash": float(native_slippage),
+        "native_slippage_treatment": "included_in_actual_fill_prices_not_subtracted_again",
         "native_minus_modeled_cash": native_net - model_net,
         "native_fill_vs_reference_gross_cash": price_and_native_slippage,
         "modeled_fee_minus_native_fee_cash": fees_difference,
@@ -134,3 +140,4 @@ def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recip
     return {"native_cases": len(results),
             "comparable": sum(item["status"] == "COMPARABLE" for item in results),
             "cases": results}
+
