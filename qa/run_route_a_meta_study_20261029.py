@@ -182,6 +182,38 @@ def _steps(start_ns, end_ns):
     return result
 
 
+def _registered_screen_split_evidence(config, window, *, model_available_after_ns=None):
+    """Prove temporal separation from the registered fit/calibration period.
+
+    This is run-level evidence only. It does not claim that overlapping market
+    events or candidate labels are statistically independent trials.
+    """
+    def interval(name):
+        return tuple(map(preflight.ns, config["intervals"][name]))
+
+    fit_start, fit_end = interval("train_fit")
+    calibration_start, calibration_end = interval("train_calibration")
+    screen = tuple(map(preflight.ns, window))
+    registered_screens = tuple(tuple(map(preflight.ns, item))
+                               for item in config["intervals"]["native_screen"])
+    if screen not in registered_screens:
+        raise ValueError("screen window is not present in the frozen preregistration")
+    if not (fit_start < fit_end <= calibration_start < calibration_end <= screen[0] < screen[1]):
+        raise ValueError("registered model and screen intervals overlap or are unordered")
+    if (model_available_after_ns is not None
+            and (type(model_available_after_ns) is not int
+                 or model_available_after_ns > screen[0])):
+        raise ValueError("frozen model was not available before its registered screen window")
+    return {
+        "status": "PASS_REGISTERED_TEMPORAL_SEPARATION",
+        "fit_interval_ns": [fit_start, fit_end],
+        "calibration_interval_ns": [calibration_start, calibration_end],
+        "screen_interval_ns": list(screen),
+        "model_available_after_ns": model_available_after_ns,
+        "independent_trials_claimed": False,
+    }
+
+
 def _score_diagnostics(teacher, factory, config, scenario, start_ns, end_ns, native_cases=()):
     from collections import Counter
     decisions = tuple(candidate for row in teacher.decisions for candidate in row.candidates)
@@ -300,6 +332,11 @@ def _account_costs_including_first_row(account):
 
 def _run_screen_cell(*, factory, source, config, strategy, scenario, window, model, output):
     start_ns, end_ns = map(preflight.ns, window)
+    split_evidence = _registered_screen_split_evidence(
+        config, window,
+        model_available_after_ns=(model.available_after_ns if strategy == "META_X1" and model is not None
+                                  else None),
+    )
     seed = 20261029
     episode = f"meta-study-{strategy}-{scenario}-{start_ns}-seed-{seed}"
     recovery = RecoveryTeacher()
@@ -353,6 +390,7 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
     if account["terminal_flat"] is not True or not account["account_rows"]:
         raise RuntimeError("native episode lacks settled account evidence")
     record = {"strategy_id": strategy, "scenario": scenario, "window": tuple(window),
+              "registered_screen_split": split_evidence,
               "cases": native_cases,
               # Start at the configured native account capital even if the
               # first sampled barrier already contains an entry and its costs.
@@ -430,6 +468,10 @@ def execute_study(config, prereg_sha, *, source_root, output):
     matrix.update({"protocol_id": config["protocol_id"], "preregistration_sha256": prereg_sha,
                    "source_marker_sha256": source["marker_sha256"],
                    "training_failures": failures,
+                   "registered_screen_split_design": [
+                       _registered_screen_split_evidence(config, window)
+                       for window in config["intervals"]["native_screen"]
+                   ],
                    "scope": "Train development; no independent OOS profitability claim"})
     (output/"comparison.json").write_text(json.dumps(matrix, sort_keys=True,
         indent=2, allow_nan=False) + "\n", encoding="utf-8")

@@ -12,11 +12,14 @@ These are candidate prediction diagnostics; the generic quality summarizer does 
 
 The report field `independence_status` is therefore `UNVERIFIED_BY_GENERIC_SUMMARIZER`; independence must be established at the screen-run layer and must not be inferred from successful candidate/outcome pairing.
 
+The registered native study runner now writes a per-cell temporal split receipt with the frozen fit, calibration, and screen intervals. It requires the model availability time to be no later than the registered screen start. The receipt explicitly sets `independent_trials_claimed: false`; temporal separation does not make overlapping market candidates independent observations.
+
 ## Verification
 
 - Ubuntu 24.04 / WSL2 / Python 3.14.7 full package suite plus native Meta engine and synthetic Train-to-screen end-to-end tests: **575 passed in 68.65s**.
 - Ruff and `git diff --check` passed for changed modules.
 - The synthetic full study still produces a complete 48-cell comparison while retaining `qualification: NOT_ESTABLISHED`.
+- Registered screen split evidence: **2 targeted tests passed** for registered-window acceptance, unregistered-window rejection, late-model rejection, and no independent-trials claim.
 - Latest read-only source preflight: `REGISTERED_FUTURE_SOURCE`, `completed_screen_windows: 0`, `market_payload_read: false`; registered interval `2026-12-01T00:00:00Z` through `2026-12-19T00:00:00Z`; protocol SHA-256 `b731f1e9f3d0eb7bb62f2fcdf4a76b609ff6452e3e8c146a8538b2fc25cc1845`.
 
 ## Evidence boundary
