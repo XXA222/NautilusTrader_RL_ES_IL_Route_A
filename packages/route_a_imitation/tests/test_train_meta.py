@@ -48,6 +48,15 @@ def test_registered_meta_training_reports_coverage_and_delays_inference(observed
     assert result.diagnostics["fit_overlap"]["max_concurrent_labels"] == 1
     assert result.policy.return_basis_id == "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS"
     assert result.policy.available_after_ns == 8_000_000_002
+    calibration_quality = result.diagnostics["calibration_prediction_quality"]
+    assert calibration_quality["samples"] == 4
+    assert calibration_quality["effective_weighted_samples"] == pytest.approx(4.)
+    assert calibration_quality["net_prediction_mae_bps"] >= 0.
+    assert calibration_quality["probability_brier_score"] >= 0.
+    assert calibration_quality["net_return_bins"] and calibration_quality["probability_bins"]
+    assert calibration_quality["thresholds_adjusted"] is False
+    assert calibration_quality["independent_probability_validation"] is False
+    assert "USED_TO_FIT_PLATT" in calibration_quality["probability_scope"]
     with pytest.raises(ValueError, match="before calibration"):
         result.policy.score(groups[-1])
 

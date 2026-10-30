@@ -11,6 +11,7 @@ from .candidate_event_union import CandidateGroup
 from .conditional_outcome_labels import GroupOutcome
 from .opportunity_models import (_fit_logistic, _fit_platt, _sigmoid,
                                 overlap_uniqueness_weights,
+                                summarize_prediction_calibration,
                                 uniqueness_effective_label_count)
 from rles_route_a.teachers_1m.registry import ALL_TEACHER_RECIPE_BY_ID
 
@@ -242,6 +243,45 @@ def fit_entry_meta_policy(
         uniqueness_effective_label_count(calibration_weights),
         "AVERAGE_INVERSE_LABEL_CONCURRENCY_V1",
     )
+
+
+def entry_meta_calibration_report(
+    policy: FrozenEntryMetaPolicy,
+    calibration: Sequence[GroupOutcome],
+    groups: Mapping[str, CandidateGroup],
+) -> dict[str, object]:
+    """Report net-value and probability calibration on the later Calib block."""
+    labels = tuple(calibration)
+    if not isinstance(policy, FrozenEntryMetaPolicy) or not labels:
+        raise ValueError("frozen policy and complete calibration outcomes are required")
+    if any(label.net_return_bps is None or label.outcome_status != "COMPLETE"
+           or label.label_end_ts_ns is None or label.censor_ts_ns is not None
+           for label in labels):
+        raise ValueError("calibration report accepts complete outcomes only")
+    if set(groups) != {label.event_id for label in labels}:
+        raise ValueError("calibration candidate map must cover each label exactly once")
+    features = np.vstack([
+        _features(groups[label.event_id], policy.feature_names, policy.cost_bps)
+        for label in labels
+    ])
+    design = np.column_stack((np.ones(len(labels)), (features - policy.mean) / policy.scale))
+    predicted_net = design @ policy.value_weights
+    predicted_probability = np.asarray([
+        _sigmoid(policy.calibrator[0] * float(logit) + policy.calibrator[1])
+        for logit in design @ policy.logistic
+    ])
+    observed_net = np.asarray([label.net_return_bps for label in labels], dtype=np.float64)
+    observed_positive = observed_net > 0
+    report = summarize_prediction_calibration(
+        predicted_net, observed_net, predicted_probability, observed_positive,
+        sample_weights=overlap_uniqueness_weights(labels),
+    )
+    report.update({
+        "net_value_scope": "TRAIN_CALIBRATION_BLOCK_NOT_USED_TO_FIT_RIDGE",
+        "probability_scope": "TRAIN_CALIBRATION_BLOCK_USED_TO_FIT_PLATT_IN_SAMPLE_DIAGNOSTIC",
+        "independent_probability_validation": False,
+    })
+    return report
 
 
 def summarize_entry_scores(

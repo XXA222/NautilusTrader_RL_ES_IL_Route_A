@@ -29,6 +29,81 @@ RETURN_BASIS_IDS = frozenset({
 })
 
 
+def summarize_prediction_calibration(
+    predicted_net_bps: Sequence[float],
+    observed_net_bps: Sequence[float],
+    predicted_probability_positive: Sequence[float],
+    observed_positive: Sequence[int | bool],
+    *,
+    sample_weights: Sequence[float] | np.ndarray | None = None,
+    bin_count: int = 5,
+) -> dict[str, object]:
+    """Compare frozen-model predictions with later calibration outcomes.
+
+    Bins are equal-count, stable-sorted groups. This reports calibration only;
+    it never adjusts model parameters or candidate acceptance thresholds.
+    """
+    predicted = np.asarray(predicted_net_bps, dtype=np.float64)
+    observed = np.asarray(observed_net_bps, dtype=np.float64)
+    probability = np.asarray(predicted_probability_positive, dtype=np.float64)
+    positive = np.asarray(observed_positive, dtype=np.float64)
+    if (predicted.ndim != 1 or not len(predicted)
+            or observed.shape != predicted.shape or probability.shape != predicted.shape
+            or positive.shape != predicted.shape
+            or not all(np.isfinite(x).all() for x in (predicted, observed, probability, positive))
+            or np.any((probability < 0) | (probability > 1))
+            or np.any((positive != 0) & (positive != 1))
+            or type(bin_count) is not int or bin_count < 1):
+        raise ValueError("calibration predictions and outcomes must be finite aligned vectors")
+    weights = _validated_sample_weights(sample_weights, len(predicted))
+    if len(predicted) != len(observed):
+        raise ValueError("calibration prediction and outcome counts differ")
+
+    def weighted_mean(values: np.ndarray, indices: np.ndarray) -> float:
+        selected_weights = weights[indices]
+        return float(np.average(values[indices], weights=selected_weights))
+
+    def bins_by(values: np.ndarray, order_values: np.ndarray) -> list[dict[str, float | int]]:
+        order = np.argsort(order_values, kind="stable")
+        bins = np.array_split(order, min(bin_count, len(order)))
+        result = []
+        for indices in bins:
+            result.append({
+                "samples": int(len(indices)),
+                "weight_sum": float(weights[indices].sum()),
+                "mean_predicted_net_bps": weighted_mean(predicted, indices),
+                "mean_observed_net_bps": weighted_mean(observed, indices),
+                "mean_net_prediction_error_bps": weighted_mean(predicted - observed, indices),
+                "mean_predicted_probability_positive": weighted_mean(probability, indices),
+                "observed_positive_rate": weighted_mean(positive, indices),
+            })
+        return result
+
+    error = predicted - observed
+    clipped = np.clip(probability, 1e-15, 1 - 1e-15)
+    effective_count = float(weights.sum() ** 2 / np.square(weights).sum())
+    return {
+        "samples": int(len(predicted)),
+        "effective_weighted_samples": effective_count,
+        "mean_predicted_net_bps": weighted_mean(predicted, np.arange(len(predicted))),
+        "mean_observed_net_bps": weighted_mean(observed, np.arange(len(observed))),
+        "mean_net_prediction_error_bps": weighted_mean(error, np.arange(len(error))),
+        "net_prediction_mae_bps": float(np.average(np.abs(error), weights=weights)),
+        "net_prediction_rmse_bps": float(np.sqrt(np.average(np.square(error), weights=weights))),
+        "mean_predicted_probability_positive": weighted_mean(probability, np.arange(len(probability))),
+        "observed_positive_rate": weighted_mean(positive, np.arange(len(positive))),
+        "probability_brier_score": float(np.average(np.square(probability - positive), weights=weights)),
+        "probability_log_loss": float(np.average(
+            -(positive * np.log(clipped) + (1 - positive) * np.log(1 - clipped)),
+            weights=weights,
+        )),
+        "net_return_bins": bins_by(predicted, predicted),
+        "probability_bins": bins_by(probability, probability),
+        "binning": "stable_equal_count_weighted_summary_v1",
+        "thresholds_adjusted": False,
+    }
+
+
 @dataclass(frozen=True, slots=True)
 class OpportunityOutcome:
     """One complete candidate outcome under a frozen continuation policy.
@@ -380,220 +455,4 @@ def fit_opportunity_model(
             row.event_id, row.decision_ts_ns, row.label_end_ts_ns,
             _complete_return(row).hex(), row.feature_vector_sha256,
             row.simulation_receipt_id,
-        ) for row in calibration),
-        "fold_id": purged[0].fold_id,
-        "source_identity": purged[0].source_identity,
-        "rule_version": purged[0].rule_version,
-        "outcome_method": purged[0].outcome_method,
-        "feature_spec_hash": purged[0].feature_spec_hash,
-        "exit_policy_id": purged[0].exit_policy_id,
-        "execution_recipe": purged[0].execution_recipe,
-        "cost_scenario_id": purged[0].cost_scenario_id,
-        "return_basis_id": purged[0].return_basis_id,
-        "feature_names": names,
-        "l2": l2,
-        "learning_rate": learning_rate,
-        "iterations": iterations,
-        "overlap_weighting": "average_inverse_concurrency_v1",
-    }, sort_keys=True, separators=(",", ":"))
-    calibration_id = sha256(calibration_material.encode("utf-8")).hexdigest()
-    return FrozenOpportunityModel(
-        feature_names=names,
-        feature_spec_hash=purged[0].feature_spec_hash,
-        mean=_readonly(mean),
-        scale=_readonly(scale),
-        fit_min=_readonly(fit_x.min(axis=0)),
-        fit_max=_readonly(fit_x.max(axis=0)),
-        logistic_weights=_readonly(logistic),
-        calibrator=calibrator,
-        value_weights=_readonly(value_weights),
-        calibration_residual_p10_offset_bps=_weighted_quantile(
-            calibration_residual, calibration_weights, 0.10,
-        ),
-        residual_variance=residual_variance,
-        value_covariance=_readonly(value_covariance),
-        fit_sample_count=len(purged),
-        calibration_sample_count=len(calibration),
-        fit_independent_blocks=len({row.independent_block_id for row in purged}),
-        calibration_independent_blocks=len({
-            row.independent_block_id for row in calibration
-        }),
-        calibration_id=calibration_id,
-        fold_id=purged[0].fold_id,
-        source_identity=purged[0].source_identity,
-        exit_policy_id=purged[0].exit_policy_id,
-        execution_recipe=purged[0].execution_recipe,
-        rule_version=purged[0].rule_version,
-        outcome_method=purged[0].outcome_method,
-        cost_scenario_id=purged[0].cost_scenario_id,
-        return_basis_id=purged[0].return_basis_id,
-        evidence_type=purged[0].evidence_type,
-        economic_status=purged[0].economic_status,
-        fit_effective_label_count=uniqueness_effective_label_count(fit_weights),
-        calibration_effective_label_count=uniqueness_effective_label_count(calibration_weights),
-        fit_weighting_id="AVERAGE_INVERSE_LABEL_CONCURRENCY_V1",
-    )
-
-
-def _feature_row(values: Sequence[float] | np.ndarray, width: int) -> np.ndarray:
-    row = np.asarray(values, dtype=np.float64)
-    if row.shape != (width,) or not np.all(np.isfinite(row)):
-        raise ValueError("feature row has wrong shape or non-finite values")
-    return row
-
-
-def overlap_uniqueness_weights(outcomes: Sequence[object]) -> np.ndarray:
-    """Share model influence across complete labels covering the same time."""
-    rows = tuple(outcomes)
-    if not rows:
-        return np.zeros(0, dtype=np.float64)
-    if len({getattr(row, "event_id", None) for row in rows}) != len(rows):
-        raise ValueError("uniqueness weights require distinct complete future labels")
-    events: list[tuple[int, int, int]] = []
-    durations = []
-    for i, row in enumerate(rows):
-        start = getattr(row, "decision_ts_ns", None)
-        end = getattr(row, "label_end_ts_ns", None)
-        value = getattr(row, "net_return_bps", None)
-        status = getattr(row, "outcome_status", "COMPLETE")
-        if (status != "COMPLETE" or value is None or type(start) is not int
-                or type(end) is not int or end <= start):
-            raise ValueError("uniqueness weiguóÏt¶‰žËkºwµç][ÛŠ
-N‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL[XWÎONNKŠJBˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠLK[XWÎOLLK‹[™[™ÏJ›Ü™\ˆ‹
-JJBˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\Âˆ\ÜÙ\[
-][K™\ÜÜÚ][ÛˆOH”‘R‘PÕQÔS‘S‘×ÓÔ‘Tˆ‚ˆ›Üˆ][H[ˆXXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÊB‚‚™Yˆ\ÝÛÝÛ™\—ÛY™XÞXÛWØØ[—Ø›ØÚ×ÜÚYÛ˜[ÝÚ]Ý]ØX›Ü[™×Ü›ÛÝ]
-
-N‚ˆÛ\ÜÈ›Ý™XYN‚ˆYˆYš\ÙJÙ[‹ØœÊN‚ˆ™]\›ˆ^\YšXÙJ•WÑSPWÎWÌŒH‹ØœË™XÚ\Ú[Û—Ý×ÛœË‘“U‹‹
-“Q‘PÖPÓWÓ“ÕÔ‘PQH‹
-JBˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹—ÝXXÚ\œÖÈ•WÑSPWÎWÌŒH—HH›Ý™XYJ
-BˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL[XWÎONNKŠJBˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠLK[XWÎOLLKŠJBˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆ\ÜÙ\[žJ][K™\ÜÜÚ][ÛˆOH”‘R‘PÕQÓÕÓ‘T—Ó“ÕÔ‘PQHˆ›Üˆ][H[ˆXXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÊBˆ\ÜÙ\›Ý[žJ][KœÙ[XÝY›Üˆ][H[ˆXXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÊB‚‚™Yˆ\ÝÜš\Ú×ÛÝ™\œšYWÜ™XÙY\×Û[Ù[Ø[™Ý[šÛ›ÝÛ—ÜÜÚ][ÛŠ
-N‚ˆ™XÛÝ™\žHH™XÛÝ™\žJ
-Bˆ™XÛÝ™\žK˜XÝ]™HHYBˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žO\™XÛÝ™\žJBˆÈX\›Y\ˆ[ˆØ[Xœ˜][Ûˆ[™›ÈÛ›ÝÛˆÝÛ™\Žˆ\™š\ÚÈÝ[XÝË‚ˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠK^ÜÝ\™OK
-JBˆ\ÜÙ\XÝ[Û‹š[[OH‘VUˆ[™XÝ[Û‹™^\ÚYOHœ™XÛÝ™\žH‚ˆÈHÝ™\œšYH™[XZ[œÈ^XÝ]X›HÚ[H[Ù[][˜]˜Z[X›HØ[™Y]\ÈÝ^H^XÚ]‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]WÙ\œ›Üˆ\È›Û™BˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠ‹[XWÎOLLK‹^ÜÝ\™OK
-JBˆ\ÜÙ\XÝ[Û‹š[[OH‘VU‚ˆXÚ\Ú[ÛˆHXXÚ\‹™XÚ\Ú[ÛœÖËLWBˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\È[™XÚ\Ú[Û‹˜Ø[™Y]\ÖÌKœØÛÜ™H\È›Û™Bˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\ÖÌK™\ÜÜÚ][ÛˆOH”‘R‘PÕQÒT‘Ô’TÒ×ÓÕ‘T”’QH‚ˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]WÙ\œ›Üˆ\È›Û™B‚‚™Yˆ\ÝÙ™X]\™WÜØÚ[XWØÚ[™ÙWÜ™\Ù]×Ù›]ÝXXÚ\—ÜÝ]WØ[™ÚÙY\×Ý˜XÙJ
-N‚ˆÛ\ÜÈ™\Ù]›Ø™N‚ˆYˆ×Ú[š]×ÊÙ[ŠN‚ˆÙ[‹œ™\Ù]ÈH‚ˆYˆ™\Ù]
-Ù[‹\\ÛÙWÚYHˆŠN‚ˆÙ[‹œ™\Ù]È
-ÏHB‚ˆYˆYš\ÙJÙ[‹ØœÊN‚ˆ™]\›ˆ^\YšXÙJ•WÑSPWÎWÌŒH‹ØœË™XÚ\Ú[Û—Ý×ÛœË‘“U‹‹
-”“Ð‘H‹
-JB‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆ›Ø™HH™\Ù]›Ø™J
-BˆXXÚ\‹—ÝXXÚ\œÖÈ•WÑSPWÎWÌŒH—HH›Ø™BˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL
-JBˆÚ[™ÙYÜØÚ[XHH™\XÙJØœÙ\˜][ÛŠLJK™X]\™WÜÜX×Ú\ÚHŒHˆ
-ˆ
-BˆXXÚ\‹˜Yš\ÙJÚ[™ÙYÜØÚ[XJB‚ˆ\ÜÙ\›Ø™Kœ™\Ù]ÈOHBˆ\ÜÙ\XXÚ\‹—ÜØÛÜHOH
-™H‹œÞ[]XÈ‹˜Z[ˆ‹ŒHˆ
-ˆ
-Bˆ\ÜÙ\[ŠXXÚ\‹™XÚ\Ú[ÛœÊHOH‚‚‚™Yˆ\ÝØXÝ]™WÜØÛÜWØÚ[™ÙWÚÙY\×Ú\™Üš\Ú×ØXÝ[Û—ÝÚ]Ý]ØY˜[˜Ú[™×ÜÝ]J
-N‚ˆÛ\ÜÈØ[›Ø™N‚ˆYˆ×Ú[š]×ÊÙ[ŠN‚ˆÙ[‹˜Ø[ÈHˆÙ[‹›˜]]™WØØ[ÈH‚ˆYˆYš\ÙJÙ[‹ØœÊN‚ˆÙ[‹˜Ø[È
-ÏHBˆ™]\›ˆ^\YšXÙJ•WÑSPWÎWÌŒH‹ØœË™XÚ\Ú[Û—Ý×ÛœË‘“U‹‹
-”“Ð‘H‹
-JB‚ˆYˆ™\Ù]
-Ù[‹\\ÛÙWÚYHˆŠN‚ˆ\ÜÂ‚ˆYˆØœÙ\™WÛ˜]]™WØXÝ[ÛŠÙ[‹XÝ[Û‹˜XÙK˜]]™WÛÜ™\—Ù˜XÝÊN‚ˆÙ[‹›˜]]™WØØ[È
-ÏHB‚ˆ™XÛÝ™\žHH™XÛÝ™\žJ
-Bˆ™XÛÝ™\žK˜XÝ]™HHYBˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žO\™XÛÝ™\žJBˆ›Ø™HHØ[›Ø™J
-BˆXXÚ\‹—ÝXXÚ\œÖÈ•WÑSPWÎWÌŒH—HH›Ø™BˆXXÚ\‹—ÛÝÛ™\ˆH•WÑSPWÎWÌŒH‚ˆXXÚ\‹—ÜØÛÜHH
-™H‹œÞ[]XÈ‹˜Z[ˆ‹Œˆ
-ˆ
-BˆÚ[™ÙYÜÛÝ\˜ÙHH™\XÙJØœÙ\˜][ÛŠL^ÜÝ\™OK
-KÛÝ\˜ÙWÚYH›Ý\‹\ÛÝ\˜ÙHŠB‚ˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJÚ[™ÙYÜÛÝ\˜ÙJB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘VUˆ[™XÝ[Û‹™^\ÚYOHœ™XÛÝ™\žH‚ˆ\ÜÙ\›Ø™K˜Ø[ÈOHˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÈOH
-
-Bˆ\ÜÙ\™XYÛ›ÜÝXÜÈÚÚ\Yˆ[ˆXXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]WÙ\œ›Ü‚ˆ˜XÙHH˜]]™PXÝ[Û•˜XÙJXÝ[Û‹™XÚ\Ú[Û—Ý×ÛœË‹‹‹NNNK‹NNNK‹”ÕP“RUŠBˆXXÚ\‹›ØœÙ\™WÛ˜]]™WØXÝ[ÛŠXÝ[Û‹˜XÙKÓÜ™\‘˜XÝÊ˜]]™WÙ]šY[˜ÙWÜ™XÙZ\Hœš\ÚË\™XÙZ\ŠJBˆ\ÜÙ\XXÚ\‹›˜]]™WÜ™XÙZ\ÖËLWK˜XÝ[ÛˆOHXÝ[Û‚ˆ\ÜÙ\›Ø™K›˜]]™WØØ[ÈOH‚‚™Yˆ\ÝØXÝ]™WÜØÛÜWØÚ[™ÙWÝÚ]Ý]Ü™XÛÝ™\žWÙ˜Z[×Ø™Y›Ü™WÝXXÚ\—ÜÝ]WÛ[Ý™\Ê
-N‚ˆÛ\ÜÈØ[›Ø™N‚ˆYˆ×Ú[š]×ÊÙ[ŠN‚ˆÙ[‹˜Ø[ÈH‚ˆYˆYš\ÙJÙ[‹ØœÊN‚ˆÙ[‹˜Ø[È
-ÏHBˆ™]\›ˆ^\YšXÙJ•WÑSPWÎWÌŒH‹ØœË™XÚ\Ú[Û—Ý×ÛœË‘“U‹‹
-”“Ð‘H‹
-JB‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆ›Ø™HHØ[›Ø™J
-BˆXXÚ\‹—ÝXXÚ\œÖÈ•WÑSPWÎWÌŒH—HH›Ø™BˆXXÚ\‹—ÜØÛÜHH
-™H‹œÞ[]XÈ‹˜Z[ˆ‹Œˆ
-ˆ
-BˆÚ[™ÙYÜÛÝ\˜ÙHH™\XÙJØœÙ\˜][ÛŠL^ÜÝ\™OK
-KÛÝ\˜ÙWÚYH›Ý\‹\ÛÝ\˜ÙHŠB‚ˆÚ]]\Ýœ˜Z\Ù\Ê˜[YQ\œ›Ü‹X]ÚH™\\ÛÙKÜÛÝ\˜ÙKÙ›ÛÜØÚ[XHŠN‚ˆXXÚ\‹˜Yš\ÙJÚ[™ÙYÜÛÝ\˜ÙJB‚ˆ\ÜÙ\›Ø™K˜Ø[ÈOH‚‚™Yˆ\ÝÚ[˜ÛÛ\]WÙZYÚÝXXÚ\—Ý[š[Û—Ù˜Z[×ØÛÜÙYØ]ÚÙY\×ØØ[™Y]WÙXYÛ›ÜÝXÊ[ÛšÙ^\]Ú
-N‚ˆÛ\ÜÈ\X[ÛÛXÝ[ÛŽ‚ˆYˆ™\Ù]
-Ù[‹\\ÛÙWÚYHˆŠN‚ˆ\ÜÂ‚ˆYˆÛÛXÝ
-Ù[‹ØœÊN‚ˆÜ›Ý\HÜ›Ý\ÝXXÚ\—Ü›ÜÜØ[ÊÂˆXXÚ\”›ÜÜØ[
-ØœË•—Ô“Ð×ÌŒÍŒ‹K”“Ð×ÐÓÓ”ÑS”ÕT×ÓÓ‘ÈŠBˆJBˆ™]\›ˆØ[™Y]PÛÛXÝ[ÛŠ
-Ü›Ý\
-K
-
-•WÑSPWÎWÌŒH‹‘T”“Ôˆ‹”[[YQ\œ›ÜˆŠK
-Kˆ
-
-•WÑSPWÎWÌŒH‹”[[YQ\œ›ÜŽˆÚYÛ˜[[˜]˜Z[X›HŠK
-JB‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹˜ÛÛXÝÜˆH\X[ÛÛXÝ[ÛŠ
-Bˆ[ÛšÙ^\]ÚœÙ]]Š\JXXÚ\‹œÛXÞJKœØÛÜ™H‹ˆ[X™H
-—Ø\™ÜÎˆ]\Ý™˜Z[
-œ\X[XXÚ\ˆ[š[Ûˆ]\Ý›Ý™HØÛÜ™YŠJB‚ˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL›Ø×ÌŒLK‹›Ø×ÍŒLKŠJB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆ\ÜÙ\•PPÒT—ÔÒQÓSÒSÓÓTUHˆ[ˆXÝ[Û‹œ™X\ÛÛ—ØÛÙ\ÂˆXÚ\Ú[ÛˆHXXÚ\‹™XÚ\Ú[ÛœÖËLWBˆ\ÜÙ\XÚ\Ú[Û‹XXÚ\—Ù\œ›ÜœÈOH
-
-•WÑSPWÎWÌŒH‹”[[YQ\œ›ÜŽˆÚYÛ˜[[˜]˜Z[X›HŠK
-Bˆ\ÜÙ\[ŠXÚ\Ú[Û‹˜Ø[™Y]\ÊHOHBˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\ÖÌKœØÛÜ™H\È›Û™Bˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\ÖÌK™\ÜÜÚ][ÛˆOH”‘R‘PÕQÕPPÒT—ÔÒQÓSÒSÓÓTUH‚‚‚™Yˆ\ÝØØ[™Y]WÙœ›ÛWÛ™]×Û[Ù[ÜØÛÜWÚ\×Ü™XÛÜ™YØ\×Ü™Z™XÝYÛ›ÝÙ^Ù\[ÛŠ
-N‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL
-JBˆXXÚ\‹˜Yš\ÙJ™\XÙJØœÙ\˜][ÛŠLJKÛÝ\˜ÙWÚYH›™]Ë\ÛÝ\˜ÙHŠJBˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJ™\XÙJØœÙ\˜][ÛŠL‹[XWÎOLLKŠKÛÝ\˜ÙWÚYH›™]Ë\ÛÝ\˜ÙHŠJB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆØ[™Y]\ÈHXXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÂˆØ[™Y]HH™^
-][H›Üˆ][H[ˆØ[™Y]\ÂˆYˆ•WÑSPWÎWÌŒHˆ[ˆÝXXÚ\—ÚY›ÜˆXXÚ\—ÚYÈ[ˆ][K™Ü›Ý\XXÚ\œßJBˆ\ÜÙ\Ø[™Y]KœØÛÜ™H\È›Û™Bˆ\ÜÙ\Ø[™Y]K™\ÜÜÚ][ÛˆOH”‘R‘PÕQÓSÑSÔÐÓÔWÓRTÓPUÒ‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]WÙ\œ›Üˆ\È›Û™B‚‚™Yˆ\ÝØØ[™Y]WØ™Y›Ü™WØØ[Xœ˜][Û—Ø]˜Z[Xš[]WÚ\×Ü™XÛÜ™YØ\×Ü™Z™XÝY
-
-N‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠJJBˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠ‹[XWÎOLLKŠJB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆØ[™Y]HH™^
-][H›Üˆ][H[ˆXXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÂˆYˆ•WÑSPWÎWÌŒHˆ[ˆÝXXÚ\—ÚY›ÜˆXXÚ\—ÚYÈ[ˆ][K™Ü›Ý\XXÚ\œßJBˆ\ÜÙ\Ø[™Y]KœØÛÜ™H\È›Û™Bˆ\ÜÙ\Ø[™Y]K™\ÜÜÚ][ÛˆOH”‘R‘PÕQÓSÑSÓ“ÕÐURSP“H‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]WÙ\œ›Üˆ\È›Û™B‚‚™Yˆ\ÝÜ™Z™XÝ[Û—ÙXYÛ›ÜÝXÜ×ÚY[YžWÛÝ]ÛÙ—ÜÝ\ÜÙ™X]\™J
-N‚ˆ[Ù[H˜Z[™YÜÛXÞJ
-BˆØœÈHØœÙ\˜][ÛŠL[XWÎOLŒŠBˆÜ›Ý\HÜ›Ý\ÝXXÚ\—Ü›ÜÜØ[ÊÕXXÚ\”›ÜÜØ[
-ØœË•WÑSPWÎWÌŒH‹K˜Ü›ÜÜÈŠWJBˆØÛÜ™HH[Ù[œØÛÜ™JÜ›Ý\
-Bˆ\ÜÙ\ØÛÜ™Kœ™X\ÛÛˆOH“ÕUÓÑ—ÔÕTÔ•‚ˆ\ÜÙ\›X\šÙ]™[XWÎHˆ[ˆØÛÜ™K[œÝ\ÜYÙ™X]\™\Âˆ™\Ý[HÝ[[X\š^™WÙ[žWÜØÛÜ™\ÊÜØÛÜ™WJBˆ\ÜÙ\™\Ý[È˜ÛÝ™\˜YÙH—HOH[™™\Ý[Èœ™X\ÛÛ—ØÛÝ[È—VÈ“ÕUÓÑ—ÔÕTÔ•—HOHBˆ\ÜÙ\™\Ý[È[œÝ\ÜYÙ™X]\™WØÛÝ[È—VÈ›X\šÙ]™[XWÎH—HOHB‚‚™Yˆ\ÝÛZ\ÜÚ[™×ÛX\šÙ]Ù™X]\™WÜ™Z™XÝ×ØØ[™Y]WÝÚ]Ý]ÜØÛÜš[™Ê
-N‚ˆ[Ù[H˜Z[™YÜÛXÞJ
-Bˆ[Ù[H™\XÙJ[Ù[™X]\™WÛ˜[Y\ÏJ›X\šÙ]žœØÛÜ™WÍŒ‹
-›[Ù[™™X]\™WÛ˜[Y\ÖÌN—JJBˆXXÚ\ˆHY]QØ]YXXÚ\Š[Ù[™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆYˆÚ]Ý]ÞœØÛÜ™JØœÊN‚ˆ™]\›ˆ™\XÙJØœËX\šÙ]^ÚÎˆˆ›ÜˆËˆ[ˆØœË›X\šÙ]š][\Ê
-HYˆÈOHžœØÛÜ™WÍŒŸKˆ™X]\™WØ]˜Z[X›WØ]ÛœÏ^ÚÎˆˆ›ÜˆËˆ[ˆØœË™™X]\™WØ]˜Z[X›WØ]ÛœËš][\Ê
-BˆYˆÈOHžœØÛÜ™WÍŒŸJBˆXXÚ\‹˜Yš\ÙJÚ]Ý]ÞœØÛÜ™JØœÙ\˜][ÛŠL[XWÎONNKŠJJBˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJÚ]Ý]ÞœØÛÜ™JØœÙ\˜][ÛŠLK[XWÎOLLKŠJJBˆXÚ\Ú[ÛˆHXXÚ\‹™XÚ\Ú[ÛœÖËLWBˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\È[™XÚ\Ú[Û‹˜Ø[™Y]\ÖÌKœØÛÜ™H\È›Û™Bˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\ÖÌK™\ÜÜÚ][ÛˆOH”‘R‘PÕQÑ‘PUT‘WÓ“ÕÔ‘PQH‚ˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\ÖÌK›Z\ÜÚ[™×Ù™X]\™\ÈOH
-›X\šÙ]žœØÛÜ™WÍŒ‹
-B‚‚™Yˆ\ÝÛZ\ÜÚ[™×ØXØÛÝ[Û[Ù[Ù™X]\™WÜ™Z™XÝ×ÝÚ]Ý]Ù˜XœšXØ][™×Þ™\›Ê
-N‚ˆ[Ù[H˜Z[™YÜÛXÞJ
-Bˆ[Ù[H™\XÙJ[Ù[™X]\™WÛ˜[Y\ÏJ˜XØÛÝ[™˜]ÙÝÛˆ‹
-›[Ù[™™X]\™WÛ˜[Y\ÖÌN—JJBˆXXÚ\ˆHY]QØ]YXXÚ\Š[Ù[™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL[XWÎONNKŠJBˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠLK[XWÎOLLKŠJBˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÖÌK™\ÜÜÚ][ÛˆOH”‘R‘PÕQÑ‘PUT‘WÓ“ÕÔ‘PQH‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÖÌKœØÛÜ™H\È›Û™Bˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÖÌK›Z\ÜÚ[™×Ù™X]\™\ÈOH
-˜XØÛÝ[™˜]ÙÝÛˆ‹
-B‚‚™Yˆ\ÝØØ[™Y]WÜØÛÜš[™×Ù\œ›Ü—Ú\×Ü™XÛÜ™YØ[™Ù˜Z[×ØÛÜÙY
-[ÛšÙ^\]Ú
-N‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL[XWÎONNKŠJBˆ[ÛšÙ^\]ÚœÙ]]Š\JXXÚ\‹œÛXÞJKœØÛÜ™H‹ˆ[X™HÜÛXÞKÙÜ›Ý\ˆ
-È›ÜˆÈ[ˆ
-
-JK›ÝÊ˜[YQ\œ›ÜŠ˜˜YØÛÜ™HŠJJB‚ˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠLK[XWÎOLLKŠJB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆXÚ\Ú[ÛˆHXXÚ\‹™XÚ\Ú[ÛœÖËLWBˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]WÙ\œ›Üˆ\È›Û™Bˆ\ÜÙ\XÚ\Ú[Û‹˜Ø[™Y]\Âˆ\ÜÙ\[
-Ø[™Y]K™\ÜÜÚ][ÛˆOH”‘R‘PÕQÔÐÓÔ’S‘×ÑT”“Ôˆ‚ˆ[™Ø[™Y]K™\œ›Ü—Ù]Z[OH•˜[YQ\œ›ÜŽˆ˜YØÛÜ™H‚ˆ›ÜˆØ[™Y]H[ˆXÚ\Ú[Û‹˜Ø[™Y]\ÊB‚‚™Yˆ\ÝØØ[™Y]WØÛÛXÝ[Û—Ù\œ›Ü—ÙÙ\×Û›ÝÜÝ\™\Ü×Û˜]]™WÙ^]
-[ÛšÙ^\]Ú
-N‚ˆÛ\ÜÈ^]XXÚ\Ž‚ˆYˆYš\ÙJÙ[‹ØœÊN‚ˆ™]\›ˆ^\YšXÙJ•WÑSPWÎWÌŒH‹ØœË™XÚ\Ú[Û—Ý×ÛœË‘VU‹‹ˆ
-‘SPWÔ‘U‘T”ÑWÐÔ“ÔÔÈ‹
-JB‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆXXÚ\‹—ÛÝÛ™\ˆH•WÑSPWÎWÌŒH‚ˆXXÚ\‹—ÜØÛÜHH
-™H‹œÞ[]XÈ‹˜Z[ˆ‹Œˆ
-ˆ
-BˆXXÚ\‹—ÝXXÚ\œÖÈ•WÑSPWÎWÌŒH—HH^]XXÚ\Š
-Bˆ[ÛšÙ^\]ÚœÙ]]ŠXXÚ\‹˜ÛÛXÝÜ‹˜ÛÛXÝ‹ˆ[X™HÛØœÙ\˜][ÛŽˆ
-È›ÜˆÈ[ˆ
-
-JK›ÝÊ˜[YQ\œ›ÜŠ˜˜Y™X]\™\ÈŠJJB‚ˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL^ÜÝ\™OKŒÊJB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘VU‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]WÙ\œ›ÜˆOH•˜[YQ\œ›ÜŽˆ˜Y™X]\™\È‚ˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]\ÈOH
-
-B‚‚™Yˆ\ÝØØ[™Y]WØÛÛXÝ[Û—Ù\œ›Ü—Ù˜Z[×ØÛÜÙYÙ›Ü—Û™]×Ù[šY\Ê[ÛšÙ^\]Ú
-N‚ˆXXÚ\ˆHY]QØ]YXXÚ\Š˜Z[™YÜÛXÞJ
-K™XÛÝ™\žOT™XÛÝ™\žJ
-JBˆ[ÛšÙ^\]ÚœÙ]]ŠXXÚ\‹˜ÛÛXÝÜ‹˜ÛÛXÝ‹ˆ[X™HÛØœÙ\˜][ÛŽˆ
-È›ÜˆÈ[ˆ
-
-JK›ÝÊ˜[YQ\œ›ÜŠ˜˜Y™X]\™\ÈŠJJB‚ˆXÝ[ÛˆHXXÚ\‹˜Yš\ÙJØœÙ\˜][ÛŠL
-JB‚ˆ\ÜÙ\XÝ[Û‹š[[OH‘“U‚ˆ\ÜÙ\ÐS‘QUWÐÓÓPÕSÓ—ÑRSQˆ[ˆXÝ[Û‹œ™X\ÛÛ—ØÛÙ\Âˆ\ÜÙ\XXÚ\‹™XÚ\Ú[ÛœÖËLWK˜Ø[™Y]WÙ\œ›ÜˆOH•˜[YQ\œ›ÜŽˆ˜Y™X]\™\È‚‚‚™Yˆ\ÝÛZ^YÜ™]\›—Ø˜\Ù\×Ø\™WÜ™Z™XÝY
-
-N‚ˆÈ]H˜[Y][Ûˆ[™\[™[Ùˆ[Ù[š][™Ë‚ˆ[Ù[H˜Z[™YÜÛXÞJ
-Bˆ\ÜÙ\[Ù[˜ÛÜÝØœÈOHL‹‚ˆ\ÜÙ\[Ù[˜Ø[Xœ˜][Û—ÛXYWØœÈH‚
+       #n½òÚ$z{-®éÜj×¸¡½ÕÑ½µ”è=ÁÁ½ÉÑÕ¹¥Ñå=ÕÑ½µ”¤€´ø™±½…Ðè(€€€Ù…±Õ”€ô½ÕÑ½µ”¹¹•Ñ}É•ÑÕÉ¹}‰ÁÌ(€€€¥˜Ù…±Õ”¥Ì9½¹”½È¹½Ðµ…Ñ ¹¥Í™¥¹¥Ñ”¡Ù…±Õ”¤è(€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰½µÁ±•Ñ”½ÁÁ½ÉÑÕ¹¥ÑäÉ•ÑÕÉ¸¥ÌÉ•ÅÕ¥É•…¹µÕÍÐ‰”™¥¹¥Ñ”ˆ¤(€€€É•ÑÕÉ¸™±½…Ð¡Ù…±Õ”¤(()‘•˜™•…ÑÕÉ•}Ù•Ñ½É}Í¡„ÈÔØ (€€€•Ù•¹Ñ}¥èÍÑÈ°(€€€™•…ÑÕÉ•}ÍÁ•}¡…Í èÍÑÈ°(€€€™•…ÑÕÉ•}¹…µ•ÌèM•ÅÕ•¹•mÍÑÉt°(€€€Ù…±Õ•ÌèM•ÅÕ•¹•m™±½…Ñtð¹À¹¹‘…ÉÉ…ä°(¤€´øÍÑÈè(€€€€ˆˆ‰	¥¹½É‘•É•…ÕÍ…°™•…ÑÕÉ”Ù…±Õ•ÌÑ¼½¹”…¹‘¥‘…Ñ”…¹™•…ÑÕÉ”Í¡•µ„¸ˆˆˆ(€€€¥˜€¡¹½Ð¥Í¥¹ÍÑ…¹”¡•Ù•¹Ñ}¥°ÍÑÈ¤½È¹½ÐÉ”¹™Õ±±µ…Ñ ¡È‰lÀ´å„µ™uìØÑôˆ°•Ù•¹Ñ}¥¤(€€€€€€€€€€€½È¹½Ð¥Í¥¹ÍÑ…¹”¡™•…ÑÕÉ•}ÍÁ•}¡…Í °ÍÑÈ¤(€€€€€€€€€€€½È¹½ÐÉ”¹™Õ±±µ…Ñ ¡È‰lÀ´å„µ™uìØÑôˆ°™•…ÑÕÉ•}ÍÁ•}¡…Í ¤¤è(€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰™•…ÑÕÉ”Ù•Ñ½È¥‘•¹Ñ¥Ñä¹••‘Ì•Ù•¹Ð…¹™•…ÑÕÉ”µÍÁ•ŒM!´ÈÔØˆ¤(€€€¹…µ•Ì€ôÑÕÁ±”¡™•…ÑÕÉ•}¹…µ•Ì¤(€€€¥˜¹½Ð¹…µ•Ì½È±•¸¡Í•Ð¡¹…µ•Ì¤¤€„ô±•¸¡¹…µ•Ì¤½È…¹ä¡¹½Ð¹…µ”™½È¹…µ”¥¸¹…µ•Ì¤è(€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰™•…ÑÕÉ”Ù•Ñ½È¥‘•¹Ñ¥Ñä¹••‘Ì½É‘•É•Õ¹¥ÅÕ”™•…ÑÕÉ”¹…µ•Ìˆ¤(€€€É½Ü€ô}™•…ÑÕÉ•}É½Ü¡Ù…±Õ•Ì°±•¸¡¹…µ•Ì¤¤(€€€Á…å±½…€ô©Í½¸¹‘ÕµÁÌ¡ì(€€€€€€€€‰•Ù•¹Ñ}¥ˆè•Ù•¹Ñ}¥°(€€€€€€€€‰™•…ÑÕÉ•}ÍÁ•}¡…Í ˆè™•…ÑÕÉ•}ÍÁ•}¡…Í °(€€€€€€€€‰™•…ÑÕÉ•}¹…µ•Ìˆè¹…µ•Ì°(€€€€€€€€‰Ù…±Õ•Í}¡•àˆèÑÕÁ±”¡™±½…Ð¡Ù…±Õ”¤¹¡•à ¤™½ÈÙ…±Õ”¥¸É½Ü¤°(€€€ô°Í½ÉÑ}­•åÌõQÉÕ”°Í•Á…É…Ñ½ÉÌô ˆ°ˆ°€ˆèˆ¤¤(€€€É•ÑÕÉ¸Í¡„ÈÔØ¡Á…å±½…¹•¹½‘” ‰ÕÑ˜´àˆ¤¤¹¡•á‘¥•ÍÐ ¤(()‘•˜}‘•Í¥¹}™•…ÑÕÉ•Ì¡É½Üè¹À¹¹‘…ÉÉ…ä°Í¥‘”è¥¹Ð°™…µ¥±äèÍÑÈ¤€´ø¹À¹¹‘…ÉÉ…äè(€€€™…µ¥±å}½‘”€ô€À¸À¥˜™…µ¥±ä€ôô€‰‰É•…­½ÕÐˆ•±Í”€Ä¸À(€€€É•ÑÕÉ¸¹À¹½¹…Ñ•¹…Ñ” ¡É½Ü°¹À¹…Í…ÉÉ…ä ¡™±½…Ð¡Í¥‘”¤°™…µ¥±å}½‘”¤¤¤¤(()‘•˜}™¥Ñ}±½¥ÍÑ¥Œ (€€€‘•Í¥¸è¹À¹¹‘…ÉÉ…ä°Ñ…É•Ðè¹À¹¹‘…ÉÉ…ä°°Èè™±½…Ð°(€€€±•…É¹¥¹}É…Ñ”è™±½…Ð°¥Ñ•É…Ñ¥½¹Ìè¥¹Ð°(€€€Í…µÁ±•}Ý•¥¡ÑÌèM•ÅÕ•¹•m™±½…Ñtð¹À¹¹‘…ÉÉ…äð9½¹”€ô9½¹”°(¤€´ø¹À¹¹‘…ÉÉ…äè(€€€½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ€ô}Ù…±¥‘…Ñ•‘}Í…µÁ±•}Ý•¥¡ÑÌ¡Í…µÁ±•}Ý•¥¡ÑÌ°±•¸¡Ñ…É•Ð¤¤(€€€½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ€¼ô½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ¹ÍÕ´ ¤(€€€Ý•¥¡ÑÌ€ô¹À¹é•É½Ì¡‘•Í¥¸¹Í¡…Á•lÅt°‘ÑåÁ”õ¹À¹™±½…ÐØÐ¤(€€€Á•¹…±Ñä€ô¹À¹½¹•Í}±¥­”¡Ý•¥¡ÑÌ¤(€€€Á•¹…±ÑålÁt€ô€À¸À(€€€™½È|¥¸É…¹”¡¥Ñ•É…Ñ¥½¹Ì¤è(€€€€€€€ÁÉ½‰…‰¥±¥Ñä€ô¹À¹…Í…ÉÉ…ä¡m}Í¥µ½¥¡™±½…Ð¡à¤¤™½Èà¥¸‘•Í¥¸ Ý•¥¡ÑÍt¤(€€€€€€€É…‘¥•¹Ð€ô‘•Í¥¸¹P €¡½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ€¨€¡ÁÉ½‰…‰¥±¥Ñä€´Ñ…É•Ð¤¤€¬°È€¨Á•¹…±Ñä€¨Ý•¥¡ÑÌ(€€€€€€€Ý•¥¡ÑÌ€´ô±•…É¹¥¹}É…Ñ”€¨É…‘¥•¹Ð(€€€€€€€¥˜¹½Ð¹À¹…±°¡¹À¹¥Í™¥¹¥Ñ”¡Ý•¥¡ÑÌ¤¤è(€€€€€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰1½¥ÍÑ¥Œ™¥Ð‘¥Ù•É•ìÉ•©•ÐÑ¡¥Ì™É½é•¸É•¥Á”ˆ¤(€€€É•ÑÕÉ¸Ý•¥¡ÑÌ(()‘•˜}™¥Ñ}Á±…ÑÐ (€€€±½¥ÑÌè¹À¹¹‘…ÉÉ…ä°Ñ…É•Ðè¹À¹¹‘…ÉÉ…ä°±•…É¹¥¹}É…Ñ”è™±½…Ð°¥Ñ•É…Ñ¥½¹Ìè¥¹Ð°(€€€Í…µÁ±•}Ý•¥¡ÑÌèM•ÅÕ•¹•m™±½…Ñtð¹À¹¹‘…ÉÉ…äð9½¹”€ô9½¹”°(¤€´øÑÕÁ±•m™±½…Ð°™±½…Ñtè(€€€‘•Í¥¸€ô¹À¹½±Õµ¹}ÍÑ…¬ ¡±½¥ÑÌ°¹À¹½¹•Ì¡±•¸¡±½¥ÑÌ¤¤¤¤(€€€Á…É…µÌ€ô¹À¹…ÉÉ…ä¡lÄ¸À°€À¸Át°‘ÑåÁ”õ¹À¹™±½…ÐØÐ¤(€€€½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ€ô}Ù…±¥‘…Ñ•‘}Í…µÁ±•}Ý•¥¡ÑÌ¡Í…µÁ±•}Ý•¥¡ÑÌ°±•¸¡Ñ…É•Ð¤¤(€€€½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ€¼ô½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ¹ÍÕ´ ¤(€€€™½È|¥¸É…¹”¡¥Ñ•É…Ñ¥½¹Ì¤è(€€€€€€€ÁÉ½‰…‰¥±¥Ñä€ô¹À¹…Í…ÉÉ…ä¡m}Í¥µ½¥¡™±½…Ð¡à¤¤™½Èà¥¸‘•Í¥¸ Á…É…µÍt¤(€€€€€€€É…‘¥•¹Ð€ô‘•Í¥¸¹P €¡½‰Í•ÉÙ…Ñ¥½¹}Ý•¥¡ÑÌ€¨€¡ÁÉ½‰…‰¥±¥Ñä€´Ñ…É•Ð¤¤(€€€€€€€Á…É…µÌ€´ô±•…É¹¥¹}É…Ñ”€¨É…‘¥•¹Ð(€€€€€€€¥˜¹½Ð¹À¹…±°¡¹À¹¥Í™¥¹¥Ñ”¡Á…É…µÌ¤¤è(€€€€€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰A±…ÑÐ…±¥‰É…Ñ¥½¸‘¥Ù•É•ìÉ•©•ÐÑ¡¥Ì…±¥‰É…Ñ¥½¸‰±½¬ˆ¤(€€€É•ÑÕÉ¸™±½…Ð¡Á…É…µÍlÁt¤°™±½…Ð¡Á…É…µÍlÅt¤(()‘•˜}Ù…±¥‘…Ñ•‘}Í…µÁ±•}Ý•¥¡ÑÌ (€€€Í…µÁ±•}Ý•¥¡ÑÌèM•ÅÕ•¹•m™±½…Ñtð¹À¹¹‘…ÉÉ…äð9½¹”°½Õ¹Ðè¥¹Ð°(¤€´ø¹À¹¹‘…ÉÉ…äè(€€€¥˜Í…µÁ±•}Ý•¥¡ÑÌ¥Ì9½¹”è(€€€€€€€É•ÑÕÉ¸¹À¹½¹•Ì¡½Õ¹Ð°‘ÑåÁ”õ¹À¹™±½…ÐØÐ¤(€€€É•ÍÕ±Ð€ô¹À¹…Í…ÉÉ…ä¡Í…µÁ±•}Ý•¥¡ÑÌ°‘ÑåÁ”õ¹À¹™±½…ÐØÐ¤(€€€¥˜€¡É•ÍÕ±Ð¹Í¡…Á”€„ô€¡½Õ¹Ð°¤½È¹½Ð¹À¹¥Í™¥¹¥Ñ”¡É•ÍÕ±Ð¤¹…±° ¤(€€€€€€€€€€€½È¹À¹…¹ä¡É•ÍÕ±Ð€ðô€À¤¤è(€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰Í…µÁ±”Ý•¥¡ÑÌµÕÍÐ‰”™¥¹¥Ñ”°Á½Í¥Ñ¥Ù”°…¹É½Üµ…±¥¹•ˆ¤(€€€É•ÑÕÉ¸É•ÍÕ±Ð¹½Áä ¤(()‘•˜}Í¥µ½¥¡Ù…±Õ”è™±½…Ð¤€´ø™±½…Ðè(€€€¥˜Ù…±Õ”€øô€Àè(€€€€€€€É•ÑÕÉ¸€Ä¸À€¼€ Ä¸À€¬µ…Ñ ¹•áÀ µµ¥¸¡Ù…±Õ”°€ÜÀÀ¸À¤¤¤(€€€•áÁ}Ù…±Õ”€ôµ…Ñ ¹•áÀ¡µ…à¡Ù…±Õ”°€´ÜÀÀ¸À¤¤(€€€É•ÑÕÉ¸•áÁ}Ù…±Õ”€¼€ Ä¸À€¬•áÁ}Ù…±Õ”¤(()‘•˜}É•…‘½¹±ä¡…ÉÉ…äè¹À¹¹‘…ÉÉ…ä¤€´ø¹À¹¹‘…ÉÉ…äè(€€€É•ÍÕ±Ð€ô¹À¹…ÉÉ…ä¡…ÉÉ…ä°‘ÑåÁ”õ¹À¹™±½…ÐØÐ°½ÁäõQÉÕ”¤(€€€É•ÍÕ±Ð¹Í•Ñ™±…Ì¡ÝÉ¥Ñ”õ…±Í”¤(€€€É•ÑÕÉ¸É•ÍÕ±Ð

@@ -9,9 +9,32 @@ from rles_route_a.teacher_research import (
     fit_opportunity_model,
     feature_vector_sha256,
 )
+from rles_route_a.teacher_research.opportunity_models import summarize_prediction_calibration
 
 FEATURE_SPEC_HASH = sha256(b"feature-spec-v1").hexdigest()
 RULE_VERSION = "candidate-v2"
+
+
+def test_prediction_calibration_reports_net_and_probability_bins_without_retuning():
+    summary = summarize_prediction_calibration(
+        (1., 2., 3., 4.), (0., 2., 2., 6.), (.1, .4, .6, .9),
+        (False, True, False, True), bin_count=2,
+    )
+    assert summary["samples"] == 4
+    assert summary["mean_net_prediction_error_bps"] == pytest.approx(0.)
+    assert summary["net_prediction_mae_bps"] == pytest.approx(1.)
+    assert summary["net_prediction_rmse_bps"] == pytest.approx((1.5) ** .5)
+    assert summary["probability_brier_score"] == pytest.approx(.185)
+    assert [row["samples"] for row in summary["net_return_bins"]] == [2, 2]
+    assert [row["samples"] for row in summary["probability_bins"]] == [2, 2]
+    assert summary["thresholds_adjusted"] is False
+
+
+def test_prediction_calibration_rejects_misaligned_or_invalid_probabilities():
+    with pytest.raises(ValueError, match="finite aligned vectors"):
+        summarize_prediction_calibration((1.,), (1., 2.), (.5,), (True,))
+    with pytest.raises(ValueError, match="finite aligned vectors"):
+        summarize_prediction_calibration((1.,), (1.,), (1.1,), (True,))
 
 
 def _snapshot_id(event_id):
