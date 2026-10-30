@@ -14,6 +14,16 @@ from rles_route_a.teacher_research import (
 FEATURE_SPEC = sha256(b"causal-feature-spec").hexdigest()
 
 
+def test_return_basis_id_must_match_the_formula_used_for_net_labels():
+    with pytest.raises(ValueError, match="return basis ID must match"):
+        label_counterfactual_candidates(
+            (), lambda *_: None, {}, {}, {}, feature_names=("x",),
+            split="train_fit", exit_policy_id="fixed-exit-v1",
+            execution_recipe="next-open-v1", cost_scenario_id="base",
+            return_basis_id="LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS",
+        )
+
+
 def _event(index, *, side=1, family="breakout"):
     event_id = sha256(f"candidate-{index}".encode()).hexdigest()
     return OpportunityEvent(
@@ -97,7 +107,7 @@ def test_fixed_exit_labeler_preserves_winners_losers_and_censored_candidates():
         exit_policy_id="fixed-trend-exit-v1",
         execution_recipe="market-like-v1",
         cost_scenario_id="stress-30bp",
-        return_basis_id="entry-notional-bps-v1",
+        return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
     )
 
     long_label, short_label, censored_label = batch.outcomes
@@ -149,14 +159,14 @@ def test_labeler_fails_closed_on_missing_denominator_or_wrong_replay_event():
             intervals,
             feature_names=("x",), split="train_fit", exit_policy_id="exit-v1",
             execution_recipe="market-like-v1", cost_scenario_id="base-12bp",
-            return_basis_id="entry-notional-bps-v1",
+            return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
         )
     with pytest.raises(ValueError, match="does not match"):
         label_counterfactual_candidates(
             events, lambda *_: output, features, blocks, intervals,
             feature_names=("x",), split="train_fit", exit_policy_id="exit-v1",
             execution_recipe="market-like-v1", cost_scenario_id="base-12bp",
-            return_basis_id="entry-notional-bps-v1",
+            return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
         )
 
 
@@ -182,7 +192,7 @@ def test_outcome_crossing_independent_block_end_is_censored_at_boundary():
         {event.event_id: "short-block"}, {event.event_id: interval},
         feature_names=("edge",), split="train_fit",
         exit_policy_id="fixed-exit-v1", execution_recipe="market-like-v1",
-        cost_scenario_id="base-12bp", return_basis_id="entry-notional-bps-v1",
+        cost_scenario_id="base-12bp", return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
     )
 
     assert batch.outcomes[0].net_return_bps is None
@@ -243,7 +253,7 @@ def test_full_denominator_label_to_later_calibrated_model_chain():
             exit_policy_id="fixed-exit-v1",
             execution_recipe="market-like-v1",
             cost_scenario_id="base-12bp",
-            return_basis_id="entry-notional-bps-v1",
+            return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
         )
 
     fit_batch = make_batch(

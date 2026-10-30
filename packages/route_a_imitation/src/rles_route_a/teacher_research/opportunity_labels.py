@@ -122,6 +122,12 @@ def label_counterfactual_candidates(
     candidates = tuple(events)
     if gross_return_method not in ("log", "simple"):
         raise ValueError("gross return method must be log or simple")
+    expected_basis = ("LOG_REFERENCE_ENTRY_NOTIONAL_BPS" if gross_return_method == "log"
+                      else "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS")
+    if return_basis_id != expected_basis:
+        raise ValueError(
+            "return basis ID must match the selected log or linear return formula"
+        )
     if (not candidates or any(not isinstance(event, OpportunityEvent) for event in candidates)
             or not callable(replay_candidate)):
         raise ValueError("causal candidate events and frozen replay callback are required")

@@ -7,6 +7,7 @@ from typing import Callable, Literal, Sequence
 
 from .candidate_event_union import CandidateGroup
 from .opportunity_labels import CounterfactualTradeReplay
+from .opportunity_models import RETURN_BASIS_IDS
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +53,10 @@ class GroupOutcome:
     economic_status: str = "SCENARIO_ONLY"
     outcome_status: str = "COMPLETE"
     return_basis_id: str = "LOG_REFERENCE_ENTRY_NOTIONAL_BPS"
+
+    def __post_init__(self) -> None:
+        if self.return_basis_id not in RETURN_BASIS_IDS:
+            raise ValueError("group outcome return basis must use an explicit reference basis")
 
 
 def label_grouped_candidates(

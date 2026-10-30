@@ -19,6 +19,14 @@ from .candidate_events import OpportunityEvent
 
 Split = Literal["train_fit", "train_calibration", "train_inner_screen"]
 OutcomeEvidence = Literal["MODEL_COUNTERFACTUAL"]
+ReturnBasisId = Literal[
+    "LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
+    "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS",
+]
+RETURN_BASIS_IDS = frozenset({
+    "LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
+    "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS",
+})
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,7 +58,7 @@ class OpportunityOutcome:
     exit_policy_id: str
     execution_recipe: str
     cost_scenario_id: str
-    return_basis_id: str
+    return_basis_id: ReturnBasisId
     simulation_receipt_id: str
     outcome_method: str
     evidence_type: OutcomeEvidence = "MODEL_COUNTERFACTUAL"
@@ -80,6 +88,8 @@ class OpportunityOutcome:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"outcome {name} is required")
+        if self.return_basis_id not in RETURN_BASIS_IDS:
+            raise ValueError("outcome return basis is not an explicit supported reference basis")
         if (type(self.independent_block_start_ts_ns) is not int
                 or type(self.independent_block_end_ts_ns) is not int
                 or self.independent_block_start_ts_ns < 0
