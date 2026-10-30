@@ -330,7 +330,7 @@ def _account_costs_including_first_row(account):
             "total_funding": fsum(row["funding"] for row in rows)}
 
 
-def _run_screen_cell(*, factory, source, config, strategy, scenario, window, model, output):
+def _run_screen_cell(*, factory, source, config, prereg_sha, strategy, scenario, window, model, output):
     start_ns, end_ns = map(preflight.ns, window)
     split_evidence = _registered_screen_split_evidence(
         config, window,
@@ -390,7 +390,17 @@ def _run_screen_cell(*, factory, source, config, strategy, scenario, window, mod
     if account["terminal_flat"] is not True or not account["account_rows"]:
         raise RuntimeError("native episode lacks settled account evidence")
     record = {"strategy_id": strategy, "scenario": scenario, "window": tuple(window),
-              "registered_screen_split": split_evidence,
+              "registered_screen_split": {
+                  **split_evidence,
+                  "protocol_id": config["protocol_id"],
+                  "preregistration_sha256": prereg_sha,
+                  "source_marker_sha256": source["marker_sha256"],
+                  "market_snapshot_sha256": source["snapshot_hash"],
+                  "import_manifest_sha256": source["import_manifest_sha256"],
+                  "strategy_id": strategy,
+                  "scenario": scenario,
+                  "seed": seed,
+              },
               "cases": native_cases,
               # Start at the configured native account capital even if the
               # first sampled barrier already contains an entry and its costs.
@@ -460,7 +470,7 @@ def execute_study(config, prereg_sha, *, source_root, output):
                     continue
                 cell_output.mkdir(parents=True, exist_ok=False)
                 row = _run_screen_cell(factory=factory, source=source, config=config,
-                    strategy=strategy, scenario=scenario, window=window,
+                    prereg_sha=prereg_sha, strategy=strategy, scenario=scenario, window=window,
                     model=policies[scenario], output=cell_output)
                 if row is not None:
                     rows.append(row)

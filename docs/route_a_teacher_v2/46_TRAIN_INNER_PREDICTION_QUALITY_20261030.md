@@ -12,7 +12,7 @@ These are candidate prediction diagnostics; the generic quality summarizer does 
 
 The report field `independence_status` is therefore `UNVERIFIED_BY_GENERIC_SUMMARIZER`; independence must be established at the screen-run layer and must not be inferred from successful candidate/outcome pairing.
 
-The registered native study runner now writes a per-cell temporal split receipt with the frozen fit, calibration, and screen intervals. It requires the model availability time to be no later than the registered screen start. The receipt explicitly sets `independent_trials_claimed: false`; temporal separation does not make overlapping market candidates independent observations.
+The registered native study runner now writes a per-cell temporal split receipt with the frozen fit, calibration, and screen intervals, protocol digest, market marker/snapshot/import-manifest digests, strategy, cost scenario, and seed. For Meta cells it requires the model availability time to be no later than the registered screen start. The receipt explicitly sets `independent_trials_claimed: false`; temporal separation does not make overlapping market candidates independent observations.
 
 ## Verification
 
