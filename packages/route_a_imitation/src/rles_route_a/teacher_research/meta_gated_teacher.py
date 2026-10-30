@@ -42,6 +42,7 @@ class MetaDecision:
     owner_id: str | None
     candidate_error: str | None = None
     teacher_signals: tuple[tuple[str, str, str], ...] = ()
+    teacher_errors: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,14 +153,17 @@ class MetaGatedTeacher:
             missing = self._missing_model_features(observation)
             for group in collection.groups if collection is not None else ():
                 try:
-                    score = (None if self._model_rejection(group, missing) is not None
+                    score = (None if (collection is None or collection.teacher_errors
+                                      or self._model_rejection(group, missing) is not None)
                              else self.policy.score(group))
                 except Exception as exc:
                     score = None
                     failures.append(f"score {group.event_id} {type(exc).__name__}: {exc}")
                 risk_scored.append(CandidateDecision(group, score, False, "HARD_RISK_OVERRIDE", missing))
             self.decisions.append(MetaDecision(observation, tuple(risk_scored), override, self._owner,
-                "; ".join(failures) or None, collection.teacher_signals if collection is not None else ()))
+                "; ".join(failures) or None,
+                collection.teacher_signals if collection is not None else (),
+                collection.teacher_errors if collection is not None else ()))
             return override
         if abs(current) > 1e-8 and self._owner is None:
             raise ValueError("native position has no verified originating teacher")
@@ -183,6 +187,10 @@ class MetaGatedTeacher:
         pre_score_rejections: dict[str, str] = {}
         scoring_errors: dict[str, str] = {}
         for group in collection.groups if collection is not None else ():
+            if collection is not None and collection.teacher_errors:
+                scored.append((group, None))
+                pre_score_rejections[group.event_id] = "TEACHER_SIGNAL_INCOMPLETE"
+                continue
             rejection = self._model_rejection(group, missing)
             if rejection is not None:
                 scored.append((group, None))
@@ -236,6 +244,9 @@ class MetaGatedTeacher:
             if collection is None:
                 action = advice(observation, self.expert_id, "FLAT", 0.,
                                 "CANDIDATE_COLLECTION_FAILED")
+            elif collection.teacher_errors:
+                action = advice(observation, self.expert_id, "FLAT", 0.,
+                                "TEACHER_SIGNAL_INCOMPLETE")
             elif eligible:
                 # Deterministic arbitration selects one group, never both directions.
                 selected, score = max(eligible, key=lambda item:
@@ -251,6 +262,10 @@ class MetaGatedTeacher:
                 f"{teacher_id}: {owner_errors[teacher_id]}"
                 for teacher_id, _reason in group.teachers if teacher_id in owner_errors
             )
+            signal_failures = tuple(
+                f"{teacher_id}: {detail}"
+                for teacher_id, detail in (collection.teacher_errors if collection is not None else ())
+            )
             rejection = pre_score_rejections.get(group.event_id)
             if rejection is None and observation.pending_order_ids:
                 rejection = "PENDING_ORDER"
@@ -263,12 +278,13 @@ class MetaGatedTeacher:
             decisions.append(CandidateDecision(
                 group, score, selected is not None and group.event_id == selected.event_id,
                 rejection, missing,
-                scoring_errors.get(group.event_id) or "; ".join(owner_failures) or None,
+                scoring_errors.get(group.event_id) or "; ".join(owner_failures or signal_failures) or None,
             ))
         self.decisions.append(MetaDecision(
             observation, tuple(decisions), action, self._owner,
             candidate_error=collection_error,
             teacher_signals=collection.teacher_signals if collection is not None else (),
+            teacher_errors=collection.teacher_errors if collection is not None else (),
         ))
         return action
 

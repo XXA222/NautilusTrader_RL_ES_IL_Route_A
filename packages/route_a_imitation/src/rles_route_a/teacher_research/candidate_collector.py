@@ -17,6 +17,7 @@ from .candidate_event_union import CandidateGroup, group_teacher_proposals, prop
 class CandidateCollection:
     groups: tuple[CandidateGroup, ...]
     teacher_signals: tuple[tuple[str, str, str], ...]
+    teacher_errors: tuple[tuple[str, str], ...] = ()
 
 
 class OneMinuteCandidateCollector:
@@ -56,11 +57,17 @@ class OneMinuteCandidateCollector:
         signal_view = replace(observation, account=account, pending_order_ids=())
         proposals = []
         signals = []
+        errors = []
         for teacher in self._teachers:
-            teacher.advise(signal_view)
+            try:
+                teacher.advise(signal_view)
+            except Exception as exc:
+                signals.append((teacher.expert_id, "ERROR", type(exc).__name__))
+                errors.append((teacher.expert_id, f"{type(exc).__name__}: {exc}"))
+                continue
             signal = teacher.last_signal
             signals.append((teacher.expert_id, signal.raw_signal, signal.reason_code))
             proposal = proposal_from_signal(observation, teacher.expert_id, signal)
             if proposal is not None:
                 proposals.append(proposal)
-        return CandidateCollection(group_teacher_proposals(proposals), tuple(signals))
+        return CandidateCollection(group_teacher_proposals(proposals), tuple(signals), tuple(errors))

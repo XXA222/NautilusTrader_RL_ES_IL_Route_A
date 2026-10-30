@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from rles_route_a.contracts import ExpertAdvice, NativeActionTrace, PointInTimeObservation
+from rles_route_a.teachers_1m.registry import ALL_TEACHER_RECIPE_BY_ID
 from .candidate_collector import CandidateCollection, OneMinuteCandidateCollector
 
 
@@ -63,6 +64,8 @@ def summarize_teacher_signal_coverage(records, *, start_ns: int, end_ns: int):
     if type(start_ns) is not int or type(end_ns) is not int or start_ns >= end_ns:
         raise ValueError("valid signal coverage interval required")
     counters = {}
+    signal_counts = Counter()
+    error_counts = Counter()
     barriers = 0
     for record in records:
         if not start_ns <= record.observation.decision_ts_ns < end_ns:
@@ -74,9 +77,18 @@ def summarize_teacher_signal_coverage(records, *, start_ns: int, end_ns: int):
             raw_counts, reason_counts = counters.setdefault(teacher_id, (Counter(), Counter()))
             raw_counts[raw] += 1
             reason_counts[reason] += 1
+            signal_counts[teacher_id] += 1
+        for teacher_id, _error in record.collection.teacher_errors:
+            error_counts[teacher_id] += 1
+    expected_teachers = set(ALL_TEACHER_RECIPE_BY_ID)
+    complete = (barriers > 0 and set(counters) == expected_teachers
+                and all(signal_counts[name] == barriers for name in expected_teachers)
+                and not error_counts)
     return {"barriers": barriers, "teachers": {teacher_id: {
         "raw_signal_counts": dict(sorted(raw.items())), "reason_counts": dict(sorted(reasons.items()))}
-        for teacher_id, (raw, reasons) in sorted(counters.items())}}
+        for teacher_id, (raw, reasons) in sorted(counters.items())},
+        "teacher_error_counts": dict(sorted(error_counts.items())),
+        "complete_eight_teacher_coverage": complete}
 
 
 
@@ -136,6 +148,7 @@ def write_candidate_records(recorder: NativeCandidateRecorder, path) -> None:
             "exact_market_clocks_ns": obs.exact_market_clocks_ns, "account": dict(obs.account),
             "pending_order_ids": obs.pending_order_ids,
             "teacher_signals": record.collection.teacher_signals,
+            "teacher_errors": record.collection.teacher_errors,
             "candidates": [{"event_id": group.event_id, "side": group.side,
                             "teachers": group.teachers} for group in record.collection.groups],
             "native_advice": {"expert_id": record.action.expert_id, "intent": record.action.intent,

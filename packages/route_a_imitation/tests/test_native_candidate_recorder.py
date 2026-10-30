@@ -49,6 +49,28 @@ def test_collection_failure_does_not_block_existing_risk_and_fails_research():
         recorder.require_complete()
 
 
+def test_teacher_signal_error_is_visible_and_marks_union_incomplete(monkeypatch):
+    from rles_route_a.teachers_1m.ema import EmaCrossTeacher
+    from rles_route_a.teacher_research.native_candidate_recorder import summarize_teacher_signal_coverage
+
+    def fail(_self, _observation):
+        raise RuntimeError("synthetic signal failure")
+
+    monkeypatch.setattr(EmaCrossTeacher, "advise", fail)
+    recorder = NativeCandidateRecorder(Primary())
+    obs = observation(1)
+    recorder.advise(obs)
+
+    coverage = summarize_teacher_signal_coverage(
+        recorder.records, start_ns=obs.decision_ts_ns,
+        end_ns=obs.decision_ts_ns + 60_000_000_000)
+
+    assert coverage["barriers"] == 1
+    assert coverage["teacher_error_counts"] == {"T01_EMA_9_21": 1}
+    assert coverage["teachers"]["T01_EMA_9_21"]["raw_signal_counts"]["ERROR"] == 1
+    assert coverage["complete_eight_teacher_coverage"] is False
+
+
 
 def test_candidate_runner_requires_complete_matching_native_barriers():
     from types import SimpleNamespace
