@@ -209,13 +209,25 @@ def fit_entry_meta_policy(
     )
 
 
-def summarize_entry_scores(scores: Sequence[EntryScore], *, margin_bps: float | None = None) -> dict[str, object]:
-    """Report every rejection and prediction distribution without changing gates."""
+def summarize_entry_scores(
+    scores: Sequence[EntryScore], *, margin_bps: float | None = None,
+    unscored_count: int = 0, unscored_reason_counts: Mapping[str, int] | None = None,
+) -> dict[str, object]:
+    """Report the whole candidate denominator and actual sequential gate funnel."""
     from collections import Counter
     rows = tuple(scores)
+    if type(unscored_count) is not int or unscored_count < 0:
+        raise ValueError("unscored candidate count must be a nonnegative integer")
+    unscored_reasons = dict(unscored_reason_counts or {})
+    if (any(not isinstance(name, str) or not name.strip()
+            or type(count) is not int or count < 0
+            for name, count in unscored_reasons.items())
+            or (unscored_reasons and sum(unscored_reasons.values()) != unscored_count)):
+        raise ValueError("unscored rejection reasons must cover the unscored candidate count")
     reasons = Counter(row.reason for row in rows)
     unsupported = Counter(name for row in rows for name in row.unsupported_features)
     accepted = sum(row.action in ("LONG", "SHORT") for row in rows)
+    total = len(rows) + unscored_count
     def distribution(values):
         if not values:
             return None
@@ -232,12 +244,44 @@ def summarize_entry_scores(scores: Sequence[EntryScore], *, margin_bps: float | 
         "account_ineligible": sum(row.reason in ("PENDING_ORDER", "POSITION_OCCUPIED") for row in rows),
         "interpretation": "overlapping gate counts among scored candidates; not native fills",
     }
+    funnel = None
+    if margin_bps is not None:
+        account_eligible = tuple(row for row in rows
+                                 if row.reason not in ("PENDING_ORDER", "POSITION_OCCUPIED"))
+        support_eligible = tuple(row for row in account_eligible if row.in_support)
+        edge_eligible = tuple(row for row in support_eligible
+                              if row.expected_net_bps > margin_bps)
+        stages = {
+            "total_candidates": total,
+            "scored_candidates": len(rows),
+            "account_eligible": len(account_eligible),
+            "in_support": len(support_eligible),
+            "above_frozen_net_edge_margin": len(edge_eligible),
+            "accepted": accepted,
+        }
+        funnel = {
+            "gate_order": ("scored", "account", "support", "net_edge"),
+            "stage_counts": stages,
+            "rejected_at_stage": {
+                "unscored": unscored_count,
+                "account": len(rows) - len(account_eligible),
+                "support": len(account_eligible) - len(support_eligible),
+                "net_edge": len(support_eligible) - len(edge_eligible),
+            },
+            "stage_coverage_of_all_candidates": {
+                name: count / total if total else None
+                for name, count in stages.items() if name != "total_candidates"
+            },
+            "interpretation": "sequential policy gates; rejects are assigned to the first failed stage",
+        }
     return {
-        "candidate_count": len(rows), "accepted_count": accepted,
-        "coverage": accepted / len(rows) if rows else None,
+        "candidate_count": total, "scored_count": len(rows),
+        "unscored_count": unscored_count, "accepted_count": accepted,
+        "coverage": accepted / total if total else None,
         "reason_counts": dict(sorted(reasons.items())),
+        "unscored_reason_counts": dict(sorted(unscored_reasons.items())),
         "unsupported_feature_counts": dict(sorted(unsupported.items())),
         "expected_net_bps": distribution([row.expected_net_bps for row in rows]),
         "probability_positive": distribution([row.probability_positive for row in rows]),
-        "gate_counts": gates,
+        "gate_counts": gates, "sequential_gate_funnel": funnel,
     }

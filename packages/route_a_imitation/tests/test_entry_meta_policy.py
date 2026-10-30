@@ -26,6 +26,38 @@ def test_gate_diagnostics_count_overlapping_filters_without_changing_threshold()
     assert summarize_entry_scores([], margin_bps=5.)["coverage"] is None
 
 
+def test_gate_funnel_uses_all_candidates_and_assigns_first_failed_stage():
+    scores = [
+        EntryScore("LONG", .8, 10., True, "POSITIVE_NET_EDGE"),
+        EntryScore("NO_TRADE", .8, 11., False, "OUT_OF_SUPPORT", ("market.ema_9",)),
+        EntryScore("NO_TRADE", .8, 12., True, "PENDING_ORDER"),
+    ]
+    result = summarize_entry_scores(scores, margin_bps=5., unscored_count=2,
+                                    unscored_reason_counts={"REJECTED_FEATURE_NOT_READY": 1,
+                                                            "REJECTED_SCORING_ERROR": 1})
+
+    assert result["candidate_count"] == 5
+    assert result["scored_count"] == 3 and result["unscored_count"] == 2
+    assert result["accepted_count"] == 1 and result["coverage"] == pytest.approx(.2)
+    funnel = result["sequential_gate_funnel"]
+    assert funnel["stage_counts"] == {
+        "total_candidates": 5, "scored_candidates": 3, "account_eligible": 2,
+        "in_support": 1, "above_frozen_net_edge_margin": 1, "accepted": 1,
+    }
+    assert funnel["rejected_at_stage"] == {
+        "unscored": 2, "account": 1, "support": 1, "net_edge": 0,
+    }
+    assert result["unscored_reason_counts"] == {
+        "REJECTED_FEATURE_NOT_READY": 1, "REJECTED_SCORING_ERROR": 1,
+    }
+
+
+def test_unscored_reason_counts_must_match_denominator():
+    with pytest.raises(ValueError, match="cover the unscored"):
+        summarize_entry_scores([], margin_bps=5., unscored_count=2,
+                               unscored_reason_counts={"REJECTED_FEATURE_NOT_READY": 1})
+
+
 def _samples(observed):
     groups = {}
     labels = []
