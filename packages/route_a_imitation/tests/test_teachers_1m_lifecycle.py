@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from rles_route_a.contracts import (
@@ -109,6 +111,24 @@ def test_fold_change_resets_ema_cross_state_within_an_episode():
     )
     assert second_next_fold_bar.intent == "OPEN_SHORT"
     assert second_next_fold_bar.reason_codes == ("EMA_CROSS_SHORT",)
+
+
+def test_feature_schema_change_resets_ema_cross_state_within_an_episode():
+    teacher = build_teacher_1m("T01_EMA_9_21")
+
+    assert teacher.advise(_obs(1, fast=99.0)).intent == "FLAT"
+    new_schema = "1" * 64
+    first_new_schema_bar = teacher.advise(replace(
+        _obs(2, fast=101.0), feature_spec_hash=new_schema,
+    ))
+    assert first_new_schema_bar.intent == "FLAT"
+    assert first_new_schema_bar.reason_codes == ("INDICATOR_PREVIOUS_NOT_READY",)
+
+    second_new_schema_bar = teacher.advise(replace(
+        _obs(3, fast=99.0), feature_spec_hash=new_schema,
+    ))
+    assert second_new_schema_bar.intent == "OPEN_SHORT"
+    assert second_new_schema_bar.reason_codes == ("EMA_CROSS_SHORT",)
 
 
 def test_x1_and_x2_share_the_exact_entry_event_and_target():

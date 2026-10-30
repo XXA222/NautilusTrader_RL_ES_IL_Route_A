@@ -30,6 +30,7 @@ class BaseTeacher1m(ABC):
         self._episode_id = ""
         self._source_id: str | None = None
         self._fold_id: str | None = None
+        self._feature_spec_hash: str | None = None
         self._last_close_time_ns: int | None = None
         self._previous: dict[str, float] = {}
         self._last_signal = TeacherSignal("NONE", 0, "NOT_EVALUATED")
@@ -50,6 +51,7 @@ class BaseTeacher1m(ABC):
         self._episode_id = episode_id
         self._source_id = None
         self._fold_id = None
+        self._feature_spec_hash = None
         self._last_close_time_ns = None
         self._previous = {}
         self._last_signal = TeacherSignal("NONE", 0, "NOT_EVALUATED")
@@ -67,11 +69,14 @@ class BaseTeacher1m(ABC):
         if (
             (self._source_id is not None and observation.source_id != self._source_id)
             or (self._fold_id is not None and observation.fold_id != self._fold_id)
+            or (self._feature_spec_hash is not None
+                and observation.feature_spec_hash != self._feature_spec_hash)
         ):
-            # Rolling indicators and pending exits cannot cross source or fold boundaries.
+            # Rolling indicators and pending exits cannot cross market or feature identities.
             self.reset(observation.episode_id)
         self._source_id = observation.source_id
         self._fold_id = observation.fold_id
+        self._feature_spec_hash = observation.feature_spec_hash
         current_exposure = observation.account_value("net_exposure")
         try:
             close_time_ns = observation.market_clock_ns("latest_1m_close_ts_ns")
