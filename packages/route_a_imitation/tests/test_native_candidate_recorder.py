@@ -70,6 +70,13 @@ def test_teacher_signal_error_is_visible_and_marks_union_incomplete(monkeypatch)
     assert coverage["teachers"]["T01_EMA_9_21"]["raw_signal_counts"]["ERROR"] == 1
     assert coverage["complete_eight_teacher_coverage"] is False
 
+    # The sidecar preserves unaffected candidates, but cannot certify this
+    # episode as a complete eight-teacher research denominator.
+    recorder.advise(observation(2, ema_9=101., roc_20=1., roc_60=1., rsi_14=69.))
+    assert any(record.collection and record.collection.groups for record in recorder.records)
+    with pytest.raises(ValueError, match="incomplete eight-teacher"):
+        recorder.require_complete()
+
 
 
 def test_candidate_runner_requires_complete_matching_native_barriers():

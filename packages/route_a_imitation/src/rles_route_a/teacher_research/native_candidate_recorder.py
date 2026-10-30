@@ -55,6 +55,17 @@ class NativeCandidateRecorder:
         if not self.records or any(record.collection_error is not None or record.collection is None
                                    for record in self.records):
             raise ValueError("candidate collection has missing or failed native barriers")
+        expected = set(ALL_TEACHER_RECIPE_BY_ID)
+        for record in self.records:
+            collection = record.collection
+            assert collection is not None
+            signal_ids = tuple(teacher_id for teacher_id, _raw, _reason
+                               in collection.teacher_signals)
+            if (len(signal_ids) != len(expected) or set(signal_ids) != expected
+                    or collection.teacher_errors):
+                raise ValueError(
+                    "candidate collection has incomplete eight-teacher signal coverage"
+                )
         return tuple(self.records)
 
 
