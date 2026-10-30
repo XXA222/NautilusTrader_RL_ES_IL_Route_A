@@ -106,6 +106,9 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
     def segment(items):
         items = tuple(items)
         labels = [by_id[d.group.event_id] for d in items]
+        status_counts = Counter(label.outcome_status for label in labels)
+        incomplete_status_counts = Counter(label.outcome_status for label in labels
+                                           if label.outcome_status != "COMPLETE")
         values = [o.net_return_bps for o in labels if o.outcome_status == "COMPLETE"
                   and o.net_return_bps is not None]
         positive = [value for value in values if value > 0]
@@ -113,6 +116,9 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         breakeven = sum(value == 0 for value in values)
         return {"candidates": len(labels), "complete": len(values),
                 "without_outcome": len(labels) - len(values),
+                "complete_coverage": len(values) / len(labels) if labels else None,
+                "outcome_status_counts": dict(sorted(status_counts.items())),
+                "incomplete_outcome_status_counts": dict(sorted(incomplete_status_counts.items())),
                 "positive_complete_outcomes": len(positive),
                 "negative_complete_outcomes": len(negative),
                 "breakeven_complete_outcomes": breakeven,
