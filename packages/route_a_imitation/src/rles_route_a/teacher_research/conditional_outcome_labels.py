@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import log
+from math import isfinite, log
 from typing import Callable, Literal, Sequence
 
 from .candidate_event_union import CandidateGroup
@@ -49,14 +49,44 @@ class GroupOutcome:
     label_end_ts_ns: int | None
     censor_ts_ns: int | None
     net_return_bps: float | None
+    simulation_receipt_id: str
     evidence_type: str = "MODEL_COUNTERFACTUAL"
     economic_status: str = "SCENARIO_ONLY"
     outcome_status: str = "COMPLETE"
     return_basis_id: str = "LOG_REFERENCE_ENTRY_NOTIONAL_BPS"
+    observed_until_ns: int | None = None
 
     def __post_init__(self) -> None:
+        if any(not isinstance(value, str) or not value.strip() for value in (
+                self.source_identity, self.fold_id, self.exit_policy_id,
+                self.execution_recipe, self.cost_scenario_id, self.simulation_receipt_id)):
+            raise ValueError("group outcome source, recipe, and simulation receipt identities are required")
+        if self.evidence_type != "MODEL_COUNTERFACTUAL" or self.economic_status != "SCENARIO_ONLY":
+            raise ValueError("group outcomes must remain scenario-only model counterfactuals")
         if self.return_basis_id not in RETURN_BASIS_IDS:
             raise ValueError("group outcome return basis must use an explicit reference basis")
+        if self.outcome_status not in ("COMPLETE", "RIGHT_CENSORED", "UNFILLED", "CANCELLED", "MISSED"):
+            raise ValueError("group outcome status is invalid")
+        if self.observed_until_ns is not None and (
+                type(self.observed_until_ns) is not int or self.observed_until_ns <= self.decision_ts_ns):
+            raise ValueError("group outcome observation end must follow its decision")
+        if self.outcome_status == "COMPLETE":
+            if (isinstance(self.net_return_bps, bool)
+                    or not isinstance(self.net_return_bps, (int, float))
+                    or not isfinite(self.net_return_bps)
+                    or type(self.label_end_ts_ns) is not int
+                    or self.label_end_ts_ns <= self.decision_ts_ns
+                    or self.censor_ts_ns is not None or self.observed_until_ns is not None):
+                raise ValueError("complete group outcome requires a finite return and later exit")
+        elif (self.net_return_bps is not None or self.label_end_ts_ns is not None):
+            raise ValueError("incomplete group outcome cannot supply a return or exit clock")
+        elif self.outcome_status == "RIGHT_CENSORED":
+            if (type(self.censor_ts_ns) is not int or self.censor_ts_ns <= self.decision_ts_ns
+                    or (self.observed_until_ns is not None
+                        and self.observed_until_ns != self.censor_ts_ns)):
+                raise ValueError("right-censored group outcome requires a matching future observation clock")
+        elif (self.censor_ts_ns is not None or type(self.observed_until_ns) is not int):
+            raise ValueError("unfilled group outcome requires an observed-until clock, not a censor clock")
 
 
 def label_grouped_candidates(
@@ -101,7 +131,9 @@ def label_grouped_candidates(
                 group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
                 exit_policy_id, execution_recipe, cost_scenario_id, None,
                 fact.observed_until_ns if fact.status == "RIGHT_CENSORED" else None, None,
+                simulation_receipt_id=fact.simulation_receipt_id,
                 outcome_status=fact.status, return_basis_id=basis,
+                observed_until_ns=fact.observed_until_ns,
             ))
             continue
         if fact.entry_ts_ns <= obs.decision_ts_ns:
@@ -123,6 +155,8 @@ def label_grouped_candidates(
             exit_policy_id, execution_recipe, cost_scenario_id, end, censor, net,
             outcome_status="RIGHT_CENSORED" if net is None else "COMPLETE",
             return_basis_id=basis,
+            simulation_receipt_id=fact.simulation_receipt_id,
+            observed_until_ns=censor,
         ))
     return tuple(result)
 
