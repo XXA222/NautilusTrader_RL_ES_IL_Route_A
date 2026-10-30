@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import importlib.util
 from pathlib import Path
 from urllib.parse import urlencode
@@ -20,6 +20,29 @@ def test_account_costs_include_first_native_sample():
     assert costs["total_fee"] == pytest.approx(2.5)
     assert costs["total_slippage_cost"] == pytest.approx(1.2)
     assert costs["total_funding"] == pytest.approx(.2)
+
+
+def test_signal_coverage_requires_exact_registered_eight_teacher_set():
+    from types import SimpleNamespace
+
+    expected = tuple(sorted(study.ALL_TEACHER_RECIPE_BY_ID))
+    signals = tuple((teacher_id, "NONE", "NO_SIGNAL") for teacher_id in expected)
+    row = SimpleNamespace(candidates=(), candidate_error=None, teacher_signals=signals,
+                          teacher_errors=())
+    teacher = SimpleNamespace(decisions=(row,), policy=SimpleNamespace(margin_bps=5.))
+    complete = study._score_diagnostics(teacher, None, {}, "base", 1, 2)
+    assert complete["complete_eight_teacher_signal_coverage"] is True
+    assert complete["missing_teacher_ids"] == []
+    assert complete["unexpected_teacher_ids"] == []
+
+    wrong = tuple(("NOT_REGISTERED" if teacher_id == expected[0] else teacher_id,
+                   "NONE", "NO_SIGNAL") for teacher_id in expected)
+    teacher.decisions = (SimpleNamespace(candidates=(), candidate_error=None,
+        teacher_signals=wrong, teacher_errors=()),)
+    incomplete = study._score_diagnostics(teacher, None, {}, "base", 1, 2)
+    assert incomplete["complete_eight_teacher_signal_coverage"] is False
+    assert incomplete["missing_teacher_ids"] == [expected[0]]
+    assert incomplete["unexpected_teacher_ids"] == ["NOT_REGISTERED"]
 
 
 def source_metadata(config):
