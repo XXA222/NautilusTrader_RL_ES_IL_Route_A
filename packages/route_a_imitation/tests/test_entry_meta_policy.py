@@ -43,16 +43,31 @@ def test_gate_funnel_uses_all_candidates_and_assigns_first_failed_stage():
     assert funnel["stage_counts"] == {
         "total_candidates": 5, "scored_candidates": 3, "account_eligible": 2,
         "in_support": 1, "above_frozen_net_edge_margin": 1, "model_gate_accepted": 1,
+        "above_margin_after_calibration_error": 1,
         "native_eligible_after_overrides": 1,
     }
     assert funnel["rejected_at_stage"] == {
-        "unscored": 2, "account": 1, "support": 1, "net_edge": 0,
+        "unscored": 2, "account": 1, "support": 1, "net_edge": 0, "calibration_error": 0,
         "post_gate_native_constraints": 0,
         "native_arbitration_or_owner_readiness": None,
     }
     assert result["unscored_reason_counts"] == {
         "REJECTED_FEATURE_NOT_READY": 1, "REJECTED_SCORING_ERROR": 1,
     }
+
+
+def test_calibration_error_gate_is_visible_in_coverage_diagnostics():
+    score = EntryScore(
+        "NO_TRADE", .8, 10., True, "CALIBRATION_ERROR_EXCEEDS_EDGE",
+        calibration_mae_bps=6.,
+    )
+    result = summarize_entry_scores([score], margin_bps=5.)
+    assert result["accepted_count"] == 0
+    assert result["reason_counts"] == {"CALIBRATION_ERROR_EXCEEDS_EDGE": 1}
+    assert result["expected_net_after_calibration_mae_bps"] == {
+        "min": 4., "p25": 4., "median": 4., "p75": 4., "max": 4.,
+    }
+    assert result["sequential_gate_funnel"]["rejected_at_stage"]["calibration_error"] == 1
 
 
 def test_model_acceptance_is_separate_from_single_direction_native_selection():
@@ -121,6 +136,23 @@ def test_frozen_entry_model_is_causal_and_respects_pending(observed):
     clean = replace(next_obs, pending_order_ids=())
     group, = group_teacher_proposals([TeacherProposal(clean, "EMA", 1, "cross")])
     assert model.score(group).action == "LONG"
+
+
+def test_entry_requires_edge_to_cover_calibration_prediction_error(observed):
+    fit, calibration, groups = _samples(observed)
+    model = fit_entry_meta_policy(
+        fit, calibration, groups, feature_names=("market.trend_1h",), margin_bps=0.1,
+    )
+    candidate = observed(ts=10_000_000_000, hourly=0.01, pending=())
+    group, = group_teacher_proposals([TeacherProposal(candidate, "EMA", 1, "cross")])
+    original = model.score(group)
+    # Keep the same calibrated prediction while injecting only the empirically
+    # measured calibration error into a frozen-policy copy.
+    cautious = replace(model, calibration_mae_bps=max(original.expected_net_bps, 0.1))
+    rejected = cautious.score(group)
+    assert rejected.action == "NO_TRADE"
+    assert rejected.reason == "CALIBRATION_ERROR_EXCEEDS_EDGE"
+    assert rejected.calibration_mae_bps >= rejected.expected_net_bps
 
 
 def test_fitted_meta_policy_does_not_double_weight_duplicate_future_interval(observed):

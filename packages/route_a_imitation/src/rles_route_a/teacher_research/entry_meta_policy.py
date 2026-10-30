@@ -49,6 +49,7 @@ class EntryScore:
     in_support: bool
     reason: str
     unsupported_features: tuple[str, ...] = ()
+    calibration_mae_bps: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,15 +100,24 @@ class FrozenEntryMetaPolicy:
                             zip((*self.feature_names, "side"), x, self.lower, self.upper)
                             if value < lo or value > hi)
         if obs.pending_order_ids:
-            return EntryScore("NO_TRADE", probability, expected, support, "PENDING_ORDER", unsupported)
+            return EntryScore("NO_TRADE", probability, expected, support, "PENDING_ORDER",
+                              unsupported, self.calibration_mae_bps)
         if abs(obs.account_value("net_exposure")) > 1e-8:
-            return EntryScore("NO_TRADE", probability, expected, support, "POSITION_OCCUPIED", unsupported)
+            return EntryScore("NO_TRADE", probability, expected, support, "POSITION_OCCUPIED",
+                              unsupported, self.calibration_mae_bps)
         if not support:
-            return EntryScore("NO_TRADE", probability, expected, support, "OUT_OF_SUPPORT", unsupported)
+            return EntryScore("NO_TRADE", probability, expected, support, "OUT_OF_SUPPORT",
+                              unsupported, self.calibration_mae_bps)
         if expected <= self.margin_bps:
-            return EntryScore("NO_TRADE", probability, expected, support, "NET_EDGE_TOO_SMALL", unsupported)
+            return EntryScore("NO_TRADE", probability, expected, support, "NET_EDGE_TOO_SMALL",
+                              unsupported, self.calibration_mae_bps)
+        if expected - self.calibration_mae_bps <= self.margin_bps:
+            return EntryScore("NO_TRADE", probability, expected, support,
+                              "CALIBRATION_ERROR_EXCEEDS_EDGE", unsupported,
+                              self.calibration_mae_bps)
         return EntryScore("LONG" if group.side > 0 else "SHORT",
-                          probability, expected, support, "POSITIVE_NET_EDGE")
+                          probability, expected, support, "POSITIVE_NET_EDGE",
+                          calibration_mae_bps=self.calibration_mae_bps)
 
 
 def fit_entry_meta_policy(
@@ -260,6 +270,9 @@ def summarize_entry_scores(
         "fixed_margin_bps": margin_bps,
         "support_pass": sum(row.in_support for row in rows),
         "edge_pass": sum(row.expected_net_bps > margin_bps for row in rows),
+        "calibration_adjusted_edge_pass": sum(
+            row.expected_net_bps - row.calibration_mae_bps > margin_bps for row in rows
+        ),
         "support_and_edge_pass": sum(row.in_support and row.expected_net_bps > margin_bps for row in rows),
         "account_ineligible": sum(row.reason in ("PENDING_ORDER", "POSITION_OCCUPIED") for row in rows),
         "interpretation": "overlapping gate counts among scored candidates; not native fills",
@@ -271,26 +284,31 @@ def summarize_entry_scores(
         support_eligible = tuple(row for row in account_eligible if row.in_support)
         edge_eligible = tuple(row for row in support_eligible
                               if row.expected_net_bps > margin_bps)
+        calibration_eligible = tuple(row for row in edge_eligible
+                                     if row.expected_net_bps - row.calibration_mae_bps > margin_bps)
         stages = {
             "total_candidates": total,
             "scored_candidates": len(rows),
             "account_eligible": len(account_eligible),
             "in_support": len(support_eligible),
             "above_frozen_net_edge_margin": len(edge_eligible),
+            "above_margin_after_calibration_error": len(calibration_eligible),
             "model_gate_accepted": accepted,
             "native_eligible_after_overrides": native_eligible,
         }
         if native_selected_count is not None:
             stages["native_selected_after_arbitration"] = native_selected_count
         funnel = {
-            "gate_order": ("scored", "account", "support", "net_edge", "model_gate",
-                           "native_constraints", "native_arbitration"),
+            "gate_order": ("scored", "account", "support", "net_edge",
+                           "calibration_error", "model_gate", "native_constraints",
+                           "native_arbitration"),
             "stage_counts": stages,
             "rejected_at_stage": {
                 "unscored": unscored_count,
                 "account": len(rows) - len(account_eligible),
                 "support": len(account_eligible) - len(support_eligible),
                 "net_edge": len(support_eligible) - len(edge_eligible),
+                "calibration_error": len(edge_eligible) - len(calibration_eligible),
                 "post_gate_native_constraints": post_gate_overrides,
                 "native_arbitration_or_owner_readiness": (
                     native_eligible - native_selected_count
@@ -317,6 +335,10 @@ def summarize_entry_scores(
         "unscored_reason_counts": dict(sorted(unscored_reasons.items())),
         "unsupported_feature_counts": dict(sorted(unsupported.items())),
         "expected_net_bps": distribution([row.expected_net_bps for row in rows]),
+        "calibration_mae_bps": distribution([row.calibration_mae_bps for row in rows]),
+        "expected_net_after_calibration_mae_bps": distribution([
+            row.expected_net_bps - row.calibration_mae_bps for row in rows
+        ]),
         "probability_positive": distribution([row.probability_positive for row in rows]),
         "gate_counts": gates, "sequential_gate_funnel": funnel,
         "coverage_basis": "model gate acceptance before single-position native arbitration",
