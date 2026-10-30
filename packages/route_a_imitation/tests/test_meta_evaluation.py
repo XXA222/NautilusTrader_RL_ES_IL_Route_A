@@ -163,6 +163,7 @@ def test_native_comparison_reports_missing_cells_without_model_substitution():
               "intervals": {"native_screen": [["a", "b"], ["b", "c"]]}}
     run = {"strategy_id": "FLAT", "scenario": "base", "window": ("a", "b"),
            "cases": (), "equity_curve": (1000., 1000.),
+           "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
            "native_order_verification": {"barriers": 10, "authority": "retained_m22_session_snapshots"}}
     result = compare_preregistered_native_runs(config, (run,))
     assert result["expected_cells"] == 20 and result["available_cells"] == 1
@@ -172,6 +173,9 @@ def test_native_comparison_reports_missing_cells_without_model_substitution():
         compare_preregistered_native_runs(config, (run, run))
     with pytest.raises(ValueError, match="M2.2"):
         compare_preregistered_native_runs(config, ({**run, "native_order_verification": {}},))
+    with pytest.raises(ValueError, match="requires complete native account costs"):
+        compare_preregistered_native_runs(config, ({k:v for k,v in run.items()
+                                                    if k != "account_metrics"},))
 
 
 def test_native_comparison_requires_trade_case_cashflows_to_match_account():
@@ -210,8 +214,21 @@ def test_window_consistency_does_not_infer_missing_or_tied_improvements():
     config = {"teachers": ["EMA"], "controls": ["FLAT"], "cost_scenarios": {"base": {}},
               "intervals": {"native_screen": [["a", "b"], ["b", "c"]]}}
     def row(strategy, window, final):
+        cases = ()
+        if final != 1000.:
+            cases = (NativeTradeCase1m(
+                trade_case_id=f"{strategy}-{window[0]}", signal_id=f"{strategy}-{window[0]}",
+                teacher_id=strategy, exit_policy_id="X1", scenario_id="base",
+                block_id=f"{window[0]}_{window[1]}", side=1, status="ORDINARY_COMPLETE",
+                entry_decision_ts_ns=1, entry_signal_price=100., entry_fill_ts_ns=2,
+                entry_fill_price=100., entry_notional=1000., exit_signal_price=100.2,
+                exit_fill_ts_ns=4, exit_fill_price=100.2, fees=0., fee_currency="USDT",
+                equity_currency="USDT", slippage_cost=0., funding=0., realized_pnl=final-1000.,
+                equity_start=1000., equity_end=final, mfe_bps=20., mae_bps=0.,
+                holding_minutes=2., exit_reason="X1", economic_status="SCENARIO_ONLY"),)
         return {"strategy_id": strategy, "scenario": "base", "window": window,
-                "cases": (), "equity_curve": (1000., final),
+                "cases": cases, "equity_curve": (1000., final),
+                "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
                 "native_order_verification": {"barriers": 2, "authority": "retained_m22_session_snapshots"}}
     rows = (row("META_X1", ("a", "b"), 1002.), row("FLAT", ("a", "b"), 1000.),
             row("META_X1", ("b", "c"), 1000.), row("FLAT", ("b", "c"), 1000.))
@@ -228,6 +245,7 @@ def test_cost_resilience_does_not_treat_flat_or_missing_as_profit():
               "intervals": {"native_screen": [["a", "b"]]}}
     base = {"strategy_id": "META_X1", "scenario": "base", "window": ("a", "b"),
             "cases": (), "equity_curve": (1000., 1000.),
+            "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
             "native_order_verification": {"barriers": 2, "authority": "retained_m22_session_snapshots"}}
     result = compare_preregistered_native_runs(config, (base,))
     assert result["cost_resilience"][0]["status"] == "INCOMPLETE"
