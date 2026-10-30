@@ -64,6 +64,7 @@ def test_quality_reports_selected_rejected_and_censor(observed):
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
              "X1", "native", "base", obs.decision_ts_ns+1 if i != 2 else None,
              obs.decision_ts_ns+2 if i == 2 else None, 5. if i == 0 else (-2. if i == 1 else None),
+             f"replay-{i}",
              outcome_status="RIGHT_CENSORED" if i == 2 else "COMPLETE"))
     result = summarize_candidate_quality(tuple(decisions), tuple(labels))
     assert result["accepted"]["mean_net_bps"] == 5.
@@ -108,7 +109,7 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     flat_decision = CandidateDecision(flat_group,
         EntryScore("NO_TRADE", .5, 0., True, "NET_EDGE_TOO_SMALL"), False)
     flat_label = GroupOutcome(flat_group.event_id, flat_obs.decision_ts_ns, flat_obs.source_id,
-        flat_obs.fold_id, "X1", "native", "base", flat_obs.decision_ts_ns + 1, None, 0.)
+        flat_obs.fold_id, "X1", "native", "base", flat_obs.decision_ts_ns + 1, None, 0., "replay-flat")
     with_breakeven = summarize_candidate_quality(
         (*decisions, flat_decision), (*labels, flat_label))
     assert with_breakeven["rejected"]["breakeven_complete_outcomes"] == 1
@@ -122,7 +123,8 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert pair["base_mean_net_bps"] == 5. and pair["stress_mean_net_bps"] == -3.
     with pytest.raises(ValueError, match="same modeled path"):
         paired_cost_candidate_quality(tuple(decisions), (labels[0],),
-            (replace(labels[0], cost_scenario_id="stress", label_end_ts_ns=999),))
+            (replace(labels[0], cost_scenario_id="stress",
+                     label_end_ts_ns=labels[0].label_end_ts_ns + 1),))
     no_pairs = summarize_candidate_quality(
         (replace(decisions[0], score=None, selected=False), decisions[2]), (labels[0], labels[2]))
     assert no_pairs["prediction_quality"]["paired_complete_scored"] == 0
@@ -145,7 +147,7 @@ def test_quality_keeps_hard_risk_override_out_of_model_rejection(observed):
         group, EntryScore("LONG", .8, 8., True, "POSITIVE_NET_EDGE"), False,
         "HARD_RISK_OVERRIDE")
     outcome = GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
-        "X1", "native", "base", obs.decision_ts_ns + 1, None, 8.)
+        "X1", "native", "base", obs.decision_ts_ns + 1, None, 8., "replay-risk")
 
     result = summarize_candidate_quality((decision,), (outcome,))
 
@@ -253,4 +255,3 @@ def test_cost_resilience_does_not_treat_flat_or_missing_as_profit():
     report = compare_preregistered_native_runs(config, (base, stress))["cost_resilience"][0]
     assert report["status"] == "NO_COMPLETED_TRADE"
     assert report["both_positive_after_costs"] is None
-
