@@ -59,7 +59,13 @@ def _replay(event: OpportunityEvent, *, entry: int, exit: int | None,
 
 
 def _outcome(event: OpportunityEvent, *, net: float | None, end: int | None,
-             censor: int | None, receipt: str) -> OpportunityOutcome:
+             censor: int | None, receipt: str, gross_return_bps=None,
+             fees_bps=None, slippage_bps=None, funding_cashflow_bps=None) -> OpportunityOutcome:
+    if net is not None:
+        gross_return_bps = net if gross_return_bps is None else gross_return_bps
+        fees_bps = 0.0 if fees_bps is None else fees_bps
+        slippage_bps = 0.0 if slippage_bps is None else slippage_bps
+        funding_cashflow_bps = 0.0 if funding_cashflow_bps is None else funding_cashflow_bps
     return OpportunityOutcome(
         event_id=event.event_id,
         candidate_family=event.family,
@@ -72,6 +78,10 @@ def _outcome(event: OpportunityEvent, *, net: float | None, end: int | None,
         feature_vector_sha256=sha256(b"features").hexdigest(),
         label_end_ts_ns=end,
         net_return_bps=net,
+        gross_return_bps=gross_return_bps,
+        fees_bps=fees_bps,
+        slippage_bps=slippage_bps,
+        funding_cashflow_bps=funding_cashflow_bps,
         fold_id=event.fold_id,
         source_identity=event.source_identity,
         split="train_inner_screen",
@@ -160,6 +170,8 @@ def test_closed_ledger_reconciles_fees_slippage_and_funding_once():
         {event.event_id: _outcome(
             event, net=net, end=START + 10, censor=None,
             receipt=replay.simulation_receipt_id,
+            gross_return_bps=10_000 * math.log(1.1), fees_bps=3.0,
+            slippage_bps=1.0, funding_cashflow_bps=0.5,
         )},
         {}, block_end_ns=END,
     )

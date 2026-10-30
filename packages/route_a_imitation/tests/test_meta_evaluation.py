@@ -65,7 +65,11 @@ def test_quality_reports_selected_rejected_and_censor(observed):
              "X1", "native", "base", obs.decision_ts_ns+1 if i != 2 else None,
              obs.decision_ts_ns+2 if i == 2 else None, 5. if i == 0 else (-2. if i == 1 else None),
              f"replay-{i}",
-             outcome_status="RIGHT_CENSORED" if i == 2 else "COMPLETE"))
+             outcome_status="RIGHT_CENSORED" if i == 2 else "COMPLETE",
+             gross_return_bps=(10. if i == 0 else 0. if i == 1 else None),
+             fees_bps=(2. if i == 0 else 1. if i == 1 else None),
+             slippage_bps=(1. if i == 0 else 1. if i == 1 else None),
+             funding_cashflow_bps=(-2. if i == 0 else 0. if i == 1 else None)))
     result = summarize_candidate_quality(tuple(decisions), tuple(labels))
     assert result["accepted"]["mean_net_bps"] == 5.
     assert result["rejected"]["mean_net_bps"] == -2.
@@ -78,6 +82,11 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     assert result["accepted"]["incomplete_outcome_status_counts"] == {
         "RIGHT_CENSORED": 1,
     }
+    assert result["accepted"]["decomposed_complete_outcomes"] == 1
+    assert result["accepted"]["mean_gross_return_bps"] == 10.
+    assert result["accepted"]["mean_fees_bps"] == 2.
+    assert result["accepted"]["mean_slippage_bps"] == 1.
+    assert result["accepted"]["mean_funding_cashflow_bps"] == -2.
     assert result["accepted_not_native_selected"]["candidates"] == 1
     assert result["accepted_not_native_selected"]["without_outcome"] == 1
     assert result["native_selected"]["candidates"] == 1
@@ -118,7 +127,8 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     flat_decision = CandidateDecision(flat_group,
         EntryScore("NO_TRADE", .5, 0., True, "NET_EDGE_TOO_SMALL"), False)
     flat_label = GroupOutcome(flat_group.event_id, flat_obs.decision_ts_ns, flat_obs.source_id,
-        flat_obs.fold_id, "X1", "native", "base", flat_obs.decision_ts_ns + 1, None, 0., "replay-flat")
+        flat_obs.fold_id, "X1", "native", "base", flat_obs.decision_ts_ns + 1, None, 0., "replay-flat",
+        gross_return_bps=0., fees_bps=0., slippage_bps=0., funding_cashflow_bps=0.)
     with_breakeven = summarize_candidate_quality(
         (*decisions, flat_decision), (*labels, flat_label))
     assert with_breakeven["rejected"]["breakeven_complete_outcomes"] == 1
@@ -127,9 +137,14 @@ def test_quality_reports_selected_rejected_and_censor(observed):
     from dataclasses import replace
     from rles_route_a.teacher_research.meta_evaluation import paired_cost_candidate_quality
     pair = paired_cost_candidate_quality(tuple(decisions), (labels[0],),
-        (replace(labels[0], cost_scenario_id="stress", net_return_bps=-3.),))
+        (replace(labels[0], cost_scenario_id="stress", net_return_bps=-3.,
+                 fees_bps=5., slippage_bps=8., funding_cashflow_bps=0.),))
     assert pair["paired_complete"] == 1 and pair["positive_under_both"] == 0
     assert pair["base_mean_net_bps"] == 5. and pair["stress_mean_net_bps"] == -3.
+    assert pair["base_mean_gross_bps"] == pair["stress_mean_gross_bps"] == 10.
+    assert pair["base_mean_fees_bps"] == 2. and pair["stress_mean_fees_bps"] == 5.
+    assert pair["base_mean_slippage_bps"] == 1. and pair["stress_mean_slippage_bps"] == 8.
+    assert pair["base_mean_funding_bps"] == -2. and pair["stress_mean_funding_bps"] == 0.
     with pytest.raises(ValueError, match="same modeled path"):
         paired_cost_candidate_quality(tuple(decisions), (labels[0],),
             (replace(labels[0], cost_scenario_id="stress",
@@ -156,7 +171,8 @@ def test_quality_keeps_hard_risk_override_out_of_model_rejection(observed):
         group, EntryScore("LONG", .8, 8., True, "POSITIVE_NET_EDGE"), False,
         "HARD_RISK_OVERRIDE")
     outcome = GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
-        "X1", "native", "base", obs.decision_ts_ns + 1, None, 8., "replay-risk")
+        "X1", "native", "base", obs.decision_ts_ns + 1, None, 8., "replay-risk",
+        gross_return_bps=10., fees_bps=1., slippage_bps=1., funding_cashflow_bps=0.)
 
     result = summarize_candidate_quality((decision,), (outcome,))
 

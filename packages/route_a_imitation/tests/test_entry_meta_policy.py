@@ -127,7 +127,9 @@ def _samples(observed):
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id,
                                    obs.fold_id, "X1", "native", "base",
                                    obs.decision_ts_ns + 1, None, 10. if i % 2 else -10.,
-                                   simulation_receipt_id=f"fit-replay-{i}"))
+                                   simulation_receipt_id=f"fit-replay-{i}",
+                                   gross_return_bps=(13. if i % 2 else -7.), fees_bps=1.,
+                                   slippage_bps=2., funding_cashflow_bps=0.))
     return labels[:4], labels[4:], groups
 
 
@@ -218,9 +220,12 @@ def test_fit_rejects_candidates_blocked_by_positions_or_pending_orders(observed)
 
 def test_overlap_uniqueness_weights_share_only_the_concurrent_label_time():
     labels = [
-        GroupOutcome(sha256(b"a").hexdigest(), 1, "source", "fold", "X1", "native", "base", 11, None, 1., "replay-a"),
-        GroupOutcome(sha256(b"b").hexdigest(), 6, "source", "fold", "X1", "native", "base", 16, None, 1., "replay-b"),
-        GroupOutcome(sha256(b"c").hexdigest(), 21, "source", "fold", "X1", "native", "base", 31, None, 1., "replay-c"),
+        GroupOutcome(sha256(b"a").hexdigest(), 1, "source", "fold", "X1", "native", "base", 11, None, 1., "replay-a",
+                     gross_return_bps=3., fees_bps=1., slippage_bps=1., funding_cashflow_bps=0.),
+        GroupOutcome(sha256(b"b").hexdigest(), 6, "source", "fold", "X1", "native", "base", 16, None, 1., "replay-b",
+                     gross_return_bps=3., fees_bps=1., slippage_bps=1., funding_cashflow_bps=0.),
+        GroupOutcome(sha256(b"c").hexdigest(), 21, "source", "fold", "X1", "native", "base", 31, None, 1., "replay-c",
+                     gross_return_bps=3., fees_bps=1., slippage_bps=1., funding_cashflow_bps=0.),
     ]
     assert overlap_uniqueness_weights(labels) == pytest.approx([.75, .75, 1.])
     fully_overlapped = [replace(labels[0], event_id=sha256(b"d").hexdigest(), label_end_ts_ns=10),
@@ -231,10 +236,13 @@ def test_overlap_uniqueness_weights_share_only_the_concurrent_label_time():
 
 
 def test_overlap_weights_reject_censored_or_duplicate_labels():
-    label = GroupOutcome(sha256(b"a").hexdigest(), 1, "source", "fold", "X1", "native", "base", 2, None, 1., "replay")
+    label = GroupOutcome(sha256(b"a").hexdigest(), 1, "source", "fold", "X1", "native", "base", 2, None, 1., "replay",
+                         gross_return_bps=3., fees_bps=1., slippage_bps=1., funding_cashflow_bps=0.)
     with pytest.raises(ValueError, match="complete future labels"):
         overlap_uniqueness_weights([replace(label, label_end_ts_ns=None, censor_ts_ns=3,
-                                            net_return_bps=None, outcome_status="RIGHT_CENSORED")])
+                                            net_return_bps=None, outcome_status="RIGHT_CENSORED",
+                                            gross_return_bps=None, fees_bps=None,
+                                            slippage_bps=None, funding_cashflow_bps=None)])
     with pytest.raises(ValueError, match="complete future labels"):
         overlap_uniqueness_weights([label, label])
 

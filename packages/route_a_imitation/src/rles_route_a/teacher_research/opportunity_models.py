@@ -33,9 +33,9 @@ RETURN_BASIS_IDS = frozenset({
 class OpportunityOutcome:
     """One complete candidate outcome under a frozen continuation policy.
 
-    ``net_return_bps`` must already include the selected scenario's modeled
-    fees, slippage, and funding. A censored candidate carries no outcome and
-    is therefore never silently turned into a zero-return training example.
+    ``net_return_bps`` is reconciled as gross reference-price return less fees
+    and modeled slippage plus signed funding. A censored candidate carries no
+    complete-trade economics and is never turned into a zero-return example.
     """
 
     event_id: str
@@ -64,6 +64,10 @@ class OpportunityOutcome:
     evidence_type: OutcomeEvidence = "MODEL_COUNTERFACTUAL"
     economic_status: Literal["SCENARIO_ONLY"] = "SCENARIO_ONLY"
     censor_ts_ns: int | None = None
+    gross_return_bps: float | None = None
+    fees_bps: float | None = None
+    slippage_bps: float | None = None
+    funding_cashflow_bps: float | None = None
 
     def __post_init__(self) -> None:
         if (not isinstance(self.event_id, str) or len(self.event_id) != 64
@@ -105,6 +109,10 @@ class OpportunityOutcome:
             if (self.label_end_ts_ns is not None or type(self.censor_ts_ns) is not int
                     or self.censor_ts_ns <= self.decision_ts_ns):
                 raise ValueError("censored outcomes require only a future censor clock")
+            if any(value is not None for value in (
+                    self.gross_return_bps, self.fees_bps, self.slippage_bps,
+                    self.funding_cashflow_bps)):
+                raise ValueError("censored outcomes cannot supply complete-trade economics")
         elif (isinstance(self.net_return_bps, bool)
               or not isinstance(self.net_return_bps, (int, float))
               or not math.isfinite(self.net_return_bps)
@@ -112,6 +120,19 @@ class OpportunityOutcome:
               or self.label_end_ts_ns <= self.decision_ts_ns
               or self.censor_ts_ns is not None):
             raise ValueError("complete outcomes require finite net return and future end clock")
+        else:
+            components = (self.gross_return_bps, self.fees_bps,
+                          self.slippage_bps, self.funding_cashflow_bps)
+            if any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   or not math.isfinite(value) for value in components):
+                raise ValueError("complete outcomes require finite gross/cost components")
+            if self.fees_bps < 0 or self.slippage_bps < 0:
+                raise ValueError("fees and modeled slippage must be nonnegative")
+            expected_net = (self.gross_return_bps - self.fees_bps
+                            - self.slippage_bps + self.funding_cashflow_bps)
+            tolerance = 1e-8 * max(1.0, abs(self.net_return_bps), abs(expected_net))
+            if abs(self.net_return_bps - expected_net) > tolerance:
+                raise ValueError("gross, fees, slippage and funding do not reconcile to net return")
 
 
 @dataclass(frozen=True, slots=True)

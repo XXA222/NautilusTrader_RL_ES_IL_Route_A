@@ -1,3 +1,4 @@
+from dataclasses import replace
 from hashlib import sha256
 from math import log
 
@@ -117,11 +118,20 @@ def test_fixed_exit_labeler_preserves_winners_losers_and_censored_candidates():
     ) for call in callback_calls)
     assert long_label.net_return_bps == pytest.approx(log(101 / 100) * 10_000 - 13)
     assert short_label.net_return_bps == pytest.approx(-log(99 / 100) * 10_000 - 119)
+    assert long_label.gross_return_bps == pytest.approx(log(101 / 100) * 10_000)
+    assert (long_label.fees_bps, long_label.slippage_bps,
+            long_label.funding_cashflow_bps) == (10, 4, 1)
+    assert (short_label.fees_bps, short_label.slippage_bps,
+            short_label.funding_cashflow_bps) == (110, 4, -5)
     assert long_label.net_return_bps > 0
     assert short_label.net_return_bps < 0
     assert censored_label.net_return_bps is None
     assert censored_label.label_end_ts_ns is None
     assert censored_label.censor_ts_ns == interval[1]
+    assert all(value is None for value in (
+        censored_label.gross_return_bps, censored_label.fees_bps,
+        censored_label.slippage_bps, censored_label.funding_cashflow_bps,
+    ))
     assert batch.complete_count == 2
     assert batch.censored_count == 1
     assert {row.event_id for row in batch.outcomes} == {event.event_id for event in events}
@@ -198,6 +208,34 @@ def test_outcome_crossing_independent_block_end_is_censored_at_boundary():
     assert batch.outcomes[0].net_return_bps is None
     assert batch.outcomes[0].label_end_ts_ns is None
     assert batch.outcomes[0].censor_ts_ns == interval[1]
+
+
+def test_complete_outcome_rejects_mismatched_economic_decomposition():
+    event = _event(41)
+    replay = CounterfactualTradeReplay(
+        event_id=event.event_id,
+        entry_ts_ns=event.decision_ts_ns + 1,
+        entry_price=100.0,
+        exit_ts_ns=event.decision_ts_ns + 10,
+        exit_price=101.0,
+        entry_fee_bps=2.0,
+        exit_fee_bps=3.0,
+        entry_slippage_bps=1.0,
+        exit_slippage_bps=1.5,
+        funding_cashflow_bps=-0.5,
+        censor_ts_ns=None,
+        simulation_receipt_id="decomposition-check",
+    )
+    batch = label_counterfactual_candidates(
+        (event,), lambda *_: replay, {event.event_id: (0.5,)},
+        {event.event_id: "block"},
+        {event.event_id: (event.decision_ts_ns, event.decision_ts_ns + 20)},
+        feature_names=("edge",), split="train_fit",
+        exit_policy_id="fixed-exit-v1", execution_recipe="market-like-v1",
+        cost_scenario_id="base", return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
+    )
+    with pytest.raises(ValueError, match="do not reconcile"):
+        replace(batch.outcomes[0], fees_bps=batch.outcomes[0].fees_bps + 1.0)
 
 
 def test_full_denominator_label_to_later_calibrated_model_chain():
