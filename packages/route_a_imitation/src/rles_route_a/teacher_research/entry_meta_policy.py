@@ -9,7 +9,9 @@ import numpy as np
 
 from .candidate_event_union import CandidateGroup
 from .conditional_outcome_labels import GroupOutcome
-from .opportunity_models import _fit_logistic, _fit_platt, _sigmoid
+from .opportunity_models import (_fit_logistic, _fit_platt, _sigmoid,
+                                overlap_uniqueness_weights,
+                                uniqueness_effective_label_count)
 
 
 def missing_candidate_features(observation, names: Sequence[str]) -> tuple[str, ...]:
@@ -30,7 +32,9 @@ def _features(group: CandidateGroup, names: Sequence[str], cost_bps: float | Non
             values.append(float(len(group.teachers)))
         elif name.startswith("teacher.") and len(name) > len("teacher."):
             values.append(float(name[8:] in {teacher for teacher, _ in group.teachers}))
-        elif name == "cost.round_trip_bps" and cost_bps is not None:
+        elif name == "cost.round_trip_bps":
+            if cost_bps is None:
+                raise ValueError("the configured cost feature requires a frozen cost")
             values.append(cost_bps)
         else:
             raise ValueError("only configured causal market/account/teacher/consensus/cost features are permitted")
@@ -71,6 +75,9 @@ class FrozenEntryMetaPolicy:
     calibration_count: int = 0
     fee_bps_per_leg: float | None = None
     slippage_bps_per_leg: float | None = None
+    fit_effective_label_count: float = 0.0
+    calibration_effective_label_count: float = 0.0
+    fit_weighting_id: str = "AVERAGE_INVERSE_LABEL_CONCURRENCY_V1"
 
     def score(self, group: CandidateGroup) -> EntryScore:
         obs = group.observation
@@ -120,6 +127,7 @@ def fit_entry_meta_policy(
     if (fee_bps_per_leg is None) != (slippage_bps_per_leg is None):
         raise ValueError("fee and slippage must be specified together")
     if fee_bps_per_leg is not None:
+        assert slippage_bps_per_leg is not None
         if (any(isinstance(x, bool) or not isinstance(x, (int, float))
                 or not isfinite(x) or x < 0 for x in (fee_bps_per_leg, slippage_bps_per_leg))
                 or cost_bps is None
@@ -163,15 +171,22 @@ def fit_entry_meta_policy(
     if (not all(np.isfinite(x).all() for x in (train_x, cal_x, train_y, cal_y))
             or len(np.unique(train_y > 0)) != 2 or len(np.unique(cal_y > 0)) != 2):
         raise ValueError("finite fit/calibration examples with wins and losses required")
-    mean, scale = train_x.mean(axis=0), train_x.std(axis=0)
+    fit_weights = overlap_uniqueness_weights(fit)
+    calibration_weights = overlap_uniqueness_weights(calibration)
+    mean = np.average(train_x, axis=0, weights=fit_weights)
+    scale = np.sqrt(np.average((train_x - mean) ** 2, axis=0, weights=fit_weights))
     scale[scale < 1e-12] = 1.
     train_z = np.column_stack((np.ones(len(train_x)), (train_x - mean) / scale))
     cal_z = np.column_stack((np.ones(len(cal_x)), (cal_x - mean) / scale))
-    logistic = _fit_logistic(train_z, (train_y > 0).astype(float), l2, 0.05, 2000)
-    calibrator = _fit_platt(cal_z @ logistic, (cal_y > 0).astype(float), 0.05, 2000)
+    logistic = _fit_logistic(train_z, (train_y > 0).astype(float), l2, 0.05, 2000,
+                             sample_weights=fit_weights)
+    calibrator = _fit_platt(cal_z @ logistic, (cal_y > 0).astype(float), 0.05, 2000,
+                            sample_weights=calibration_weights)
     penalty = np.eye(train_z.shape[1]) * l2
     penalty[0, 0] = 0.
-    value = np.linalg.solve(train_z.T @ train_z + penalty, train_z.T @ train_y)
+    weighted_train_z = train_z * fit_weights[:, None]
+    value = np.linalg.solve(train_z.T @ weighted_train_z + penalty,
+                            train_z.T @ (fit_weights * train_y))
     for array in (mean, scale, logistic, value):
         array.setflags(write=False)
     lower, upper = train_x.min(axis=0), train_x.max(axis=0)
@@ -181,10 +196,16 @@ def fit_entry_meta_policy(
         names, mean, scale, lower, upper, logistic, calibrator, value,
         all_labels[0].source_identity, all_labels[0].fold_id, next(iter(specs)),
         next(iter(recipes)), max(x.label_end_ts_ns or 0 for x in calibration), margin_bps,
-        cost_bps, float(np.mean(np.abs(cal_z @ value - cal_y))), next(iter(bases)),
-        float(np.mean((np.asarray([_sigmoid(calibrator[0] * float(x) + calibrator[1])
-                                  for x in cal_z @ logistic]) - (cal_y > 0)) ** 2)),
+        cost_bps,
+        float(np.average(np.abs(cal_z @ value - cal_y), weights=calibration_weights)),
+        next(iter(bases)),
+        float(np.average((np.asarray([_sigmoid(calibrator[0] * float(x) + calibrator[1])
+                                     for x in cal_z @ logistic]) - (cal_y > 0)) ** 2,
+                         weights=calibration_weights)),
         len(fit), len(calibration), fee_bps_per_leg, slippage_bps_per_leg,
+        uniqueness_effective_label_count(fit_weights),
+        uniqueness_effective_label_count(calibration_weights),
+        "AVERAGE_INVERSE_LABEL_CONCURRENCY_V1",
     )
 
 

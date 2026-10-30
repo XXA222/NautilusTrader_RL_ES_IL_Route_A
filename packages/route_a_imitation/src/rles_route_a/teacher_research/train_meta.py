@@ -8,7 +8,9 @@ from typing import Callable, Sequence
 from rles_route_a.integration.scope import HostTrainGrant
 from .candidate_event_union import CandidateGroup
 from .conditional_outcome_labels import FrozenReplay, GroupOutcome, label_grouped_candidates, purge_before
-from .entry_meta_policy import FrozenEntryMetaPolicy, fit_entry_meta_policy, missing_candidate_features
+from .entry_meta_policy import (FrozenEntryMetaPolicy, fit_entry_meta_policy,
+                                missing_candidate_features)
+from .opportunity_models import overlap_uniqueness_weights, uniqueness_effective_label_count
 
 
 class MetaTrainingError(ValueError):
@@ -34,8 +36,12 @@ def _overlap_diagnostics(labels):
         overlapping += bool(active)
         heappush(active, label.label_end_ts_ns)
         maximum = max(maximum, len(active))
+    uniqueness = overlap_uniqueness_weights(labels)
     return {"labels": len(labels), "labels_starting_during_another": overlapping,
             "max_concurrent_labels": maximum,
+            "uniqueness_weight_sum": float(uniqueness.sum()),
+            "uniqueness_effective_label_count": uniqueness_effective_label_count(uniqueness),
+            "mean_uniqueness_weight": float(uniqueness.mean()) if len(uniqueness) else None,
             "interpretation": "overlapping labels are dependent; counts are not independent trials"}
 
 
@@ -89,12 +95,14 @@ def train_meta_on_registered_candidates(
     if any(not calibration_interval[0] <= g.observation.decision_ts_ns < calibration_interval[1]
            for g in calibration_groups):
         raise ValueError("calibration candidate outside declared interval")
-    kwargs = dict(exit_policy_id="X1", execution_recipe=execution_recipe,
-                  cost_scenario_id=scenario, gross_return_method="simple")
-    fit_outcomes = (label_grouped_candidates(fit_groups, replay, block_end_ns=fit_interval[1], **kwargs)
+    fit_outcomes = (label_grouped_candidates(fit_groups, replay, exit_policy_id="X1",
+                    execution_recipe=execution_recipe, cost_scenario_id=scenario,
+                    block_end_ns=fit_interval[1], gross_return_method="simple")
                     if fit_groups else ())
-    calibration_outcomes = (label_grouped_candidates(calibration_groups, replay,
-                            block_end_ns=calibration_interval[1], **kwargs) if calibration_groups else ())
+    calibration_outcomes = (label_grouped_candidates(calibration_groups, replay, exit_policy_id="X1",
+                            execution_recipe=execution_recipe, cost_scenario_id=scenario,
+                            block_end_ns=calibration_interval[1], gross_return_method="simple")
+                            if calibration_groups else ())
     interval_fit = purge_before(fit_outcomes, next_start_ns=calibration_interval[0],
                                 embargo_ns=embargo_ns)
     interval_cal = tuple(x for x in calibration_outcomes if x.outcome_status == "COMPLETE"
@@ -198,6 +206,8 @@ def train_meta_from_preregistered_x1(
     costs = config["cost_scenarios"][scenario]
     from .execution_binding import validate_native_execution
     execution_recipe = getattr(native_factory, "route_a_execution_recipe_hash", None)
+    if not isinstance(execution_recipe, str) or not execution_recipe:
+        raise ValueError("native factory lacks a frozen execution recipe identity")
     if config["execution"]["entry"] != "next_open_market":
         raise ValueError("unsupported preregistered entry model")
     validate_native_execution(native_factory, scenario=scenario, expected_recipe=execution_recipe,

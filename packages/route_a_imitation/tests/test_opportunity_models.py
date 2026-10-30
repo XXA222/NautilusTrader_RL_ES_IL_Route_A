@@ -143,6 +143,9 @@ def test_logistic_value_model_uses_later_calibration_and_fit_only_support():
     assert len(long_estimate.fold_calibration_id) == 64
     assert model.fit_sample_count == 12
     assert model.calibration_sample_count == 12
+    assert model.fit_effective_label_count == pytest.approx(12.)
+    assert model.calibration_effective_label_count == pytest.approx(12.)
+    assert model.fit_weighting_id == "AVERAGE_INVERSE_LABEL_CONCURRENCY_V1"
     assert model.fit_independent_blocks == 3
     assert model.calibration_independent_blocks == 3
     assert not model.mean.flags.writeable

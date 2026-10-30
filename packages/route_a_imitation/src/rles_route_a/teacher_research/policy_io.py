@@ -10,7 +10,7 @@ import numpy as np
 
 from .entry_meta_policy import FrozenEntryMetaPolicy
 
-SCHEMA = "rles.route-a.frozen-entry-meta-policy.v1"
+SCHEMA = "rles.route-a.frozen-entry-meta-policy.v2"
 _ARRAYS = ("mean", "scale", "lower", "upper", "logistic", "value_weights")
 
 
@@ -73,6 +73,14 @@ def policy_from_document(doc: dict) -> FrozenEntryMetaPolicy:
             or type(data["fit_count"]) is not int or data["fit_count"] < 4
             or type(data["calibration_count"]) is not int or data["calibration_count"] < 4):
         raise ValueError("invalid training sample counts or availability clock")
+    for name, count_name in (("fit_effective_label_count", "fit_count"),
+                             ("calibration_effective_label_count", "calibration_count")):
+        value = data[name]
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not isfinite(value) or not 0 < value <= data[count_name]):
+            raise ValueError(f"invalid effective unique-label count: {name}")
+    if data["fit_weighting_id"] != "AVERAGE_INVERSE_LABEL_CONCURRENCY_V1":
+        raise ValueError("unsupported frozen sample-weighting recipe")
     for name in ("margin_bps", "calibration_mae_bps", "calibration_brier"):
         value = data[name]
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value) or value < 0:

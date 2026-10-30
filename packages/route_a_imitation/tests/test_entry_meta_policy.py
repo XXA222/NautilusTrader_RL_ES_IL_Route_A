@@ -1,11 +1,16 @@
 from dataclasses import replace
+from hashlib import sha256
 
+import numpy as np
 import pytest
 
 from rles_route_a.teacher_research.candidate_event_union import TeacherProposal, group_teacher_proposals
 from rles_route_a.teacher_research.conditional_outcome_labels import GroupOutcome
 from rles_route_a.teacher_research.entry_meta_policy import (EntryScore, fit_entry_meta_policy,
+                                                              overlap_uniqueness_weights,
                                                               summarize_entry_scores)
+from rles_route_a.teacher_research.opportunity_models import _fit_logistic, _fit_platt
+from rles_route_a.teacher_research.opportunity_models import uniqueness_effective_label_count
 
 
 def test_gate_diagnostics_count_overlapping_filters_without_changing_threshold():
@@ -49,6 +54,29 @@ def test_frozen_entry_model_is_causal_and_respects_pending(observed):
     assert model.score(group).action == "LONG"
 
 
+def test_fitted_meta_policy_does_not_double_weight_duplicate_future_interval(observed):
+    fit, calibration, groups = _samples(observed)
+    reference = fit_entry_meta_policy(fit, calibration, groups,
+        feature_names=("market.trend_1h",), margin_bps=0.)
+    original = groups[fit[0].event_id]
+    duplicate_observation = replace(original.observation,
+                                    snapshot_id=sha256(b"same-minute-duplicate").hexdigest())
+    duplicate, = group_teacher_proposals([TeacherProposal(
+        duplicate_observation, original.teachers[0][0], original.side,
+        original.teachers[0][1])])
+    duplicate_label = replace(fit[0], event_id=duplicate.event_id)
+    groups[duplicate.event_id] = duplicate
+    assert overlap_uniqueness_weights((*fit, duplicate_label)) == pytest.approx(
+        [.5, 1., 1., 1., .5])
+    assert uniqueness_effective_label_count(
+        overlap_uniqueness_weights((*fit, duplicate_label))) == pytest.approx(4.)
+    weighted = fit_entry_meta_policy((*fit, duplicate_label), calibration, groups,
+        feature_names=("market.trend_1h",), margin_bps=0.)
+    assert weighted.logistic == pytest.approx(reference.logistic)
+    assert weighted.value_weights == pytest.approx(reference.value_weights)
+    assert weighted.calibrator == pytest.approx(reference.calibrator)
+
+
 def test_overlap_and_changed_exit_policy_rejected(observed):
     fit, calibration, groups = _samples(observed)
     fit[0] = replace(fit[0], label_end_ts_ns=calibration[0].decision_ts_ns)
@@ -60,3 +88,42 @@ def test_overlap_and_changed_exit_policy_rejected(observed):
     with pytest.raises(ValueError, match="recipes"):
         fit_entry_meta_policy(fit, calibration, groups,
                               feature_names=("market.trend_1h",), margin_bps=0.)
+
+
+def test_overlap_uniqueness_weights_share_only_the_concurrent_label_time():
+    labels = [
+        GroupOutcome("a", 0, "source", "fold", "X1", "native", "base", 10, None, 1.),
+        GroupOutcome("b", 5, "source", "fold", "X1", "native", "base", 15, None, 1.),
+        GroupOutcome("c", 20, "source", "fold", "X1", "native", "base", 30, None, 1.),
+    ]
+    assert overlap_uniqueness_weights(labels) == pytest.approx([.75, .75, 1.])
+    fully_overlapped = [replace(labels[0], event_id="d", label_end_ts_ns=10),
+                        replace(labels[0], event_id="e", label_end_ts_ns=10)]
+    assert overlap_uniqueness_weights(fully_overlapped) == pytest.approx([.5, .5])
+    assert uniqueness_effective_label_count(
+        overlap_uniqueness_weights(fully_overlapped)) == pytest.approx(1.)
+
+
+def test_overlap_weights_reject_censored_or_duplicate_labels():
+    label = GroupOutcome("a", 1, "source", "fold", "X1", "native", "base", 2, None, 1.)
+    with pytest.raises(ValueError, match="complete future labels"):
+        overlap_uniqueness_weights([replace(label, label_end_ts_ns=None, censor_ts_ns=3,
+                                            net_return_bps=None, outcome_status="RIGHT_CENSORED")])
+    with pytest.raises(ValueError, match="complete future labels"):
+        overlap_uniqueness_weights([label, label])
+
+
+def test_uniqueness_weights_prevent_duplicate_overlap_from_inflating_model_fit():
+    design = np.asarray([[1., -1.], [1., 0.], [1., 1.], [1., 2.]])
+    target = np.asarray([0., 0., 1., 1.])
+    duplicated = np.asarray([design[0], design[0], *design[1:]])
+    duplicated_target = np.asarray([target[0], target[0], *target[1:]])
+    weights = np.asarray([.5, .5, 1., 1., 1.])
+    assert _fit_logistic(design, target, .2, .1, 400) == pytest.approx(
+        _fit_logistic(duplicated, duplicated_target, .2, .1, 400,
+                      sample_weights=weights))
+    logits = design[:, 1] * 2
+    duplicated_logits = np.asarray([logits[0], logits[0], *logits[1:]])
+    assert _fit_platt(logits, target, .01, 400) == pytest.approx(
+        _fit_platt(duplicated_logits, duplicated_target, .01, 400,
+                   sample_weights=weights))
