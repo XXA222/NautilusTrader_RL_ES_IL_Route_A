@@ -24,6 +24,8 @@ def test_no_entry_is_never_a_zero_return(observed, status):
         execution_recipe="limit", cost_scenario_id="base", block_end_ns=obs.decision_ts_ns + 10)
     assert result.net_return_bps is None and result.outcome_status == status
     assert (result.censor_ts_ns is not None) == (status == "RIGHT_CENSORED")
+    assert result.simulation_receipt_id == "r"
+    assert result.observed_until_ns == obs.decision_ts_ns + 5
 
 
 def test_linear_and_log_returns_have_explicit_bases(observed):
@@ -39,12 +41,40 @@ def test_linear_and_log_returns_have_explicit_bases(observed):
     assert linear.net_return_bps == pytest.approx(994.)
     assert logarithmic.net_return_bps == pytest.approx(-log(.9)*10000 - 6)
     assert linear.return_basis_id == "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS"
+    assert linear.simulation_receipt_id == "r"
+    assert linear.observed_until_ns is None
 
 
 def test_group_outcome_rejects_ambiguous_return_basis():
     with pytest.raises(ValueError, match="explicit reference basis"):
         GroupOutcome("a" * 64, 1, "source", "fold", "X1", "execution", "base",
-                     2, None, 1., return_basis_id="entry-notional-bps-v1")
+                     2, None, 1., "replay", return_basis_id="entry-notional-bps-v1")
+
+
+def test_group_outcome_rejects_native_evidence_and_status_return_conflicts():
+    common = ("a" * 64, 1, "source", "fold", "X1", "execution", "base", 2, None, 1., "receipt")
+    with pytest.raises(ValueError, match="scenario-only model counterfactuals"):
+        GroupOutcome(*common, evidence_type="OBSERVED_NATIVE_CASE")
+    with pytest.raises(ValueError, match="incomplete group outcome"):
+        GroupOutcome("b" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     None, 2, 1., "receipt", outcome_status="RIGHT_CENSORED")
+    with pytest.raises(ValueError, match="observation end"):
+        GroupOutcome("c" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     None, None, None, "receipt", outcome_status="MISSED",
+                     observed_until_ns=1)
+
+
+def test_group_outcome_requires_finite_complete_return_and_bound_replay_receipt():
+    with pytest.raises(ValueError, match="complete group outcome"):
+        GroupOutcome("d" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     2, None, float("nan"), "receipt")
+    with pytest.raises(ValueError, match="simulation receipt identities"):
+        GroupOutcome("e" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     2, None, 1.0, " ")
+    with pytest.raises(ValueError, match="matching future observation clock"):
+        GroupOutcome("f" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     None, 3, None, "receipt", outcome_status="RIGHT_CENSORED",
+                     observed_until_ns=4)
 
 
 def test_retained_actual_native_trade_cashflow():
@@ -94,4 +124,3 @@ def test_same_native_case_and_research_label_discrepancy_are_accounted():
     with pytest.raises(ValueError, match="same trade"):
         reconcile_counterfactual_to_native(replay=replay, native_case=case,
             decision_ts_ns=case["entry_decision_ts_ns"]+1, side=1)
-
