@@ -105,7 +105,7 @@ def test_boundary_exit_fill_is_censored_and_not_a_zero_label(observed):
         {event.event_id: (START, schedule.end_ns)}, feature_names=["trend"],
         split="train_fit", exit_policy_id=schedule.policy_id,
         execution_recipe="next-open-v1", cost_scenario_id="base",
-        return_basis_id="entry-notional-simple-bps-v1", gross_return_method="simple",
+        return_basis_id="LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS", gross_return_method="simple",
     )
     assert batch.outcomes[0].net_return_bps is None
     assert batch.censored_count == 1
@@ -126,7 +126,7 @@ def test_simple_cashflow_fees_and_funding_share_entry_notional_basis(observed):
         {event.event_id: (START, schedule.end_ns)}, feature_names=["trend"],
         split="train_fit", exit_policy_id=schedule.policy_id,
         execution_recipe="next-open-v1", cost_scenario_id="base",
-        return_basis_id="entry-notional-simple-bps-v1", gross_return_method="simple",
+        return_basis_id="LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS", gross_return_method="simple",
     )
     expected = (100.16 / 100.01 - 1) * 10_000 - 6 * (1 + 100.16 / 100.01) + expected_funding
     assert batch.outcomes[0].net_return_bps == pytest.approx(expected)

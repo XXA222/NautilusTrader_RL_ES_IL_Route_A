@@ -18,7 +18,7 @@ def _estimate(event_id: str, passed: tuple[bool, bool, bool, bool]) -> NetValueE
         exit_policy_id="fixed-exit-diagnostic",
         execution_recipe="next-open-v1",
         cost_scenario_id="base",
-        return_basis_id="entry-notional-log-return-bps-v1",
+        return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
         rule_version="candidates-v2",
         outcome_method="synthetic-test-v1",
         feature_spec_hash=sha256(b"feature-spec").hexdigest(),

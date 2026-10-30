@@ -47,7 +47,7 @@ def _outcome(
         exit_policy_id="fixed-p0-v1",
         execution_recipe="market-like-v1",
         cost_scenario_id="base-12bp",
-        return_basis_id="entry-notional-bps-v1",
+        return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
         simulation_receipt_id=f"sim-receipt-{index}",
         outcome_method="shared-flat-entry-and-fixed-exit-policy",
         evidence_type="MODEL_COUNTERFACTUAL",
@@ -70,6 +70,12 @@ def _candidate_event(row):
         snapshot_id=row.snapshot_id,
         feature_spec_hash=row.feature_spec_hash,
     )
+
+
+def test_outcome_rejects_ambiguous_return_basis_identity():
+    row = _outcome(0, split="train_fit", decision=1_000, net=1.0)
+    with pytest.raises(ValueError, match="explicit supported reference basis"):
+        replace(row, return_basis_id="entry-notional-bps-v1")
 
 
 def test_logistic_value_model_uses_later_calibration_and_fit_only_support():

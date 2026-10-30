@@ -3,7 +3,12 @@ from math import log
 import pytest
 
 from rles_route_a.teacher_research.candidate_event_union import TeacherProposal, group_teacher_proposals
-from rles_route_a.teacher_research.conditional_outcome_labels import FrozenReplay, NoEntryReplay, label_grouped_candidates
+from rles_route_a.teacher_research.conditional_outcome_labels import (
+    FrozenReplay,
+    GroupOutcome,
+    NoEntryReplay,
+    label_grouped_candidates,
+)
 from rles_route_a.teacher_research.native_reconciliation import reconcile_native_trade
 from rles_route_a.teacher_research.opportunity_labels import CounterfactualTradeReplay
 
@@ -34,6 +39,12 @@ def test_linear_and_log_returns_have_explicit_bases(observed):
     assert linear.net_return_bps == pytest.approx(994.)
     assert logarithmic.net_return_bps == pytest.approx(-log(.9)*10000 - 6)
     assert linear.return_basis_id == "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS"
+
+
+def test_group_outcome_rejects_ambiguous_return_basis():
+    with pytest.raises(ValueError, match="explicit reference basis"):
+        GroupOutcome("a" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     2, None, 1., return_basis_id="entry-notional-bps-v1")
 
 
 def test_retained_actual_native_trade_cashflow():
