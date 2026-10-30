@@ -31,9 +31,11 @@ def trained_policy():
         obs = observation(minute, ema_9=101. if minute % 2 == 0 else 99.)
         group, = group_teacher_proposals([TeacherProposal(obs, "T01_EMA_9_21", 1, "EMA_CROSS_LONG")])
         groups[group.event_id] = group
+        net = 20. if minute % 2 == 0 else -20.
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id,
             obs.fold_id, "X1", "native", "base", obs.decision_ts_ns + 1, None,
-            20. if minute % 2 == 0 else -20., f"replay-{minute}"))
+            net, f"replay-{minute}", gross_return_bps=net + 4., fees_bps=2.,
+            slippage_bps=2., funding_cashflow_bps=0.))
     return fit_entry_meta_policy(labels[:4], labels[4:], groups,
                                  feature_names=("market.ema_9", "teacher.T01_EMA_9_21",
                                                 "consensus.count", "cost.round_trip_bps"),

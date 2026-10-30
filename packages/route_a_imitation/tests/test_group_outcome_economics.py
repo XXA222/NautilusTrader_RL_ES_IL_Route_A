@@ -43,6 +43,21 @@ def test_linear_and_log_returns_have_explicit_bases(observed):
     assert linear.return_basis_id == "LINEAR_REFERENCE_ENTRY_NOTIONAL_BPS"
     assert linear.simulation_receipt_id == "r"
     assert linear.observed_until_ns is None
+    assert linear.gross_return_bps == pytest.approx(1000.)
+    assert linear.fees_bps == pytest.approx(2.)
+    assert linear.slippage_bps == pytest.approx(2.)
+    assert linear.funding_cashflow_bps == pytest.approx(-2.)
+    assert linear.net_return_bps == pytest.approx(
+        linear.gross_return_bps - linear.fees_bps - linear.slippage_bps
+        + linear.funding_cashflow_bps)
+    assert logarithmic.gross_return_bps == pytest.approx(-log(.9) * 10000)
+
+
+def test_group_outcome_requires_reconciled_complete_economic_components():
+    with pytest.raises(ValueError, match="do not reconcile"):
+        GroupOutcome("a" * 64, 1, "source", "fold", "X1", "execution", "base",
+                     2, None, 1., "receipt", gross_return_bps=4., fees_bps=1.,
+                     slippage_bps=1., funding_cashflow_bps=0.)
 
 
 def test_group_outcome_rejects_ambiguous_return_basis():

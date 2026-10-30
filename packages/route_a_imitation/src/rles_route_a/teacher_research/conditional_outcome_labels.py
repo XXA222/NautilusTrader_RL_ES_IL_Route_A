@@ -56,6 +56,10 @@ class GroupOutcome:
     outcome_status: str = "COMPLETE"
     return_basis_id: str = "LOG_REFERENCE_ENTRY_NOTIONAL_BPS"
     observed_until_ns: int | None = None
+    gross_return_bps: float | None = None
+    fees_bps: float | None = None
+    slippage_bps: float | None = None
+    funding_cashflow_bps: float | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.event_id, str) or not re.fullmatch(r"[0-9a-f]{64}", self.event_id):
@@ -83,8 +87,21 @@ class GroupOutcome:
                     or self.label_end_ts_ns <= self.decision_ts_ns
                     or self.censor_ts_ns is not None or self.observed_until_ns is not None):
                 raise ValueError("complete group outcome requires a finite return and later exit")
+            components = (self.gross_return_bps, self.fees_bps,
+                          self.slippage_bps, self.funding_cashflow_bps)
+            if any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   or not isfinite(value) for value in components):
+                raise ValueError("complete outcome requires all finite gross/cost components")
+            expected_net = (self.gross_return_bps - self.fees_bps - self.slippage_bps
+                            + self.funding_cashflow_bps)
+            tolerance = 1e-8 * max(1.0, abs(self.net_return_bps), abs(expected_net))
+            if abs(self.net_return_bps - expected_net) > tolerance:
+                raise ValueError("gross, fees, slippage and funding do not reconcile to net return")
         elif (self.net_return_bps is not None or self.label_end_ts_ns is not None):
             raise ValueError("incomplete group outcome cannot supply a return or exit clock")
+        elif any(value is not None for value in (self.gross_return_bps, self.fees_bps,
+                                                 self.slippage_bps, self.funding_cashflow_bps)):
+            raise ValueError("incomplete outcome cannot supply complete-trade economics")
         elif self.outcome_status == "RIGHT_CENSORED":
             if (type(self.censor_ts_ns) is not int or self.censor_ts_ns <= self.decision_ts_ns
                     or (self.observed_until_ns is not None
@@ -152,9 +169,10 @@ def label_grouped_candidates(
             ratio = fact.exit_price / fact.entry_price
             price_return = log(ratio) if gross_return_method == "log" else ratio - 1
             gross = group.side * price_return * 10000
-            net = (gross - fact.entry_fee_bps - fact.exit_fee_bps
-                   - fact.entry_slippage_bps - fact.exit_slippage_bps
-                   + fact.funding_cashflow_bps)
+            fees = fact.entry_fee_bps + fact.exit_fee_bps
+            slippage = fact.entry_slippage_bps + fact.exit_slippage_bps
+            funding = fact.funding_cashflow_bps
+            net = gross - fees - slippage + funding
         result.append(GroupOutcome(
             group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
             exit_policy_id, execution_recipe, cost_scenario_id, end, censor, net,
@@ -162,6 +180,10 @@ def label_grouped_candidates(
             return_basis_id=basis,
             simulation_receipt_id=fact.simulation_receipt_id,
             observed_until_ns=censor,
+            gross_return_bps=gross if net is not None else None,
+            fees_bps=fees if net is not None else None,
+            slippage_bps=slippage if net is not None else None,
+            funding_cashflow_bps=funding if net is not None else None,
         ))
     return tuple(result)
 

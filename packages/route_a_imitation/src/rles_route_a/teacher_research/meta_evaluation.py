@@ -111,12 +111,36 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
                                            if label.outcome_status != "COMPLETE")
         values = [o.net_return_bps for o in labels if o.outcome_status == "COMPLETE"
                   and o.net_return_bps is not None]
+        decomposed = [o for o in labels if o.outcome_status == "COMPLETE"
+                      and all(value is not None for value in (
+                          o.gross_return_bps, o.fees_bps, o.slippage_bps,
+                          o.funding_cashflow_bps))]
         positive = [value for value in values if value > 0]
         negative = [value for value in values if value < 0]
         breakeven = sum(value == 0 for value in values)
         return {"candidates": len(labels), "complete": len(values),
                 "without_outcome": len(labels) - len(values),
                 "complete_coverage": len(values) / len(labels) if labels else None,
+                "decomposed_complete_outcomes": len(decomposed),
+                "decomposition_coverage_of_complete": (
+                    len(decomposed) / len(values) if values else None
+                ),
+                "mean_gross_return_bps": (
+                    fsum(o.gross_return_bps for o in decomposed) / len(decomposed)
+                    if decomposed else None
+                ),
+                "mean_fees_bps": (
+                    fsum(o.fees_bps for o in decomposed) / len(decomposed)
+                    if decomposed else None
+                ),
+                "mean_slippage_bps": (
+                    fsum(o.slippage_bps for o in decomposed) / len(decomposed)
+                    if decomposed else None
+                ),
+                "mean_funding_cashflow_bps": (
+                    fsum(o.funding_cashflow_bps for o in decomposed) / len(decomposed)
+                    if decomposed else None
+                ),
                 "outcome_status_counts": dict(sorted(status_counts.items())),
                 "incomplete_outcome_status_counts": dict(sorted(incomplete_status_counts.items())),
                 "positive_complete_outcomes": len(positive),
@@ -249,12 +273,37 @@ def paired_cost_candidate_quality(decisions, base_outcomes, stress_outcomes):
                 or a.return_basis_id != b.return_basis_id):
             raise ValueError("paired cost labels must share the same modeled path")
         rows.append({"event_id": a.event_id, "status": a.outcome_status,
-                     "base_net_bps": a.net_return_bps, "stress_net_bps": b.net_return_bps})
+                     "base_gross_bps": a.gross_return_bps,
+                     "base_fees_bps": a.fees_bps,
+                     "base_slippage_bps": a.slippage_bps,
+                     "base_funding_bps": a.funding_cashflow_bps,
+                     "base_net_bps": a.net_return_bps,
+                     "stress_gross_bps": b.gross_return_bps,
+                     "stress_fees_bps": b.fees_bps,
+                     "stress_slippage_bps": b.slippage_bps,
+                     "stress_funding_bps": b.funding_cashflow_bps,
+                     "stress_net_bps": b.net_return_bps})
     complete = [row for row in rows if row["status"] == "COMPLETE"]
     return {"evidence_type": "MODEL_COUNTERFACTUAL", "selected_candidates": len(rows),
             "paired_complete": len(complete), "without_complete_outcome": len(rows)-len(complete),
             "base_mean_net_bps": fsum(row["base_net_bps"] for row in complete)/len(complete) if complete else None,
             "stress_mean_net_bps": fsum(row["stress_net_bps"] for row in complete)/len(complete) if complete else None,
+            "base_mean_gross_bps": fsum(row["base_gross_bps"] for row in complete)/len(complete)
+                                   if complete and all(row["base_gross_bps"] is not None for row in complete) else None,
+            "base_mean_fees_bps": fsum(row["base_fees_bps"] for row in complete)/len(complete)
+                                  if complete and all(row["base_fees_bps"] is not None for row in complete) else None,
+            "base_mean_slippage_bps": fsum(row["base_slippage_bps"] for row in complete)/len(complete)
+                                      if complete and all(row["base_slippage_bps"] is not None for row in complete) else None,
+            "base_mean_funding_bps": fsum(row["base_funding_bps"] for row in complete)/len(complete)
+                                     if complete and all(row["base_funding_bps"] is not None for row in complete) else None,
+            "stress_mean_gross_bps": fsum(row["stress_gross_bps"] for row in complete)/len(complete)
+                                     if complete and all(row["stress_gross_bps"] is not None for row in complete) else None,
+            "stress_mean_fees_bps": fsum(row["stress_fees_bps"] for row in complete)/len(complete)
+                                    if complete and all(row["stress_fees_bps"] is not None for row in complete) else None,
+            "stress_mean_slippage_bps": fsum(row["stress_slippage_bps"] for row in complete)/len(complete)
+                                        if complete and all(row["stress_slippage_bps"] is not None for row in complete) else None,
+            "stress_mean_funding_bps": fsum(row["stress_funding_bps"] for row in complete)/len(complete)
+                                       if complete and all(row["stress_funding_bps"] is not None for row in complete) else None,
             "positive_under_both": sum(row["base_net_bps"] > 0 and row["stress_net_bps"] > 0 for row in complete),
             "outcomes": rows}
 
@@ -367,4 +416,3 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
         "cost_resilience": cost_resilience,
         "qualification": "NOT_ESTABLISHED",
     }
-
