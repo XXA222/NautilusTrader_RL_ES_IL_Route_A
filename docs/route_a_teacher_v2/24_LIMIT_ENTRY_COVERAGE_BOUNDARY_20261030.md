@@ -25,6 +25,8 @@ ruff check packages/route_a_imitation/src/rles_route_a/teacher_research/limit_en
 All checks passed
 ```
 
+The retained source row for `native-case-047b9e12-31d2-4dfc-931f-e32b441a5c14` was also re-read from `.artifacts/route-a-exit-economics-task3/per_trade_exit_metrics.jsonl` and passed `reconcile_native_trade`: gross `-0.174400000 USDT`, fees `0.249083520 USDT`, funding `0`, net `-0.423483520 USDT` (`-16.995716953` entry-notional bps). The result exactly matches the retained reconciliation artifact. This is an actual archived native case from consumed Train diagnostics (`SCENARIO_ONLY`), not independent profitability evidence.
+
 ## Scope
 
 This is a causal-label correctness fix and synthetic/native-engine regression evidence. It does not establish profitability or new market-data results. The frozen `route-a-meta-x1-train-20261201-20261219-v1` preregistration still specifies `next_open_market`; its bytes and SHA are unchanged. Limit-touch replay is available to explicitly configured research callers, but is not represented as the active preregistered Meta execution assumption.
