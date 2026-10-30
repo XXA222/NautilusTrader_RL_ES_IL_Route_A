@@ -248,7 +248,11 @@ class MetaGatedTeacher:
             raise ValueError("native entry owner must be one of the selected candidate's teachers")
         self.native_receipts.append(NativeDecisionReceipt(trace.decision_ts_ns, action, trace,
             native_order_facts, selected_id, selected_teacher))
-        if self._owner is not None:
+        decision_scope = (
+            decision.observation.episode_id, decision.observation.source_id,
+            decision.observation.fold_id, decision.observation.feature_spec_hash,
+        )
+        if self._owner is not None and self._scope == decision_scope:
             self._teachers[self._owner].observe_native_action(action, trace, native_order_facts)
 
 

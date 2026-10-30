@@ -202,6 +202,7 @@ def test_active_scope_change_keeps_hard_risk_action_without_advancing_state():
     class CallProbe:
         def __init__(self):
             self.calls = 0
+            self.native_calls = 0
 
         def advise(self, obs):
             self.calls += 1
@@ -210,11 +211,15 @@ def test_active_scope_change_keeps_hard_risk_action_without_advancing_state():
         def reset(self, episode_id=""):
             pass
 
+        def observe_native_action(self, action, trace, native_order_facts):
+            self.native_calls += 1
+
     recovery = Recovery()
     recovery.active = True
     teacher = MetaGatedTeacher(trained_policy(), recovery=recovery)
     probe = CallProbe()
     teacher._teachers["T01_EMA_9_21"] = probe
+    teacher._owner = "T01_EMA_9_21"
     teacher._scope = ("e", "synthetic", "train", "0" * 64)
     changed_source = replace(observation(10, exposure=.4), source_id="other-source")
 
@@ -224,6 +229,10 @@ def test_active_scope_change_keeps_hard_risk_action_without_advancing_state():
     assert probe.calls == 0
     assert teacher.decisions[-1].candidates == ()
     assert "diagnostics skipped" in teacher.decisions[-1].candidate_error
+    trace = NativeActionTrace(action.decision_ts_ns, .4, 0., 0., 0., 9999., 9999., "SUBMIT")
+    teacher.observe_native_action(action, trace, L3OrderFacts(native_evidence_receipt="risk-receipt"))
+    assert teacher.native_receipts[-1].action == action
+    assert probe.native_calls == 0
 
 
 def test_active_scope_change_without_recovery_fails_before_teacher_state_moves():
