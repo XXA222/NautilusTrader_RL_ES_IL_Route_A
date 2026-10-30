@@ -102,26 +102,32 @@ def reconcile_counterfactual_to_native(*, replay, decision_ts_ns: int, side: int
 
 
 def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recipe, scenario):
-    """Compare matched completed account cases; retain unmatched or divergent paths."""
+    """Compare completed cases and retain censored/unmatched native case dispositions."""
     from dataclasses import asdict
-    selected = {(d.group.observation.decision_ts_ns, d.group.side): d.group
-                for d in decisions if d.selected}
+    cases = tuple(cases)
+    if len({getattr(case, "trade_case_id", None) for case in cases}) != len(cases):
+        raise ValueError("native trade-case identities must be unique")
     selected_by_id = {d.group.event_id: d.group for d in decisions if d.selected}
     results = []
     for case in cases:
-        if case.status != "ORDINARY_COMPLETE":
-            continue
         row = {"trade_case_id": case.trade_case_id}
+        if case.status != "ORDINARY_COMPLETE":
+            results.append({**row, "status": "NATIVE_CASE_INCOMPLETE",
+                            "native_status": case.status,
+                            "candidate_event_id": case.candidate_event_id})
+            continue
         candidate_id = getattr(case, "candidate_event_id", None)
-        group = (selected_by_id.get(candidate_id) if candidate_id is not None
-                 else selected.get((case.entry_decision_ts_ns, case.side)))
+        if candidate_id is None:
+            results.append({**row, "status": "UNVERIFIED_CANDIDATE_IDENTITY",
+                            "reason": "native Meta case lacks the selected candidate event ID"})
+            continue
+        group = selected_by_id.get(candidate_id)
         if group is None:
             results.append({**row, "status": "UNMATCHED_CANDIDATE"})
             continue
         if (group.observation.decision_ts_ns != case.entry_decision_ts_ns
                 or group.side != case.side
-                or (case.candidate_teacher_ids
-                    and case.candidate_teacher_ids != tuple(name for name, _ in group.teachers))):
+                or case.candidate_teacher_ids != tuple(name for name, _ in group.teachers)):
             results.append({**row, "status": "NOT_COMPARABLE",
                             "reason": "native case candidate id disagrees with entry clock or side"})
             continue
@@ -137,6 +143,10 @@ def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recip
             results.append({**row, "status": "NOT_COMPARABLE", "reason": str(exc)})
         else:
             results.append({**row, "status": "COMPARABLE", "comparison": comparison})
-    return {"native_cases": len(results),
+    from collections import Counter
+    return {"native_cases": len(cases),
+            "ordinary_complete_cases": sum(case.status == "ORDINARY_COMPLETE" for case in cases),
             "comparable": sum(item["status"] == "COMPARABLE" for item in results),
+            "case_disposition_counts": dict(sorted(Counter(
+                item["status"] for item in results).items())),
             "cases": results}

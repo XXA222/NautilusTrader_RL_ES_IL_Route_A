@@ -118,6 +118,22 @@ def test_meta_native_cases_retain_exact_selected_candidate_provenance():
         execution_recipe="native", scenario="base")
     assert mismatch["cases"][0]["status"] == "NOT_COMPARABLE"
 
+    unbound = reconcile_selected_native_cases(decision,
+        (replace(result, candidate_event_id=None, candidate_teacher_ids=()),),
+        lambda *_: pytest.fail("unbound native case must not reach price replay"),
+        execution_recipe="native", scenario="base")
+    assert unbound["cases"][0]["status"] == "UNVERIFIED_CANDIDATE_IDENTITY"
+
+    censored_case = replace(result, status="OPEN_CENSORED", exit_signal_price=None,
+        exit_fill_ts_ns=None, exit_fill_price=None, exit_reason=None)
+    retained = reconcile_selected_native_cases(decision, (censored_case,),
+        lambda *_: pytest.fail("censored native case has no completed replay pair"),
+        execution_recipe="native", scenario="base")
+    assert retained["native_cases"] == 1
+    assert retained["ordinary_complete_cases"] == 0
+    assert retained["case_disposition_counts"] == {"NATIVE_CASE_INCOMPLETE": 1}
+    assert retained["cases"][0]["native_status"] == "OPEN_CENSORED"
+
     hook.cases = (replace(case, candidate_event_id="f"*64,
                           candidate_teacher_ids=("T02_ROC_20_60",)),)
     with pytest.raises(ValueError, match="conflicts"):
