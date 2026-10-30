@@ -61,6 +61,21 @@ def test_discontinuity_and_scope_change_do_not_bridge_signal_history():
     assert any(group.side == 1 for group in collector.collect(after).groups)
 
 
+def test_feature_schema_change_resets_all_eight_signal_histories():
+    collector = OneMinuteCandidateCollector()
+    collector.collect(observation(1, ema_9=99.))
+    first_new_schema = replace(observation(2, ema_9=101.), feature_spec_hash="1" * 64)
+    transition = collector.collect(first_new_schema)
+    assert not any("T01_EMA_9_21" in {teacher for teacher, _ in group.teachers}
+                   and group.side == 1 for group in transition.groups)
+
+    collector.collect(replace(observation(3, ema_9=99.), feature_spec_hash="1" * 64))
+    after_warmup = replace(observation(4, ema_9=101.), feature_spec_hash="1" * 64)
+    result = collector.collect(after_warmup)
+    assert any("T01_EMA_9_21" in {teacher for teacher, _ in group.teachers}
+               and group.side == 1 for group in result.groups)
+
+
 @pytest.mark.parametrize("before,after,teacher", [
     ({"bar_close_1m": 100.}, {"bar_close_1m": 103.}, "T03_DONCHIAN_20"),
     ({"zscore_60": -2.1}, {"zscore_60": -1.9}, "T04_ZSCORE_60"),
