@@ -72,6 +72,25 @@ class CounterfactualTradeReplay:
 
 
 @dataclass(frozen=True, slots=True)
+class NoEntryOpportunityReplay:
+    """Limit-entry result with no fill; preserve why and how long it was observed."""
+
+    event_id: str
+    status: Literal["UNFILLED", "CANCELLED", "MISSED", "RIGHT_CENSORED"]
+    observed_until_ns: int
+    simulation_receipt_id: str
+
+    def __post_init__(self) -> None:
+        if (not isinstance(self.event_id, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", self.event_id)
+                or self.status not in ("UNFILLED", "CANCELLED", "MISSED", "RIGHT_CENSORED")
+                or type(self.observed_until_ns) is not int or self.observed_until_ns <= 0
+                or not isinstance(self.simulation_receipt_id, str)
+                or not self.simulation_receipt_id.strip()):
+            raise ValueError("invalid no-entry counterfactual replay")
+
+
+@dataclass(frozen=True, slots=True)
 class CounterfactualOutcomeBatch:
     outcomes: tuple[OpportunityOutcome, ...]
     candidate_events: tuple[OpportunityEvent, ...]
@@ -79,11 +98,20 @@ class CounterfactualOutcomeBatch:
 
     @property
     def censored_count(self) -> int:
-        return sum(outcome.net_return_bps is None for outcome in self.outcomes)
+        return sum(outcome.outcome_status == "RIGHT_CENSORED" for outcome in self.outcomes)
+
+    @property
+    def no_entry_count(self) -> int:
+        return sum(outcome.outcome_status in {"UNFILLED", "CANCELLED", "MISSED"}
+                   for outcome in self.outcomes)
 
     @property
     def complete_count(self) -> int:
-        return len(self.outcomes) - self.censored_count
+        return sum(outcome.outcome_status == "COMPLETE" for outcome in self.outcomes)
+
+    @property
+    def incomplete_count(self) -> int:
+        return len(self.outcomes) - self.complete_count
 
     def event_map(self) -> dict[str, OpportunityEvent]:
         return {event.event_id: event for event in self.candidate_events}
@@ -93,7 +121,7 @@ class CounterfactualOutcomeBatch:
 
 
 ReplayCandidate = Callable[
-    [OpportunityEvent, str, str, str], CounterfactualTradeReplay
+    [OpportunityEvent, str, str, str], CounterfactualTradeReplay | NoEntryOpportunityReplay
 ]
 
 
@@ -180,28 +208,69 @@ def label_counterfactual_candidates(
         replay = replay_candidate(
             event, exit_policy_id, execution_recipe, cost_scenario_id,
         )
-        if not isinstance(replay, CounterfactualTradeReplay) or replay.event_id != event.event_id:
+        if (not isinstance(replay, (CounterfactualTradeReplay, NoEntryOpportunityReplay))
+                or replay.event_id != event.event_id):
             raise ValueError("fixed-exit replay output does not match its candidate event")
+        block_end_ts_ns = block_intervals[event.event_id][1]
+        if isinstance(replay, NoEntryOpportunityReplay):
+            if not event.decision_ts_ns < replay.observed_until_ns <= block_end_ts_ns:
+                raise ValueError("no-entry replay observation exceeds its registered block")
+            status = replay.status
+            outcomes.append(OpportunityOutcome(
+                event_id=event.event_id,
+                candidate_family=event.family,
+                candidate_side=event.side,
+                decision_ts_ns=event.decision_ts_ns,
+                feature_available_at_ns=event.feature_available_at_ns,
+                rule_version=event.rule_version,
+                snapshot_id=event.snapshot_id,
+                feature_spec_hash=event.feature_spec_hash,
+                feature_vector_sha256=vector_sha,
+                label_end_ts_ns=None,
+                net_return_bps=None,
+                fold_id=event.fold_id,
+                source_identity=event.source_identity,
+                split=split,
+                independent_block_id=block_ids[event.event_id],
+                independent_block_start_ts_ns=block_intervals[event.event_id][0],
+                independent_block_end_ts_ns=block_end_ts_ns,
+                exit_policy_id=exit_policy_id,
+                execution_recipe=execution_recipe,
+                cost_scenario_id=cost_scenario_id,
+                return_basis_id=return_basis_id,
+                simulation_receipt_id=replay.simulation_receipt_id,
+                outcome_method=outcome_method,
+                evidence_type="MODEL_COUNTERFACTUAL",
+                economic_status="SCENARIO_ONLY",
+                censor_ts_ns=(replay.observed_until_ns if status == "RIGHT_CENSORED" else None),
+                outcome_status=status,
+                observed_until_ts_ns=replay.observed_until_ns,
+            ))
+            frozen_features.append((event.event_id, values))
+            continue
         if replay.entry_ts_ns <= event.decision_ts_ns:
             raise ValueError("counterfactual fill must occur after the causal decision")
         gross_return_bps = fees_bps = slippage_bps = funding_cashflow_bps = None
-        block_end_ts_ns = block_intervals[event.event_id][1]
+        status = "COMPLETE"
         if replay.entry_ts_ns >= block_end_ts_ns:
             label_end_ts_ns = None
             net_return_bps = None
             censor_ts_ns = block_end_ts_ns
+            status = "RIGHT_CENSORED"
         elif replay.exit_ts_ns is None:
             label_end_ts_ns = None
             net_return_bps = None
             if replay.censor_ts_ns is None:
                 raise ValueError("open counterfactual replay must declare its censor time")
             censor_ts_ns = min(replay.censor_ts_ns, block_end_ts_ns)
+            status = "RIGHT_CENSORED"
         elif replay.exit_ts_ns >= block_end_ts_ns:
             # An outcome beyond the independent block boundary must not leak
             # back into this block's fit, calibration, or evaluation labels.
             label_end_ts_ns = None
             net_return_bps = None
             censor_ts_ns = block_end_ts_ns
+            status = "RIGHT_CENSORED"
         else:
             exit_ts_ns = replay.exit_ts_ns
             exit_price = replay.exit_price
@@ -246,6 +315,8 @@ def label_counterfactual_candidates(
             evidence_type="MODEL_COUNTERFACTUAL",
             economic_status="SCENARIO_ONLY",
             censor_ts_ns=censor_ts_ns,
+            outcome_status=status,
+            observed_until_ts_ns=censor_ts_ns,
             gross_return_bps=gross_return_bps,
             fees_bps=fees_bps,
             slippage_bps=slippage_bps,

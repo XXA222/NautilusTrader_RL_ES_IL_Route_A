@@ -19,6 +19,7 @@ from .opportunity_models import (
 from .opportunity_labels import (
     CounterfactualOutcomeBatch,
     CounterfactualTradeReplay,
+    NoEntryOpportunityReplay,
     label_counterfactual_candidates,
 )
 from .portfolio_replay import (
@@ -61,6 +62,7 @@ __all__ = [
     "fit_opportunity_model",
     "feature_vector_sha256",
     "CounterfactualTradeReplay",
+    "NoEntryOpportunityReplay",
     "CounterfactualOutcomeBatch",
     "label_counterfactual_candidates",
     "ResearchPortfolioRecipe",

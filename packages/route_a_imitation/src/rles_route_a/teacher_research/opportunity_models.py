@@ -143,6 +143,10 @@ class OpportunityOutcome:
     fees_bps: float | None = None
     slippage_bps: float | None = None
     funding_cashflow_bps: float | None = None
+    outcome_status: Literal[
+        "COMPLETE", "RIGHT_CENSORED", "UNFILLED", "CANCELLED", "MISSED",
+    ] | None = None
+    observed_until_ts_ns: int | None = None
 
     def __post_init__(self) -> None:
         if (not isinstance(self.event_id, str) or len(self.event_id) != 64
@@ -180,20 +184,46 @@ class OpportunityOutcome:
             raise ValueError("only full-universe model counterfactual labels can train this model")
         if self.economic_status != "SCENARIO_ONLY":
             raise ValueError("opportunity-model outputs remain SCENARIO_ONLY")
+        status = self.outcome_status
+        if status is None:
+            status = "COMPLETE" if self.net_return_bps is not None else "RIGHT_CENSORED"
+            object.__setattr__(self, "outcome_status", status)
+        if status not in ("COMPLETE", "RIGHT_CENSORED", "UNFILLED", "CANCELLED", "MISSED"):
+            raise ValueError("outcome status is invalid")
+        if self.observed_until_ts_ns is not None and (
+                type(self.observed_until_ts_ns) is not int
+                or self.observed_until_ts_ns <= self.decision_ts_ns
+                or self.observed_until_ts_ns > self.independent_block_end_ts_ns):
+            raise ValueError("outcome observation clock must stay inside its registered block")
         if self.net_return_bps is None:
-            if (self.label_end_ts_ns is not None or type(self.censor_ts_ns) is not int
-                    or self.censor_ts_ns <= self.decision_ts_ns):
-                raise ValueError("censored outcomes require only a future censor clock")
+            if self.label_end_ts_ns is not None:
+                raise ValueError("incomplete outcomes cannot have an exit clock")
+            if status == "RIGHT_CENSORED":
+                if (type(self.censor_ts_ns) is not int
+                        or self.censor_ts_ns <= self.decision_ts_ns
+                        or self.censor_ts_ns > self.independent_block_end_ts_ns
+                        or self.observed_until_ts_ns not in (None, self.censor_ts_ns)):
+                    raise ValueError("right-censored outcomes require a future censor clock")
+                if self.observed_until_ts_ns is None:
+                    object.__setattr__(self, "observed_until_ts_ns", self.censor_ts_ns)
+            elif (status in ("UNFILLED", "CANCELLED", "MISSED")
+                  and (self.censor_ts_ns is not None
+                       or type(self.observed_until_ts_ns) is not int)):
+                raise ValueError("non-fill outcomes require a future observed-until clock")
+            elif status == "COMPLETE":
+                raise ValueError("complete outcomes require finite net return economics")
             if any(value is not None for value in (
                     self.gross_return_bps, self.fees_bps, self.slippage_bps,
                     self.funding_cashflow_bps)):
-                raise ValueError("censored outcomes cannot supply complete-trade economics")
+                raise ValueError("incomplete outcomes cannot supply complete-trade economics")
         elif (isinstance(self.net_return_bps, bool)
               or not isinstance(self.net_return_bps, (int, float))
               or not math.isfinite(self.net_return_bps)
               or type(self.label_end_ts_ns) is not int
               or self.label_end_ts_ns <= self.decision_ts_ns
-              or self.censor_ts_ns is not None):
+              or self.censor_ts_ns is not None
+              or self.observed_until_ts_ns is not None
+              or status != "COMPLETE"):
             raise ValueError("complete outcomes require finite net return and future end clock")
         else:
             components = (self.gross_return_bps, self.fees_bps,

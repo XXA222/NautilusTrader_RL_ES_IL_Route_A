@@ -6,6 +6,7 @@ import pytest
 
 from rles_route_a.teacher_research import (
     CounterfactualTradeReplay,
+    NoEntryOpportunityReplay,
     OpportunityEvent,
     fit_opportunity_model,
     label_counterfactual_candidates,
@@ -140,6 +141,35 @@ def test_fixed_exit_labeler_preserves_winners_losers_and_censored_candidates():
     assert set(batch.event_map()) == set(batch.feature_map()) == {
         event.event_id for event in events
     }
+
+
+@pytest.mark.parametrize("status", ("UNFILLED", "CANCELLED", "MISSED", "RIGHT_CENSORED"))
+def test_no_entry_status_is_preserved_without_inventing_trade_economics(status):
+    event = _event(50 + len(status))
+    block_end = event.decision_ts_ns + 120
+    replay = NoEntryOpportunityReplay(
+        event_id=event.event_id, status=status, observed_until_ns=block_end,
+        simulation_receipt_id=f"no-entry-{status.lower()}",
+    )
+    batch = label_counterfactual_candidates(
+        (event,), lambda *_: replay, {event.event_id: (0.5,)},
+        {event.event_id: "no-entry-block"},
+        {event.event_id: (event.decision_ts_ns, block_end)},
+        feature_names=("edge",), split="train_fit", exit_policy_id="fixed-exit-v1",
+        execution_recipe="limit-touch-full-fill-v1", cost_scenario_id="base",
+        return_basis_id="LOG_REFERENCE_ENTRY_NOTIONAL_BPS",
+    )
+
+    outcome = batch.outcomes[0]
+    assert outcome.outcome_status == status
+    assert outcome.net_return_bps is None
+    assert outcome.label_end_ts_ns is None
+    assert outcome.observed_until_ts_ns == block_end
+    assert outcome.censor_ts_ns == (block_end if status == "RIGHT_CENSORED" else None)
+    assert batch.complete_count == 0
+    assert batch.censored_count == (status == "RIGHT_CENSORED")
+    assert batch.no_entry_count == (status != "RIGHT_CENSORED")
+    assert batch.incomplete_count == 1
 
 
 def test_labeler_fails_closed_on_missing_denominator_or_wrong_replay_event():

@@ -7,26 +7,11 @@ import re
 from typing import Callable, Literal, Sequence
 
 from .candidate_event_union import CandidateGroup
-from .opportunity_labels import CounterfactualTradeReplay
+from .opportunity_labels import CounterfactualTradeReplay, NoEntryOpportunityReplay
 from .opportunity_models import RETURN_BASIS_IDS
 
 
-@dataclass(frozen=True, slots=True)
-class NoEntryReplay:
-    """No native fill is implied; terminal and boundary states remain distinct."""
-    event_id: str
-    status: Literal["UNFILLED", "CANCELLED", "MISSED", "RIGHT_CENSORED"]
-    observed_until_ns: int
-    simulation_receipt_id: str
-
-    def __post_init__(self) -> None:
-        if (not isinstance(self.event_id, str) or len(self.event_id) != 64
-                or any(c not in "0123456789abcdef" for c in self.event_id)
-                or self.status not in ("UNFILLED", "CANCELLED", "MISSED", "RIGHT_CENSORED")
-                or type(self.observed_until_ns) is not int or self.observed_until_ns <= 0
-                or not isinstance(self.simulation_receipt_id, str)
-                or not self.simulation_receipt_id.strip()):
-            raise ValueError("invalid no-entry research replay")
+NoEntryReplay = NoEntryOpportunityReplay
 
 
 @dataclass(frozen=True, slots=True)
