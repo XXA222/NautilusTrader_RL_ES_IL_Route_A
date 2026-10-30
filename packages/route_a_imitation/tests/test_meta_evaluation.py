@@ -226,7 +226,7 @@ def test_native_comparison_reports_missing_cells_without_model_substitution():
            "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
            "native_order_verification": {"barriers": 10, "authority": "retained_m22_session_snapshots"}}
     result = compare_preregistered_native_runs(config, (run,))
-    assert result["expected_cells"] == 20 and result["available_cells"] == 1
+    assert result["expected_cells"] == 24 and result["available_cells"] == 1
     assert result["status"] == "INCOMPLETE" and result["qualification"] == "NOT_ESTABLISHED"
     assert all(item["all_windows_improved"] is None for item in result["window_consistency"])
     with pytest.raises(ValueError, match="duplicate"):
@@ -236,6 +236,24 @@ def test_native_comparison_reports_missing_cells_without_model_substitution():
     with pytest.raises(ValueError, match="requires complete native account costs"):
         compare_preregistered_native_runs(config, ({k:v for k,v in run.items()
                                                     if k != "account_metrics"},))
+
+
+def test_native_comparison_includes_the_executed_original_eight_teacher_control():
+    from rles_route_a.teacher_research.meta_evaluation import compare_preregistered_native_runs
+
+    config = {"teachers": [], "controls": ["ORIGINAL_8_X1"],
+              "cost_scenarios": {"base": {}}, "intervals": {"native_screen": [["a", "b"]]}}
+    run = {"strategy_id": "ORIGINAL_8_X1", "scenario": "base", "window": ("a", "b"),
+           "cases": (), "equity_curve": (1000., 1000.),
+           "account_metrics": {"total_fee": 0., "total_slippage_cost": 0., "total_funding": 0.},
+           "native_order_verification": {"barriers": 2,
+               "authority": "retained_m22_session_snapshots"}}
+
+    result = compare_preregistered_native_runs(config, (run,))
+
+    assert result["expected_cells"] == 2 and result["available_cells"] == 1
+    original = next(row for row in result["rows"] if row["strategy_id"] == "ORIGINAL_8_X1")
+    assert original["status"] == "AVAILABLE"
 
 
 def test_native_comparison_requires_trade_case_cashflows_to_match_account():

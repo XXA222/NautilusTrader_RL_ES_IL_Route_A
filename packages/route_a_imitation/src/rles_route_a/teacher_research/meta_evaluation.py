@@ -381,7 +381,7 @@ def compare_preregistered_native_runs(config, runs) -> dict[str, object]:
     from dataclasses import replace
 
     original = tuple(config["teachers"])
-    controls = tuple(item for item in config["controls"] if item != "ORIGINAL_8_X1")
+    controls = tuple(config["controls"])
     strategies = (*original, "META_X1", *controls)
     scenarios = tuple(config["cost_scenarios"])
     windows = tuple(tuple(window) for window in config["intervals"]["native_screen"])
