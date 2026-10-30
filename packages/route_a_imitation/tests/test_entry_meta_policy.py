@@ -13,6 +13,20 @@ from rles_route_a.teacher_research.opportunity_models import _fit_logistic, _fit
 from rles_route_a.teacher_research.opportunity_models import uniqueness_effective_label_count
 
 
+@pytest.mark.parametrize("field,value,message", [
+    ("action", "FLAT", "action must"),
+    ("probability_positive", float("nan"), "probability must"),
+    ("probability_positive", 1.01, "probability must"),
+    ("expected_net_bps", float("inf"), "expected net return must"),
+    ("in_support", 1, "support status must"),
+    ("calibration_mae_bps", -1., "calibration MAE must"),
+])
+def test_entry_score_rejects_invalid_predictions_and_decision_contract(field, value, message):
+    baseline = EntryScore("NO_TRADE", .5, 1., True, "NET_EDGE_TOO_SMALL")
+    with pytest.raises(ValueError, match=message):
+        replace(baseline, **{field: value})
+
+
 def test_gate_diagnostics_count_overlapping_filters_without_changing_threshold():
     scores = [EntryScore("NO_TRADE", .8, 6., False, "OUT_OF_SUPPORT"),
               EntryScore("NO_TRADE", .4, 2., True, "NET_EDGE_TOO_SMALL"),

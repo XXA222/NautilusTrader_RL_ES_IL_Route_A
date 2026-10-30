@@ -74,6 +74,34 @@ class EntryScore:
     unsupported_features: tuple[str, ...] = ()
     calibration_mae_bps: float = 0.0
 
+    def __post_init__(self) -> None:
+        if self.action not in ("LONG", "SHORT", "NO_TRADE"):
+            raise ValueError("entry score action must be LONG, SHORT or NO_TRADE")
+        if (isinstance(self.probability_positive, bool)
+                or not isinstance(self.probability_positive, (int, float))
+                or not isfinite(self.probability_positive)
+                or not 0 <= self.probability_positive <= 1):
+            raise ValueError("entry score probability must be finite and inside [0, 1]")
+        if (isinstance(self.expected_net_bps, bool)
+                or not isinstance(self.expected_net_bps, (int, float))
+                or not isfinite(self.expected_net_bps)):
+            raise ValueError("entry score expected net return must be finite")
+        if type(self.in_support) is not bool:
+            raise ValueError("entry score support status must be boolean")
+        if (not isinstance(self.reason, str) or not self.reason.strip()
+                or (self.action in ("LONG", "SHORT") and self.reason != "POSITIVE_NET_EDGE")):
+            raise ValueError("entry score requires a valid decision reason")
+        if (not isinstance(self.unsupported_features, tuple)
+                or any(not isinstance(name, str) or not name.strip()
+                       for name in self.unsupported_features)
+                or len(set(self.unsupported_features)) != len(self.unsupported_features)):
+            raise ValueError("unsupported feature names must be unique nonempty strings")
+        if (isinstance(self.calibration_mae_bps, bool)
+                or not isinstance(self.calibration_mae_bps, (int, float))
+                or not isfinite(self.calibration_mae_bps)
+                or self.calibration_mae_bps < 0):
+            raise ValueError("entry score calibration MAE must be finite and nonnegative")
+
 
 @dataclass(frozen=True, slots=True)
 class FrozenEntryMetaPolicy:
