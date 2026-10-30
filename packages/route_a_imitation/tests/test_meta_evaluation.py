@@ -193,7 +193,7 @@ def test_screen_prediction_quality_separates_executable_and_account_blocked_cand
     assert by_account["position_or_pending_order_blocked"]["scored_outcome_status_counts"] == {
         "COMPLETE": 1,
     }
-    assert by_account["executable_flat"]["independent_screen_rows"] is True
+    assert by_account["executable_flat"]["independence_status"] == "UNVERIFIED_BY_GENERIC_SUMMARIZER"
     assert by_account["executable_flat"]["thresholds_adjusted"] is False
 
 

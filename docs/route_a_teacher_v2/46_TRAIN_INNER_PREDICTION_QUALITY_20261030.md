@@ -8,7 +8,9 @@ Candidate-quality evaluation now reports prediction-to-outcome quality for all s
 
 For complete scored outcomes, the frozen screen report includes predicted versus observed net return and positive-return probability; MAE, bias, RMSE, Brier and log-loss; fixed probability bands plus stable equal-count return/probability bins; and overlap-uniqueness-weighted estimates so overlapping candidate labels do not count as independent trials. Accepted/rejected and per-teacher/side/consensus slices continue to show outcome quality and explicit reject reasons.
 
-These are diagnostics on the independent Train-inner screen after the model and thresholds are frozen. They do not refit Platt/Ridge or modify the acceptance margin. Blocked account candidates are reported separately from executable candidates; censored labels remain outside realized-return statistics.
+These are candidate prediction diagnostics; the generic quality summarizer does not establish source or split independence. A caller may describe results as an independent Train-inner screen only when the frozen run identity, preregistration, and source-access evidence establish that claim. The diagnostics do not refit Platt/Ridge or modify the acceptance margin. Blocked account candidates are reported separately from executable candidates; censored labels remain outside realized-return statistics.
+
+The report field `independence_status` is therefore `UNVERIFIED_BY_GENERIC_SUMMARIZER`; independence must be established at the screen-run layer and must not be inferred from successful candidate/outcome pairing.
 
 ## Verification
 

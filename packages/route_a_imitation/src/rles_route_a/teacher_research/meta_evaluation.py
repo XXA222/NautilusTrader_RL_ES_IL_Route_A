@@ -198,7 +198,11 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
             "complete_scored_coverage": len(complete) / len(rows) if rows else None,
             "scored_without_complete_outcome": len(scored) - len(complete),
             "scored_outcome_status_counts": dict(sorted(status_counts.items())),
-            "independent_screen_rows": True,
+            # This pure summarizer validates candidate/outcome pairing, but it
+            # cannot establish that the source window is independent of model
+            # fitting or threshold selection. The caller must attach that
+            # evidence from the frozen run identity and source ledger.
+            "independence_status": "UNVERIFIED_BY_GENERIC_SUMMARIZER",
             "thresholds_adjusted": False,
             "basis": "complete scored MODEL_COUNTERFACTUAL outcomes; overlapping candidates are dependent",
         }
