@@ -127,6 +127,12 @@ def reconcile_selected_native_cases(decisions, cases, replay, *, execution_recip
                             "reason": "native case candidate id disagrees with entry clock or side"})
             continue
         row["event_id"] = group.event_id
+        if (case.scenario_id != scenario or case.exit_policy_id != "X1"
+                or case.economic_status != "SCENARIO_ONLY"):
+            results.append({**row, "status": "NOT_COMPARABLE",
+                            "reason": "native case scenario, exit, or economic status differs "
+                                     "from the requested X1 scenario"})
+            continue
         if case.status != "ORDINARY_COMPLETE":
             results.append({**row, "status": "NATIVE_CASE_INCOMPLETE",
                             "native_status": case.status})

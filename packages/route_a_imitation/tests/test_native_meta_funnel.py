@@ -118,6 +118,17 @@ def test_meta_native_cases_retain_exact_selected_candidate_provenance():
         execution_recipe="native", scenario="base")
     assert mismatch["cases"][0]["status"] == "NOT_COMPARABLE"
 
+    for mismatched_case in (
+        replace(result, scenario_id="stress"),
+        replace(result, exit_policy_id="X2"),
+        replace(result, economic_status="LIVE_ACCOUNT"),
+    ):
+        mismatched = reconcile_selected_native_cases(decision, (mismatched_case,),
+            lambda *_: pytest.fail("mismatched case recipe must not reach price replay"),
+            execution_recipe="native", scenario="base")
+        assert mismatched["cases"][0]["status"] == "NOT_COMPARABLE"
+        assert "scenario, exit, or economic status" in mismatched["cases"][0]["reason"]
+
     unbound = reconcile_selected_native_cases(decision,
         (replace(result, candidate_event_id=None, candidate_teacher_ids=()),),
         lambda *_: pytest.fail("unbound native case must not reach price replay"),
