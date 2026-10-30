@@ -3,9 +3,12 @@ from dataclasses import replace
 import pytest
 
 from rles_route_a.contracts import ExpertAdvice, NativeActionTrace
+from rles_route_a.teacher_research.candidate_collector import CandidateCollection
 from rles_route_a.teacher_research.candidate_event_union import TeacherProposal, group_teacher_proposals
 from rles_route_a.teacher_research.conditional_outcome_labels import GroupOutcome
-from rles_route_a.teacher_research.entry_meta_policy import fit_entry_meta_policy, summarize_entry_scores
+from rles_route_a.teacher_research.entry_meta_policy import (
+    EntryScore, fit_entry_meta_policy, summarize_entry_scores,
+)
 from rles_route_a.teacher_research.meta_gated_teacher import MetaGatedTeacher, write_meta_trace
 from rles_route_a.integration.host_gym_projection import L3OrderFacts
 from test_candidate_collector import observation
@@ -83,6 +86,45 @@ def test_native_receipt_cannot_skip_an_earlier_decision():
     with pytest.raises(ValueError, match="matching decision"):
         teacher.observe_native_action(action, trace, L3OrderFacts(native_evidence_receipt="receipt"))
     assert not teacher.native_receipts
+
+
+def test_consensus_candidate_uses_any_ready_native_teacher_owner(monkeypatch):
+    class StaticTeacher:
+        def __init__(self, teacher_id, intent):
+            self.teacher_id = teacher_id
+            self.intent = intent
+
+        def advise(self, obs):
+            return ExpertAdvice(self.teacher_id, obs.decision_ts_ns, self.intent,
+                                .3 if self.intent == "OPEN_LONG" else 0., (self.intent,))
+
+        def reset(self, episode_id=""):
+            pass
+
+    class FixedCollection:
+        def reset(self, episode_id=""):
+            pass
+
+        def collect(self, obs):
+            proposals = (
+                TeacherProposal(obs, "T01_EMA_9_21", 1, "EMA_CROSS_LONG"),
+                TeacherProposal(obs, "T02_ROC_20_60", 1, "ROC_CONSENSUS_LONG"),
+            )
+            return CandidateCollection(group_teacher_proposals(proposals), ())
+
+    teacher = MetaGatedTeacher(trained_policy(), recovery=Recovery())
+    teacher.collector = FixedCollection()
+    teacher._teachers["T01_EMA_9_21"] = StaticTeacher("T01_EMA_9_21", "FLAT")
+    teacher._teachers["T02_ROC_20_60"] = StaticTeacher("T02_ROC_20_60", "OPEN_LONG")
+    monkeypatch.setattr(type(teacher.policy), "score", lambda _policy, _group:
+                        EntryScore("LONG", .8, 20., True, "POSITIVE_NET_EDGE"))
+
+    action = teacher.advise(observation(10, ema_9=101.))
+
+    assert action.intent == "OPEN_LONG"
+    assert action.expert_id == "T02_ROC_20_60"
+    assert teacher.decisions[-1].owner_id == "T02_ROC_20_60"
+    assert teacher.decisions[-1].candidates[0].selected
 
 
 def test_pending_order_candidate_is_not_misreported_as_arbitration():
