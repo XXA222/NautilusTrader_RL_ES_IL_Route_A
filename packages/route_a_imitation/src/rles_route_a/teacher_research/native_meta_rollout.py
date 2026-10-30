@@ -53,7 +53,13 @@ def run_registered_meta_rollout(
             or verification.get("barriers") != len(barriers)
             or verification.get("authority") != "retained_m22_session_snapshots"):
         raise ValueError("native M2.2 verification does not cover the complete episode")
-    if len(teacher.decisions) != len(barriers) or len(teacher.native_receipts) != len(barriers):
+    decision_clocks = tuple(row.observation.decision_ts_ns for row in teacher.decisions)
+    receipt_clocks = tuple(row.trace.decision_ts_ns for row in teacher.native_receipts)
+    barrier_clocks = tuple(getattr(getattr(barrier, "trace", None), "decision_ts_ns", None)
+                           for barrier in barriers)
+    if (len(teacher.decisions) != len(barriers)
+            or len(teacher.native_receipts) != len(barriers)
+            or decision_clocks != barrier_clocks or receipt_clocks != barrier_clocks):
         raise ValueError("candidate/native trace does not cover every native barrier")
     write_meta_trace(teacher, trace_path)
     return barriers, native
