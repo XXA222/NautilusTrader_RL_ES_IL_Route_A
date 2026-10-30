@@ -23,6 +23,34 @@ def test_native_economics_counts_open_censor_separately():
     assert report["completed_trade_net_pnl"] == 8.
     assert report["max_drawdown"] == pytest.approx(.01)
     assert report["long"]["win_rate"] == 1. and report["short"]["win_rate"] is None
+    assert report["winning_trades"] == 1 and report["losing_trades"] == 0
+    assert report["breakeven_trades"] == 0
+    assert report["average_winning_trade_pnl"] == 8.
+    assert report["average_losing_trade_pnl"] is None
+
+
+def test_native_economics_separates_average_wins_losses_and_breakeven():
+    from dataclasses import replace
+
+    winner = NativeTradeCase1m(
+        trade_case_id="win", signal_id="win-signal", teacher_id="EMA", exit_policy_id="X1",
+        scenario_id="base", block_id="train", side=1, status="ORDINARY_COMPLETE",
+        entry_decision_ts_ns=1, entry_signal_price=100., entry_fill_ts_ns=2,
+        entry_fill_price=100., entry_notional=1000., exit_signal_price=101.,
+        exit_fill_ts_ns=4, exit_fill_price=101., fees=2., fee_currency="USDT",
+        equity_currency="USDT", slippage_cost=1., funding=0., realized_pnl=8.,
+        equity_start=1000., equity_end=1008., mfe_bps=100., mae_bps=-10.,
+        holding_minutes=2., exit_reason="exit", economic_status="SCENARIO_ONLY")
+    loser = replace(winner, trade_case_id="loss", signal_id="loss-signal",
+        exit_signal_price=99., exit_fill_price=99., realized_pnl=-12.)
+    flat = replace(winner, trade_case_id="flat", signal_id="flat-signal",
+        exit_signal_price=100.2, exit_fill_price=100.2, realized_pnl=0.)
+
+    report = summarize_native_economics((winner, loser, flat), (1000., 1010.))
+
+    assert report["winning_trades"] == report["losing_trades"] == report["breakeven_trades"] == 1
+    assert report["average_winning_trade_pnl"] == 8.
+    assert report["average_losing_trade_pnl"] == -12.
 
 
 def test_quality_reports_selected_rejected_and_censor(observed):

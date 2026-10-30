@@ -33,6 +33,9 @@ def summarize_native_economics(cases: tuple[NativeTradeCase1m, ...],
     funding = fsum(c.funding for c in complete)
     slip = fsum(c.slippage_cost for c in complete)
     net = fsum(c.realized_pnl for c in complete)
+    winners = tuple(c.realized_pnl for c in complete if c.realized_pnl > 0)
+    losers = tuple(c.realized_pnl for c in complete if c.realized_pnl < 0)
+    breakeven = sum(c.realized_pnl == 0 for c in complete)
     if abs((gross_fill - fees + funding) - net) > 1e-6 * max(1, len(complete)):
         raise ValueError("completed native trade cash flows do not reconcile")
     def side_stats(side):
@@ -51,6 +54,11 @@ def summarize_native_economics(cases: tuple[NativeTradeCase1m, ...],
         "account_equity_change": equity_curve[-1] - equity_curve[0],
         "max_drawdown": drawdown,
         "win_rate": sum(c.realized_pnl > 0 for c in complete) / len(complete) if complete else None,
+        "winning_trades": len(winners),
+        "losing_trades": len(losers),
+        "breakeven_trades": breakeven,
+        "average_winning_trade_pnl": fsum(winners) / len(winners) if winners else None,
+        "average_losing_trade_pnl": fsum(losers) / len(losers) if losers else None,
         "average_trade_pnl": net / len(complete) if complete else None,
         "average_holding_minutes": fsum(c.holding_minutes for c in complete) / len(complete)
                                    if complete else None,
