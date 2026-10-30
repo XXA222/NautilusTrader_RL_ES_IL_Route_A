@@ -96,7 +96,7 @@ def test_label_overlap_reports_dependencies_and_endpoint_boundary():
     from rles_route_a.teacher_research.conditional_outcome_labels import GroupOutcome
     from rles_route_a.teacher_research.train_meta import _overlap_diagnostics
     labels = [GroupOutcome(name, start, "source", "fold", "X1", "native", "base",
-                           end, None, 1.)
+                           end, None, 1., f"replay-{name}")
               for name, start, end in (("a", 1, 5), ("b", 2, 4), ("c", 5, 6))]
     report = _overlap_diagnostics(labels)
     assert report["labels_starting_during_another"] == 1

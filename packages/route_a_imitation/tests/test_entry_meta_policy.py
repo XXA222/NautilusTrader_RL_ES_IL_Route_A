@@ -119,7 +119,8 @@ def _samples(observed):
         groups[group.event_id] = group
         labels.append(GroupOutcome(group.event_id, obs.decision_ts_ns, obs.source_id,
                                    obs.fold_id, "X1", "native", "base",
-                                   obs.decision_ts_ns + 1, None, 10. if i % 2 else -10.))
+                                   obs.decision_ts_ns + 1, None, 10. if i % 2 else -10.,
+                                   simulation_receipt_id=f"fit-replay-{i}"))
     return labels[:4], labels[4:], groups
 
 
@@ -210,9 +211,9 @@ def test_fit_rejects_candidates_blocked_by_positions_or_pending_orders(observed)
 
 def test_overlap_uniqueness_weights_share_only_the_concurrent_label_time():
     labels = [
-        GroupOutcome("a", 0, "source", "fold", "X1", "native", "base", 10, None, 1.),
-        GroupOutcome("b", 5, "source", "fold", "X1", "native", "base", 15, None, 1.),
-        GroupOutcome("c", 20, "source", "fold", "X1", "native", "base", 30, None, 1.),
+        GroupOutcome("a", 0, "source", "fold", "X1", "native", "base", 10, None, 1., "replay-a"),
+        GroupOutcome("b", 5, "source", "fold", "X1", "native", "base", 15, None, 1., "replay-b"),
+        GroupOutcome("c", 20, "source", "fold", "X1", "native", "base", 30, None, 1., "replay-c"),
     ]
     assert overlap_uniqueness_weights(labels) == pytest.approx([.75, .75, 1.])
     fully_overlapped = [replace(labels[0], event_id="d", label_end_ts_ns=10),
@@ -223,7 +224,7 @@ def test_overlap_uniqueness_weights_share_only_the_concurrent_label_time():
 
 
 def test_overlap_weights_reject_censored_or_duplicate_labels():
-    label = GroupOutcome("a", 1, "source", "fold", "X1", "native", "base", 2, None, 1.)
+    label = GroupOutcome("a", 1, "source", "fold", "X1", "native", "base", 2, None, 1., "replay")
     with pytest.raises(ValueError, match="complete future labels"):
         overlap_uniqueness_weights([replace(label, label_end_ts_ns=None, censor_ts_ns=3,
                                             net_return_bps=None, outcome_status="RIGHT_CENSORED")])
