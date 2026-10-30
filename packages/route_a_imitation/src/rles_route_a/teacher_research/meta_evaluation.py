@@ -7,6 +7,7 @@ from math import fsum, isfinite
 from rles_route_a.evaluation.teacher_case_report_1m import NativeTradeCase1m
 from .conditional_outcome_labels import GroupOutcome
 from .meta_gated_teacher import CandidateDecision
+from .opportunity_models import overlap_uniqueness_weights, summarize_prediction_calibration
 
 
 def summarize_native_economics(cases: tuple[NativeTradeCase1m, ...],
@@ -177,38 +178,95 @@ def summarize_candidate_quality(decisions: tuple[CandidateDecision, ...],
         str(count): acceptance_slices(d for d in decisions if len(d.group.teachers) == count)
         for count in consensus_counts
     }
-    paired = [(d.score, by_id[d.group.event_id].net_return_bps) for d in decisions
-              if d.score is not None and by_id[d.group.event_id].outcome_status == "COMPLETE"]
-    for score, actual in paired:
-        if (not isfinite(score.expected_net_bps) or not isfinite(score.probability_positive)
-                or not 0 <= score.probability_positive <= 1):
-            raise ValueError("invalid candidate prediction")
-    n = len(paired)
-    bins = []
-    for index in range(5):
-        lower, upper = index / 5, (index + 1) / 5
-        members = [(score.probability_positive, value) for score, value in paired
-                   if lower <= score.probability_positive < upper
-                   or (index == 4 and score.probability_positive == 1)]
-        count = len(members)
-        bins.append({"lower_inclusive": lower, "upper": upper, "upper_inclusive": index == 4,
-                     "count": count,
-                     "mean_predicted_probability": fsum(p for p, _ in members) / count if count else None,
-                     "observed_positive_fraction": sum(v > 0 for _, v in members) / count if count else None})
-    prediction = {
-        "paired_complete_scored": n,
-        "unscored_candidates": sum(d.score is None for d in decisions),
-        "scored_without_complete_outcome": sum(
-            d.score is not None and by_id[d.group.event_id].outcome_status != "COMPLETE" for d in decisions),
-        "mean_absolute_error_bps": fsum(abs(s.expected_net_bps - y) for s, y in paired) / n if n else None,
-        "mean_prediction_error_bps": fsum(s.expected_net_bps - y for s, y in paired) / n if n else None,
-        "brier_score": fsum((s.probability_positive - (y > 0)) ** 2 for s, y in paired) / n if n else None,
-        "probability_bins": bins,
-        "basis": "complete scored MODEL_COUNTERFACTUAL outcomes; overlapping candidates are dependent",
+    def prediction_report(rows):
+        rows = tuple(rows)
+        scored = tuple(d for d in rows if d.score is not None)
+        complete = tuple(d for d in scored if by_id[d.group.event_id].outcome_status == "COMPLETE")
+        for decision in scored:
+            score = decision.score
+            assert score is not None
+            if (not isfinite(score.expected_net_bps) or not isfinite(score.probability_positive)
+                    or not 0 <= score.probability_positive <= 1):
+                raise ValueError("invalid candidate prediction")
+        labels = tuple(by_id[d.group.event_id] for d in complete)
+        status_counts = Counter(by_id[d.group.event_id].outcome_status for d in scored)
+        result = {
+            "candidate_count": len(rows),
+            "scored_candidates": len(scored),
+            "unscored_candidates": len(rows) - len(scored),
+            "complete_scored_candidates": len(complete),
+            "complete_scored_coverage": len(complete) / len(rows) if rows else None,
+            "scored_without_complete_outcome": len(scored) - len(complete),
+            "scored_outcome_status_counts": dict(sorted(status_counts.items())),
+            "independent_screen_rows": True,
+            "thresholds_adjusted": False,
+            "basis": "complete scored MODEL_COUNTERFACTUAL outcomes; overlapping candidates are dependent",
+        }
+        if not complete:
+            result.update({
+                "paired_complete_scored": 0,
+                "mean_absolute_error_bps": None,
+                "mean_prediction_error_bps": None,
+                "brier_score": None,
+                "probability_bins": [{"lower_inclusive": i / 5, "upper": (i + 1) / 5,
+                    "upper_inclusive": i == 4, "count": 0,
+                    "mean_predicted_probability": None, "observed_positive_fraction": None}
+                    for i in range(5)],
+                "net_return_bins": [],
+                "probability_calibration_bins": [],
+            })
+            return result
+        scores = tuple(d.score for d in complete)
+        assert all(score is not None for score in scores)
+        actual = tuple(label.net_return_bps for label in labels)
+        if any(value is None for value in actual):
+            raise ValueError("complete screen outcome lacks a net return")
+        probabilities = tuple(score.probability_positive for score in scores)
+        positives = tuple(value > 0 for value in actual)
+        weighted = summarize_prediction_calibration(
+            tuple(score.expected_net_bps for score in scores), actual,
+            probabilities, positives,
+            sample_weights=overlap_uniqueness_weights(labels),
+        )
+        n = len(complete)
+        bins = []
+        for index in range(5):
+            lower, upper = index / 5, (index + 1) / 5
+            members = [(p, y) for p, y in zip(probabilities, actual)
+                       if lower <= p < upper or (index == 4 and p == 1)]
+            count = len(members)
+            bins.append({"lower_inclusive": lower, "upper": upper, "upper_inclusive": index == 4,
+                         "count": count,
+                         "mean_predicted_probability": fsum(p for p, _ in members) / count if count else None,
+                         "observed_positive_fraction": sum(y > 0 for _, y in members) / count if count else None})
+        result.update({
+            "paired_complete_scored": n,
+            "mean_absolute_error_bps": fsum(abs(s.expected_net_bps - y) for s, y in zip(scores, actual)) / n,
+            "mean_prediction_error_bps": fsum(s.expected_net_bps - y for s, y in zip(scores, actual)) / n,
+            "brier_score": fsum((p - y) ** 2 for p, y in zip(probabilities, positives)) / n,
+            "probability_bins": bins,
+            "net_return_bins": weighted["net_return_bins"],
+            "probability_calibration_bins": weighted["probability_bins"],
+            "uniqueness_weighted_metrics": {key: weighted[key] for key in (
+                "effective_weighted_samples", "mean_predicted_net_bps", "mean_observed_net_bps",
+                "mean_net_prediction_error_bps", "net_prediction_mae_bps",
+                "net_prediction_rmse_bps", "mean_predicted_probability_positive",
+                "observed_positive_rate", "probability_brier_score", "probability_log_loss")},
+        })
+        return result
+
+    account_executable = tuple(d for d in decisions if not d.group.observation.pending_order_ids
+                               and abs(d.group.observation.account_value("net_exposure")) <= 1e-8)
+    account_blocked = tuple(d for d in decisions if d not in account_executable)
+    prediction = prediction_report(decisions)
+    prediction_by_account_state = {
+        "executable_flat": prediction_report(account_executable),
+        "position_or_pending_order_blocked": prediction_report(account_blocked),
     }
     return {"evidence_type": "MODEL_COUNTERFACTUAL",
             "label_recipe": next(iter(recipes)) if recipes else None,
             "prediction_quality": prediction,
+            "prediction_quality_by_account_state": prediction_by_account_state,
             "accepted": segment(d for d in decisions if model_accepted(d)),
             "rejected": segment(d for d in decisions if not model_accepted(d)),
             "accepted_not_native_selected": segment(

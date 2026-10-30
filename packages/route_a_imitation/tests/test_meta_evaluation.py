@@ -164,6 +164,39 @@ def test_quality_reports_selected_rejected_and_censor(observed):
             (labels[0], replace(labels[1], source_identity="different"), labels[2]))
 
 
+def test_screen_prediction_quality_separates_executable_and_account_blocked_candidates(observed):
+    from dataclasses import replace
+
+    rows = []
+    labels = []
+    for index, (pending, probability, expected, actual) in enumerate((
+            ((), .8, 4., 3.), (("native-order",), .9, 5., -2.)), start=1):
+        obs = replace(observed(ts=index * 1_000_000_000), pending_order_ids=pending)
+        group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
+        score = EntryScore("LONG" if not pending else "NO_TRADE", probability,
+                           expected, True, "POSITIVE_NET_EDGE" if not pending else "PENDING_ORDER")
+        rows.append(CandidateDecision(group, score, not pending))
+        labels.append(GroupOutcome(
+            group.event_id, obs.decision_ts_ns, obs.source_id, obs.fold_id,
+            "X1", "native", "base", obs.decision_ts_ns + 1, None, actual,
+            f"screen-{index}", gross_return_bps=actual, fees_bps=0.,
+            slippage_bps=0., funding_cashflow_bps=0.,
+        ))
+
+    report = summarize_candidate_quality(tuple(rows), tuple(labels))
+    assert report["prediction_quality"]["paired_complete_scored"] == 2
+    assert report["prediction_quality"]["uniqueness_weighted_metrics"]["net_prediction_rmse_bps"] >= 0.
+    assert report["prediction_quality"]["net_return_bins"]
+    by_account = report["prediction_quality_by_account_state"]
+    assert by_account["executable_flat"]["paired_complete_scored"] == 1
+    assert by_account["position_or_pending_order_blocked"]["paired_complete_scored"] == 1
+    assert by_account["position_or_pending_order_blocked"]["scored_outcome_status_counts"] == {
+        "COMPLETE": 1,
+    }
+    assert by_account["executable_flat"]["independent_screen_rows"] is True
+    assert by_account["executable_flat"]["thresholds_adjusted"] is False
+
+
 def test_quality_keeps_hard_risk_override_out_of_model_rejection(observed):
     obs = observed(ts=10_000_000_000)
     group, = group_teacher_proposals([TeacherProposal(obs, "EMA", 1, "cross")])
